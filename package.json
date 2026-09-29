@@ -1,0 +1,24 @@
+{
+  "name": "crm-leads-universidad",
+  "private": true,
+  "description": "CRM de leads para la oficina de admisión (bot Genesys + panel de asesores + Supabase)",
+  "workspaces": [
+    "packages/*",
+    "panel"
+  ],
+  "scripts": {
+    "db:link": "supabase link --project-ref itmwdnttrfbbehoipzzp",
+    "db:push": "supabase db push",
+    "db:types": "supabase gen types typescript --linked --schema public > packages/db/src/database.types.ts && node -e \"require('fs').copyFileSync('packages/db/src/database.types.ts','supabase/functions/_shared/database.types.ts')\"",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "db:test": "node supabase/tests/probar_migraciones.mjs",
+    "fn:deploy": "supabase functions deploy genesys --no-verify-jwt --use-api --project-ref itmwdnttrfbbehoipzzp",
+    "db:bundle": "node supabase/tests/empaquetar_sql_editor.mjs",
+    "dev": "npm run dev -w panel"
+  },
+  "devDependencies": {
+    "supabase": "^2.118.0",
+    "typescript": "^5.9.0",
+    "@electric-sql/pglite": "^0.3.0"
+  }
+}

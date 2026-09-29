@@ -1,1 +1,180 @@
-# CRM
+# CRM de Leads — Oficina de Admisión
+
+CRM para la oficina de admisión. **Toda persona que escribe al bot de WhatsApp Genesys es un lead**
+y queda guardada en Supabase. Los asesores trabajan sus leads desde un panel web.
+
+- **Base de datos**: Supabase (PostgreSQL) con seguridad por filas (RLS).
+- **Bot**: Genesys en BuilderBot Cloud → API `genesys` (Supabase Edge Function).
+- **Panel**: Next.js + Tailwind + Supabase Auth (ingreso con usuario, sin correo).
+- **Todo en TypeScript.**
+
+```
+WhatsApp ─► Genesys (BuilderBot Cloud) ─► Edge Function "genesys" ─► Supabase ◄─ Panel web (Next.js)
+                     └─ (transición) ─► Apps Script ─► Google Sheets        asesores y admin
+```
+
+---
+
+## Estructura
+
+```
+.
+├── supabase/
+│   ├── migrations/          # Tablas, funciones, vistas y RLS (en orden)
+│   ├── functions/genesys/   # API que llama el bot (Edge Function, Deno)
+│   ├── functions/_shared/   # Reglas de normalización y tipos para la función
+│   ├── tests/               # Pruebas de la base de datos (npm run db:test)
+│   ├── demo/                # Leads de demostración (cargar / borrar)
+│   ├── seed.sql             # Asesores de EJEMPLO
+│   └── seed.local.sql       # Asesores REALES (no se sube a git)
+├── panel/                   # Panel web (Next.js)
+├── packages/db/             # Tipos de la base de datos y del dominio (compartidos)
+├── docs/
+│   ├── fase2-conectar-genesys.md   # Guía para conectar el bot
+│   └── apps-script/                # Código para el Apps Script (modo sombra)
+└── schema_leads.sql, leads.js, flujos_leads.js   # Archivos de referencia originales
+```
+
+## Estados del lead
+
+`lead_nuevo` → `lead_en_conversacion` → `lead_interesado` → `lead_asignado` → `lead_contactado`
+→ `lead_inscrito` → `lead_matriculado`, más `lead_no_interesado` (no quiso asesor; no se borra)
+y `lead_perdido`.
+
+- El teléfono es único y el DNI también (cuando existe): **no hay leads duplicados**.
+- Al confirmar interés, el lead se asigna **por turnos**: los leads de **CePre** van a los asesores con
+  `CEPRE` en sus carreras; el resto rota entre los asesores generales (sin carreras exclusivas).
+- Cuando el lead pasa al asesor, la API responde `bot_atiende: false` y Genesys deja de responderle.
+
+---
+
+## 1. Instalación
+
+Requisitos: **Node.js 20 o superior**.
+
+```bash
+npm install
+```
+
+## 2. Configurar Supabase
+
+Proyecto: `https://itmwdnttrfbbehoipzzp.supabase.co`
+
+### 2.1 Crear la base de datos
+
+**Opción A — CLI** (recomendada; usa el pooler IPv4, la conexión directa de Supabase es solo IPv6):
+
+```bash
+npx supabase db push --db-url "postgresql://postgres.itmwdnttrfbbehoipzzp:CONTRASEÑA_BD@aws-0-us-west-2.pooler.supabase.com:5432/postgres"
+```
+
+**Opción B — SQL Editor**: `npm run db:bundle` genera `supabase/instalar_en_sql_editor.sql`;
+pégalo completo en *Supabase > SQL Editor* y ejecuta (solo en un proyecto vacío).
+
+Después de cambiar migraciones, regenera los tipos:
+
+```bash
+npx supabase gen types typescript --db-url "postgresql://...(igual que arriba)" --schema public > packages/db/src/database.types.ts
+cp packages/db/src/database.types.ts supabase/functions/_shared/database.types.ts
+```
+
+### 2.2 Asesores
+
+Ejecuta `supabase/seed.local.sql` en el SQL Editor (asesores reales; no está en git).
+Se pueden agregar más desde el panel: **Asesores y usuarios > Agregar asesor**.
+
+### 2.3 Usuarios del panel
+
+Se ingresa con **usuario** (`nombre.apellido`) y contraseña, sin correo.
+El administrador `cris` ya existe. Para los asesores: entra como admin →
+**Asesores y usuarios** → **Crear usuario** en cada fila (contraseña inicial: su DNI).
+Con la casilla *"Obligar a cambiar la contraseña"*, el asesor deberá crear una propia al primer ingreso.
+
+Recomendado en Supabase: *Authentication > Sign In / Providers* → desactivar **Allow new users to sign up**.
+
+## 3. Levantar el panel
+
+Crea `panel/.env.local` (ver `.env.example`; solo la **publishable key**, nunca la service_role):
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://itmwdnttrfbbehoipzzp.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+```
+
+```bash
+npm run dev          # desarrollo → http://localhost:3001
+```
+
+Producción: `npm run build -w panel` y luego `npm run start -w panel`.
+(El panel usa el puerto **3001** porque el 3000 suele estar ocupado.)
+
+### Qué ve cada rol
+
+| | Asesor | Administrador |
+|---|---|---|
+| Leads, ficha, notas, Kanban | Solo los suyos | Todos |
+| Cambiar estado / registrar lead | Sí (sus leads) | Sí |
+| Reasignar asesor | No | Sí |
+| Dashboard | Sus números | Todo, filtrable por asesor |
+| Asesores y usuarios | No | Sí |
+
+Los permisos los aplica la base de datos (RLS), no solo la pantalla.
+
+### Dashboard
+
+Total de leads, leads por estado, por carrera y por asesor, leads nuevos por día y el embudo de
+conversión (lead → interesado → contactado → matriculado). Filtros por fechas, convocatoria y asesor.
+Las cifras se calculan en la base (`resumen_dashboard`), así que son exactas con cualquier volumen.
+
+Para verlo con datos de prueba: ejecuta `supabase/demo/cargar_demo.sql` en el SQL Editor y, al terminar,
+`supabase/demo/borrar_demo.sql`. No lo hagas con asesores trabajando: verían leads falsos.
+
+## 4. Conectar el bot Genesys
+
+Guía completa: **[docs/fase2-conectar-genesys.md](docs/fase2-conectar-genesys.md)**. En resumen:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"   # token del bot
+npx supabase login
+npx supabase secrets set --project-ref itmwdnttrfbbehoipzzp GENESYS_BOT_TOKEN=... GENESYS_MODO=sombra
+npx supabase functions deploy genesys --no-verify-jwt --project-ref itmwdnttrfbbehoipzzp
+```
+
+1. **Modo sombra** (transición): el Apps Script sigue asignando y avisando; copia cada lead a Supabase
+   con el mismo asesor (`docs/apps-script/espejo_supabase.gs`). En BuilderBot se agrega `/registrar`
+   al inicio del flujo.
+2. **Modo activo**: `GENESYS_MODO=activo` + `BUILDERBOT_URL` y `BUILDERBOT_API_KEY`. BuilderBot envía su
+   webhook a `/genesys/webhook` (mismo JSON que el Apps Script); Supabase asigna, avisa al asesor por
+   WhatsApp y manda recordatorios diarios a las 8am.
+
+La **service_role key nunca sale de Supabase**: el bot usa un token propio y el panel la publishable key.
+
+---
+
+## Scripts
+
+| Comando | Qué hace |
+|---|---|
+| `npm run dev` | Panel en modo desarrollo (http://localhost:3001) |
+| `npm run build -w panel` | Compila el panel (verifica tipos) |
+| `npm run db:test` | Prueba migraciones, RLS, reparto y dashboard en un Postgres en memoria |
+| `npm run db:bundle` | Une las migraciones en un archivo para el SQL Editor |
+| `npm run fn:deploy` | Publica la Edge Function `genesys` (requiere `supabase login` y `link`) |
+| `npm run typecheck` | Revisa los tipos de todos los paquetes |
+
+## Solución de problemas
+
+- **"Usuario o contraseña incorrectos"**: el usuario va en minúsculas (`danna.lima`). El admin puede
+  restablecer la contraseña desde *Asesores y usuarios*.
+- **"Tu usuario no está vinculado a un asesor"**: la cuenta existe en Auth pero no en `asesores`;
+  crea las cuentas desde el panel, no desde Supabase Auth.
+- **`db push` no conecta (hostname resolving error)**: usa la URL del pooler (`aws-0-us-west-2.pooler.supabase.com`),
+  no `db.<proyecto>.supabase.co`.
+- **El puerto 3001 está ocupado**: cambia `-p 3001` en `panel/package.json`.
+- **Errores de la API del bot**: *Supabase > Edge Functions > genesys > Logs*.
+
+## Seguridad
+
+- `panel/.env.local`, `supabase/seed.local.sql` y cualquier `.env` están en `.gitignore`.
+- La publishable key es pública por diseño: sin sesión no permite leer nada (probado).
+- Cambia la contraseña de la base de datos si se compartió por algún medio.

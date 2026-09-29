@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  --color-marca-50: #eff6ff;
+  --color-marca-100: #dbeafe;
+  --color-marca-600: #1d4ed8;
+  --color-marca-700: #1e40af;
+  --color-marca-800: #1e3a8a;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+}
+
+/* Colores de los gráficos del dashboard (paleta validada: CVD y contraste).
+   Categórica en orden fijo; secuencial azul para magnitud y el embudo. */
+:root {
+  --serie-1: #2a78d6;
+  --serie-2: #eb6834;
+  --serie-3: #1baf7a;
+  --serie-4: #eda100;
+  --serie-5: #e87ba4;
+  --secuencial-250: #86b6ef;
+  --secuencial-400: #3987e5;
+  --secuencial-550: #1c5cab;
+  --secuencial-700: #0d366b;
+  --rejilla: #e2e8f0;
+}
+
+/* Campos de formulario del panel */
+@utility campo {
+  @apply block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-marca-600 focus:ring-2 focus:ring-marca-100 focus:outline-none disabled:bg-slate-100;
+}
+
+@utility boton {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg bg-marca-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-marca-700 disabled:cursor-not-allowed disabled:opacity-60;
+}
+
+@utility boton-secundario {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60;
+}
+
+@utility tarjeta {
+  @apply rounded-xl border border-slate-200 bg-white shadow-sm;
+}

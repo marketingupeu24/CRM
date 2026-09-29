@@ -1,0 +1,19 @@
+# Configuración de Supabase CLI (valores por defecto para desarrollo local)
+project_id = "crm-leads"
+
+[db]
+major_version = 17
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[auth]
+site_url = "http://localhost:3000"
+# Los asesores los crea el administrador: no se permite registro libre
+enable_signup = false
+
+# API de Genesys: BuilderBot Cloud no envía un JWT de Supabase,
+# la función se protege con su propio token (header x-genesys-token)
+[functions.genesys]
+verify_jwt = false
