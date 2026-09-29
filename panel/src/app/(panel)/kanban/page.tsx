@@ -65,7 +65,7 @@ export default async function PaginaKanban(props: PageProps<'/kanban'>) {
         <p className="text-xs text-amber-700">Se muestran los {LIMITE} leads movidos más recientemente. Usa los filtros para acotar.</p>
       )}
 
-      <TableroKanban leads={leads} estados={estados} mostrarAsesor={esAdmin} />
+      <TableroKanban leads={leads} estados={estados} mostrarAsesor={esAdmin} ahora={Date.now()} />
     </div>
   )
 }

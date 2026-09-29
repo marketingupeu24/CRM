@@ -15,10 +15,14 @@ export function fecha(valor: string | null | undefined): string {
     .format(new Date(valor))
 }
 
-/** "hace 3 días", "hace 2 h", "hace un momento" */
-export function haceCuanto(valor: string | null | undefined): string {
+/**
+ * "hace 3 días", "hace 2 h", "hace un momento".
+ * En componentes de cliente pasa `ahora` desde el servidor: así el HTML del servidor
+ * y el del navegador coinciden aunque los relojes difieran.
+ */
+export function haceCuanto(valor: string | null | undefined, ahora: number = Date.now()): string {
   if (!valor) return '—'
-  const minutos = Math.floor((Date.now() - Date.parse(valor)) / 60_000)
+  const minutos = Math.floor((ahora - Date.parse(valor)) / 60_000)
   if (minutos < 1) return 'hace un momento'
   if (minutos < 60) return `hace ${minutos} min`
   const horas = Math.floor(minutos / 60)

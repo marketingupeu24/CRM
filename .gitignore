@@ -22,3 +22,6 @@ supabase/instalar_en_sql_editor.sql
 
 # Generado por Next.js
 panel/next-env.d.ts
+
+.vercel
+.env*

@@ -21,7 +21,7 @@ export interface TarjetaLead {
   asesor: string | null
 }
 
-function Tarjeta({ lead, mostrarAsesor }: { lead: TarjetaLead; mostrarAsesor: boolean }) {
+function Tarjeta({ lead, mostrarAsesor, ahora }: { lead: TarjetaLead; mostrarAsesor: boolean; ahora: number }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: lead.id })
   const estilo = transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined
 
@@ -44,14 +44,14 @@ function Tarjeta({ lead, mostrarAsesor }: { lead: TarjetaLead; mostrarAsesor: bo
       </p>
       <div className="mt-2 flex justify-between gap-2 text-xs text-slate-400">
         <span className="truncate">{mostrarAsesor ? (lead.asesor ?? 'Sin asesor') : ''}</span>
-        <span className="whitespace-nowrap">{haceCuanto(lead.updated_at)}</span>
+        <span className="whitespace-nowrap">{haceCuanto(lead.updated_at, ahora)}</span>
       </div>
     </div>
   )
 }
 
 function Columna(
-  { estado, leads, mostrarAsesor }: { estado: LeadEstado; leads: TarjetaLead[]; mostrarAsesor: boolean },
+  { estado, leads, mostrarAsesor, ahora }: { estado: LeadEstado; leads: TarjetaLead[]; mostrarAsesor: boolean; ahora: number },
 ) {
   const { setNodeRef, isOver } = useDroppable({ id: estado })
   return (
@@ -66,14 +66,14 @@ function Columna(
         <span className="text-xs font-medium text-slate-500">{leads.length}</span>
       </div>
       <div className="flex min-h-24 flex-col gap-2 overflow-y-auto">
-        {leads.map((l) => <Tarjeta key={l.id} lead={l} mostrarAsesor={mostrarAsesor} />)}
+        {leads.map((l) => <Tarjeta key={l.id} lead={l} mostrarAsesor={mostrarAsesor} ahora={ahora} />)}
       </div>
     </div>
   )
 }
 
 export function TableroKanban(
-  { leads, estados, mostrarAsesor }: { leads: TarjetaLead[]; estados: readonly LeadEstado[]; mostrarAsesor: boolean },
+  { leads, estados, mostrarAsesor, ahora }: { leads: TarjetaLead[]; estados: readonly LeadEstado[]; mostrarAsesor: boolean; ahora: number },
 ) {
   const [error, setError] = useState<string | null>(null)
   const [, iniciar] = useTransition()
@@ -110,7 +110,7 @@ export function TableroKanban(
         <div className="flex gap-3 overflow-x-auto pb-4">
           {estados.map((estado) => (
             <Columna
-              key={estado} estado={estado} mostrarAsesor={mostrarAsesor}
+              key={estado} estado={estado} mostrarAsesor={mostrarAsesor} ahora={ahora}
               leads={optimistas.filter((l) => l.estado === estado)}
             />
           ))}
