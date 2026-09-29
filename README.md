@@ -108,6 +108,15 @@ npm run dev          # desarrollo → http://localhost:3001
 Producción: `npm run build -w panel` y luego `npm run start -w panel`.
 (El panel usa el puerto **3001** porque el 3000 suele estar ocupado.)
 
+### En producción (Vercel)
+
+Panel publicado en **https://crm-admision.vercel.app** (proyecto `crm-admision`).
+Configuración del proyecto en Vercel: *Root Directory* = `panel`, framework Next.js y las variables
+`NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (Production, Preview y Development).
+
+- Con el repositorio de GitHub conectado (*Settings > Git*), cada push a `main` se despliega solo.
+- Despliegue manual desde la raíz del repo: `npx vercel deploy --prod`.
+
 ### Qué ve cada rol
 
 | | Asesor | Administrador |
