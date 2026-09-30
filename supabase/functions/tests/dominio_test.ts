@@ -30,3 +30,18 @@ Deno.test('variables de BuilderBot sin resolver se descartan', () => {
   igual(elegir(undefined, '', '{Nombres}', 'Ana', 'Otro'), 'Ana')
   igual(elegir(null, undefined), null)
 })
+
+Deno.test('botAtiendeLead: pausa del bot', async () => {
+  const { botAtiendeLead, leadEnEtapaBot } = await import('../_shared/dominio.ts')
+  const ahora = Date.parse('2026-09-30T15:00:00Z')
+  igual(botAtiendeLead('lead_en_conversacion', null, ahora), true)
+  igual(botAtiendeLead('lead_asignado', null, ahora), false)            // espera a su asesor
+  igual(botAtiendeLead('lead_interesado', null, ahora), false)
+  igual(botAtiendeLead('lead_contactado', '2026-09-30T18:00:00Z', ahora), false) // pausa vigente
+  igual(botAtiendeLead('lead_contactado', '2026-09-30T14:00:00Z', ahora), true)  // pausa vencida
+  igual(botAtiendeLead('lead_atendido', null, ahora), true)
+  igual(botAtiendeLead('lead_matriculado', null, ahora), true)
+  igual(botAtiendeLead('lead_nuevo', '2026-09-30T18:00:00Z', ahora), false)      // admin conversando con un lead sin asesor
+  igual(leadEnEtapaBot('lead_matriculado'), false)
+  igual(leadEnEtapaBot('lead_en_conversacion'), true)
+})

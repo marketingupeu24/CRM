@@ -25,6 +25,8 @@ import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../_shared/database.types.ts'
 import {
   botAtiendeLead,
+  ESTADOS_AVISO_MENSAJE,
+  leadEnEtapaBot,
   elegir,
   type Fuente,
   FUENTES,
@@ -60,6 +62,9 @@ const supabase = createClient<Database>(
 const TOKEN = Deno.env.get('GENESYS_BOT_TOKEN') ?? ''
 const MODO: 'sombra' | 'activo' = Deno.env.get('GENESYS_MODO') === 'activo' ? 'activo' : 'sombra'
 const MAX_INTENTOS_NOTIFICACION = 3
+const PANEL_URL = (Deno.env.get('PANEL_URL') ?? 'https://crm-admision.vercel.app').replace(/\/+$/, '')
+// Aviso de mensaje nuevo al asesor: como máximo uno cada 10 minutos por lead
+const MINUTOS_ENTRE_AVISOS = 10
 
 // ---------------------------------------------------------------------
 // Utilidades
@@ -144,16 +149,51 @@ async function notificarAsesor(lead: Lead, telefonoAsesor: string, fuente: Fuent
   return envio.ok
 }
 
+/**
+ * El lead escribió: avisa a su asesor por WhatsApp con el mensaje y el enlace al chat del CRM.
+ * Se "reserva" el aviso en la base antes de enviarlo, así dos mensajes seguidos no generan dos avisos.
+ */
+async function avisarMensajeNuevo(lead: Lead, mensaje: string) {
+  if (!lead.asesor_id) return
+  const avisar = (ESTADOS_AVISO_MENSAJE as readonly string[]).includes(lead.estado) ||
+    (!!lead.bot_pausado_hasta && Date.parse(lead.bot_pausado_hasta) > Date.now())
+  if (!avisar) return
+
+  const limite = new Date(Date.now() - MINUTOS_ENTRE_AVISOS * 60_000).toISOString()
+  const { data: reservado } = await supabase.from('leads')
+    .update({ ultimo_aviso_mensaje_at: new Date().toISOString() })
+    .eq('id', lead.id)
+    .or(`ultimo_aviso_mensaje_at.is.null,ultimo_aviso_mensaje_at.lt.${limite}`)
+    .select('id')
+  if (!reservado?.length) return
+
+  const { data: asesor } = await supabase.from('asesores').select('telefono').eq('id', lead.asesor_id).single()
+  if (!asesor?.telefono) return
+  const texto = [
+    `💬 *Nuevo mensaje de ${lead.nombre ?? lead.telefono}*`,
+    '',
+    mensaje.length > 300 ? mensaje.slice(0, 300) + '…' : mensaje,
+    '',
+    `Responde desde el CRM: ${PANEL_URL}/leads/${lead.id}#chat`,
+  ].join('\n')
+  const envio = await enviarWhatsApp(asesor.telefono, texto)
+  if (!envio.ok) console.error('[genesys] No se pudo avisar el mensaje nuevo al asesor:', envio.error)
+}
+
 // ---------------------------------------------------------------------
 // Acciones
 // ---------------------------------------------------------------------
 
-/** Todo el que escribe es un lead. Si ya tiene asesor, bot_atiende=false: Genesys no debe responder. */
+/**
+ * Todo el que escribe es un lead. Se guarda cada mensaje en su conversación.
+ * bot_atiende=false: Genesys no debe responder (espera a su asesor o el asesor está conversando).
+ */
 async function registrar(cuerpo: Cuerpo): Promise<Respuesta> {
   const telefono = telefonoDe(cuerpo)
+  const mensaje = valorResuelto(cuerpo.mensaje)
   const { data, error } = await supabase.rpc('registrar_lead', {
     p_telefono: telefono,
-    p_mensaje: valorResuelto(cuerpo.mensaje) ?? undefined,
+    p_mensaje: mensaje ?? undefined,
   })
   if (error) throw error
 
@@ -164,13 +204,16 @@ async function registrar(cuerpo: Cuerpo): Promise<Respuesta> {
     if (actualizado.error) throw actualizado.error
     lead = actualizado.data
   }
+  if (mensaje) EdgeRuntime.waitUntil(avisarMensajeNuevo(lead, mensaje))
+
   return {
     ok: true,
     lead_id: lead.id,
     es_nuevo: lead.total_mensajes <= 1,
     estado: lead.estado,
     nombre: lead.nombre ?? '',
-    bot_atiende: botAtiendeLead(lead.estado),
+    bot_atiende: botAtiendeLead(lead.estado, lead.bot_pausado_hasta),
+    bot_pausado_hasta: lead.bot_pausado_hasta ?? '',
   }
 }
 
@@ -284,7 +327,7 @@ async function noInteresado(cuerpo: Cuerpo): Promise<Respuesta> {
   let lead = await buscarLead(telefono)
 
   // Un lead que ya pasó a un asesor no vuelve atrás por un mensaje al bot
-  if (botAtiendeLead(lead.estado)) {
+  if (leadEnEtapaBot(lead.estado)) {
     const { data, error } = await supabase.from('leads').update({
       estado: 'lead_no_interesado',
       motivo_no_interes: valorResuelto(cuerpo.motivo) ?? 'No quiso contacto de asesor',

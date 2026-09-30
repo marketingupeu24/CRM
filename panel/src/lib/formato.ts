@@ -39,6 +39,7 @@ export const COLOR_ESTADO: Record<LeadEstado, string> = {
   lead_interesado: 'bg-amber-50 text-amber-700 ring-amber-200',
   lead_asignado: 'bg-orange-50 text-orange-700 ring-orange-200',
   lead_contactado: 'bg-blue-50 text-blue-700 ring-blue-200',
+  lead_atendido: 'bg-teal-50 text-teal-700 ring-teal-200',
   lead_inscrito: 'bg-violet-50 text-violet-700 ring-violet-200',
   lead_matriculado: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
   lead_perdido: 'bg-rose-50 text-rose-700 ring-rose-200',

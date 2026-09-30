@@ -140,3 +140,14 @@ export async function registrarLeadManual(_previo: ResultadoRegistro, formData: 
   refrescar()
   redirect(`/leads/${r.lead_id}`)
 }
+
+/** Pausa a Genesys 5 horas para este lead (el asesor conversa con él) o lo reactiva. */
+export async function pausarBot(leadId: string, pausar: boolean): Promise<Resultado> {
+  const supabase = await crearClienteServidor()
+  const hasta = pausar ? new Date(Date.now() + 5 * 3_600_000).toISOString() : null
+  const { data, error } = await supabase.from('leads').update({ bot_pausado_hasta: hasta }).eq('id', leadId).select('id')
+  if (error) return { error: mensajeError(error) }
+  if (!data.length) return { error: 'No tienes permiso para modificar este lead.' }
+  refrescar(leadId)
+  return { ok: true }
+}

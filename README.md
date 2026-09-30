@@ -137,6 +137,12 @@ queda en el historial. La página **Chats** es la bandeja: primero las conversac
 Se actualiza en vivo (Supabase Realtime).
 
 - El primer mensaje del asesor a un lead *Asignado* lo pasa a *Contactado*.
+- **Pausa del bot**: Genesys no responde al lead durante **5 horas** desde que pasa a *Contactado* o desde el
+  último mensaje del asesor (cada mensaje renueva la pausa). La barra del chat muestra hasta qué hora y permite
+  *Pausar bot 5 h* o *Reactivar bot*. Mientras el lead está *Interesado* o *Asignado* (esperando a su asesor) el bot no responde.
+- Botones **✓ Atendido** (estado nuevo: consulta resuelta) y **🎓 Matriculado**: devuelven el lead al bot.
+- **Aviso de mensaje nuevo**: cuando un lead con asesor escribe, el asesor recibe un WhatsApp con el mensaje y el
+  enlace al chat del CRM (máximo uno cada 10 minutos por lead).
 - Límite de 20 mensajes por minuto por asesor, para cuidar el número (WhatsApp Business por QR).
 - Para ver las respuestas del postulante, BuilderBot debe llamar a `/genesys/registrar` con **cada mensaje entrante**
   (ver [docs/fase2-conectar-genesys.md](docs/fase2-conectar-genesys.md), sección 5).

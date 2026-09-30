@@ -21,11 +21,11 @@ interface Props {
   inicial: MensajeChat[]
   miNombre: string
   nombresAutores: Record<string, string>
-  /** El lead aún no tiene asesor: Genesys también le responde */
-  botAtiende: boolean
+  /** Barra con el estado del bot y los botones Atendido / Matriculado */
+  encabezado?: React.ReactNode
 }
 
-export function Conversacion({ leadId, telefono, inicial, miNombre, nombresAutores, botAtiende }: Props) {
+export function Conversacion({ leadId, telefono, inicial, miNombre, nombresAutores, encabezado }: Props) {
   const [mensajes, setMensajes] = useState<MensajeChat[]>(inicial)
   const [texto, setTexto] = useState('')
   const [enviando, setEnviando] = useState(false)
@@ -94,11 +94,7 @@ export function Conversacion({ leadId, telefono, inicial, miNombre, nombresAutor
         </span>
       </div>
 
-      {botAtiende && (
-        <p className="border-b border-amber-200 bg-amber-50 px-5 py-2 text-xs text-amber-800">
-          Este lead aún no tiene asesor: Genesys también le está respondiendo. Asígnalo antes de escribirle para no cruzar mensajes.
-        </p>
-      )}
+      {encabezado}
       <div ref={fondo} className="h-[28rem] space-y-2 overflow-y-auto bg-[#efeae2] px-4 py-4">
         {mensajes.length === 0 && (
           <p className="mt-24 text-center text-sm text-slate-500">

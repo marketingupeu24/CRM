@@ -24,23 +24,19 @@ export const ETIQUETAS_ESTADO: Record<LeadEstado, string> = {
   lead_interesado: 'Interesado',
   lead_asignado: 'Asignado',
   lead_contactado: 'Contactado',
+  lead_atendido: 'Atendido',
   lead_inscrito: 'Inscrito',
   lead_matriculado: 'Matriculado',
   lead_perdido: 'Perdido',
 }
 
-/**
- * Estados en los que el bot Genesys todavía atiende al lead (igual que en _shared/dominio.ts).
- * En cualquier otro estado el lead ya pasó a un asesor y el bot no le responde.
- */
-export const ESTADOS_ATENDIDOS_POR_BOT: readonly LeadEstado[] = [
-  'lead_nuevo',
-  'lead_en_conversacion',
-  'lead_no_interesado',
-]
+/** Esperando o recién asignado a su asesor: Genesys no le responde (igual que en _shared/dominio.ts). */
+export const ESTADOS_SIN_BOT: readonly LeadEstado[] = ['lead_interesado', 'lead_asignado']
 
-export function botAtiendeLead(estado: LeadEstado): boolean {
-  return ESTADOS_ATENDIDOS_POR_BOT.includes(estado)
+/** ¿Genesys responde ahora a este lead? No, si espera a su asesor o si el bot está en pausa. */
+export function botAtiendeLead(estado: LeadEstado, botPausadoHasta?: string | null, ahora = Date.now()): boolean {
+  if (ESTADOS_SIN_BOT.includes(estado)) return false
+  return !botPausadoHasta || Date.parse(botPausadoHasta) <= ahora
 }
 
 export const FUENTES = ['whatsapp_genesys', 'manual', 'google_form', 'web'] as const

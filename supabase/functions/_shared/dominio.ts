@@ -3,12 +3,28 @@
 //  Mismas reglas de normalización que el Apps Script de admisión.
 // =====================================================================
 
-/** Estados en los que Genesys todavía atiende al lead. En los demás, el lead ya es del asesor. */
-export const ESTADOS_ATENDIDOS_POR_BOT = ['lead_nuevo', 'lead_en_conversacion', 'lead_no_interesado'] as const
+/** Etapas previas al asesor: el lead todavía está con Genesys (sirve para no retroceder estados). */
+export const ESTADOS_ETAPA_BOT = ['lead_nuevo', 'lead_en_conversacion', 'lead_no_interesado'] as const
 
-export function botAtiendeLead(estado: string): boolean {
-  return (ESTADOS_ATENDIDOS_POR_BOT as readonly string[]).includes(estado)
+export function leadEnEtapaBot(estado: string): boolean {
+  return (ESTADOS_ETAPA_BOT as readonly string[]).includes(estado)
 }
+
+/** Esperando o recién asignado a su asesor: Genesys no le responde. */
+export const ESTADOS_SIN_BOT = ['lead_interesado', 'lead_asignado'] as const
+
+/**
+ * ¿Genesys debe responder ahora a este lead?
+ * No, si espera a su asesor o si el bot está en pausa (el asesor conversa con él: 5 h
+ * desde su último mensaje o desde que pasó a contactado).
+ */
+export function botAtiendeLead(estado: string, botPausadoHasta?: string | null, ahora = Date.now()): boolean {
+  if ((ESTADOS_SIN_BOT as readonly string[]).includes(estado)) return false
+  return !botPausadoHasta || Date.parse(botPausadoHasta) <= ahora
+}
+
+/** Estados en los que se avisa al asesor cuando el lead le escribe. */
+export const ESTADOS_AVISO_MENSAJE = ['lead_asignado', 'lead_contactado', 'lead_inscrito'] as const
 
 export const FUENTES = ['whatsapp_genesys', 'manual', 'google_form', 'web'] as const
 export type Fuente = (typeof FUENTES)[number]

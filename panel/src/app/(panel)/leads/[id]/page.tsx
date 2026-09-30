@@ -9,6 +9,7 @@ import { crearClienteServidor } from '@/lib/supabase/server'
 import { BotonEliminarNota, EditarDatos, FormularioNota, ReasignarAsesor, SelectorEstado } from './Acciones'
 import { esDelChat } from '@/lib/chat'
 import { Conversacion, type MensajeChat } from './Conversacion'
+import { ControlesChat } from './ControlesChat'
 
 export const metadata: Metadata = { title: 'Ficha del lead' }
 
@@ -32,7 +33,7 @@ const NOTIFICACION: Record<string, string> = {
 function textoCambioEstado(contenido: string | null): string {
   const etiquetas: Record<string, string> = {
     lead_nuevo: 'Nuevo', lead_en_conversacion: 'En conversación', lead_no_interesado: 'No interesado',
-    lead_interesado: 'Interesado', lead_asignado: 'Asignado', lead_contactado: 'Contactado',
+    lead_interesado: 'Interesado', lead_asignado: 'Asignado', lead_contactado: 'Contactado', lead_atendido: 'Atendido',
     lead_inscrito: 'Inscrito', lead_matriculado: 'Matriculado', lead_perdido: 'Perdido',
   }
   return (contenido ?? '').split(' -> ').map((e) => etiquetas[e] ?? e).join(' → ')
@@ -95,7 +96,13 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
         <div className="space-y-6 lg:col-span-2">
           <Conversacion
             leadId={lead.id} telefono={lead.telefono} inicial={chat}
-            miNombre={perfil.nombre} nombresAutores={nombresAutores} botAtiende={!lead.asesor_id}
+            miNombre={perfil.nombre} nombresAutores={nombresAutores}
+            encabezado={
+              <ControlesChat
+                leadId={lead.id} estado={lead.estado} botPausadoHasta={lead.bot_pausado_hasta}
+                tieneAsesor={!!lead.asesor_id} ahora={Date.now()}
+              />
+            }
           />
 
           <section className="tarjeta p-6">
