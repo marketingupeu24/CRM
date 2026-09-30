@@ -32,7 +32,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
 
   let consulta = supabase
     .from('leads')
-    .select('id, nombre, telefono, dni, carrera_interes, modalidad, programa, convocatoria, estado, origen, created_at, ultimo_contacto, asesor:asesores!leads_asesor_id_fkey(nombre)', { count: 'exact' })
+    .select('id, nombre, telefono, dni, carrera_interes, modalidad, programa, convocatoria, estado, origen, created_at, ultimo_contacto, sin_responder, asesor:asesores!leads_asesor_id_fkey(nombre)', { count: 'exact' })
 
   if (filtros.q) {
     // Quita caracteres que alteran la sintaxis del filtro de PostgREST
@@ -137,6 +137,9 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
                   <Link href={`/leads/${l.id}`} className="font-medium text-marca-700 hover:underline">
                     {l.nombre ?? 'Sin nombre'}
                   </Link>
+                  {l.sin_responder && (
+                    <Link href={`/leads/${l.id}#chat`} className="ml-2 rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700">✉ Sin responder</Link>
+                  )}
                   <p className="text-xs text-slate-500">
                     {l.telefono}{l.dni ? ` · DNI ${l.dni}` : ''}
                   </p>

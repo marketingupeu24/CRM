@@ -10,10 +10,11 @@ interface Enlace {
   icono: string
 }
 
-export function Navegacion({ esAdmin }: { esAdmin: boolean }) {
+export function Navegacion({ esAdmin, sinResponder = 0 }: { esAdmin: boolean; sinResponder?: number }) {
   const ruta = usePathname()
   const enlaces: Enlace[] = [
     { href: '/dashboard', texto: 'Dashboard', icono: '◔' },
+    { href: '/chats', texto: 'Chats', icono: '✉' },
     { href: '/leads', texto: 'Leads', icono: '☰' },
     { href: '/kanban', texto: 'Kanban', icono: '▦' },
     { href: '/leads/nuevo', texto: 'Registrar lead', icono: '+' },
@@ -38,6 +39,9 @@ export function Navegacion({ esAdmin }: { esAdmin: boolean }) {
         >
           <span aria-hidden className="w-4 text-center">{e.icono}</span>
           {e.texto}
+          {e.href === '/chats' && sinResponder > 0 && (
+            <span className="ml-auto rounded-full bg-rose-500 px-1.5 text-xs font-semibold text-white">{sinResponder}</span>
+          )}
         </Link>
       ))}
     </nav>

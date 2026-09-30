@@ -7,12 +7,15 @@ import { fechaHora, haceCuanto } from '@/lib/formato'
 import { obtenerSesion } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { BotonEliminarNota, EditarDatos, FormularioNota, ReasignarAsesor, SelectorEstado } from './Acciones'
+import { esDelChat } from '@/lib/chat'
+import { Conversacion, type MensajeChat } from './Conversacion'
 
 export const metadata: Metadata = { title: 'Ficha del lead' }
 
 const TIPO_INTERACCION: Record<InteraccionTipo, { etiqueta: string; estilo: string }> = {
   mensaje_lead: { etiqueta: 'Mensaje del lead', estilo: 'bg-sky-100 text-sky-700' },
   respuesta_bot: { etiqueta: 'Respuesta de Genesys', estilo: 'bg-slate-100 text-slate-600' },
+  mensaje_asesor: { etiqueta: 'Mensaje del asesor', estilo: 'bg-green-100 text-green-700' },
   cambio_estado: { etiqueta: 'Cambio de estado', estilo: 'bg-amber-100 text-amber-700' },
   nota_asesor: { etiqueta: 'Nota', estilo: 'bg-emerald-100 text-emerald-700' },
   sistema: { etiqueta: 'Sistema', estilo: 'bg-zinc-100 text-zinc-600' },
@@ -22,7 +25,7 @@ const NOTIFICACION: Record<string, string> = {
   pendiente: 'Aviso al asesor pendiente',
   notificado: 'Asesor avisado por WhatsApp',
   error: 'Error al avisar al asesor',
-  omitida: 'Aviso enviado por el Apps Script / no requerido',
+  omitida: 'Sin aviso automático (registro manual o asesor elegido a mano)',
 }
 
 /** "lead_nuevo -> lead_en_conversacion" en palabras */
@@ -53,6 +56,14 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
   ])
   if (!lead) notFound()
 
+  // El chat muestra la conversación de WhatsApp (en orden); el resto va a "Actividad"
+  const chat: MensajeChat[] = (historial ?? []).filter(esDelChat).reverse()
+    .map(({ autor, ...m }) => ({ ...m, autor_nombre: autor?.nombre ?? null }))
+  const actividad = (historial ?? []).filter((h) => !esDelChat(h))
+  const nombresAutores = Object.fromEntries(
+    (historial ?? []).filter((h) => h.autor_id && h.autor?.nombre).map((h) => [h.autor_id!, h.autor!.nombre]),
+  )
+
   const datos: [string, React.ReactNode][] = [
     ['Celular', <a key="tel" href={`https://wa.me/${lead.telefono}`} target="_blank" rel="noreferrer" className="text-marca-700 hover:underline">{lead.telefono} ↗</a>],
     ['DNI', lead.dni],
@@ -82,6 +93,11 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
+          <Conversacion
+            leadId={lead.id} telefono={lead.telefono} inicial={chat}
+            miNombre={perfil.nombre} nombresAutores={nombresAutores} botAtiende={!lead.asesor_id}
+          />
+
           <section className="tarjeta p-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-semibold">Datos del lead</h2>
@@ -98,9 +114,9 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
           </section>
 
           <section className="tarjeta p-6">
-            <h2 className="mb-4 font-semibold">Historial</h2>
+            <h2 className="mb-4 font-semibold">Actividad</h2>
             <ol className="space-y-4">
-              {(historial ?? []).map((h) => {
+              {actividad.map((h) => {
                 const tipo = TIPO_INTERACCION[h.tipo]
                 const esMiNota = h.tipo === 'nota_asesor' && (h.autor_id === perfil.id || esAdmin)
                 return (
@@ -120,7 +136,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
                   </li>
                 )
               })}
-              {!historial?.length && <p className="text-sm text-slate-500">Sin interacciones todavía.</p>}
+              {!actividad.length && <p className="text-sm text-slate-500">Sin actividad todavía.</p>}
             </ol>
           </section>
         </div>

@@ -129,6 +129,19 @@ Configuración del proyecto en Vercel: *Root Directory* = `panel`, framework Nex
 
 Los permisos los aplica la base de datos (RLS), no solo la pantalla.
 
+### Chat de WhatsApp
+
+En la ficha de cada lead hay un chat: el asesor lee lo que escribió el postulante y le responde desde el CRM.
+Los mensajes salen por el **número de Genesys** (API de BuilderBot), firmados con el nombre del asesor, y todo
+queda en el historial. La página **Chats** es la bandeja: primero las conversaciones **sin responder** (con contador en el menú).
+Se actualiza en vivo (Supabase Realtime).
+
+- El primer mensaje del asesor a un lead *Asignado* lo pasa a *Contactado*.
+- Límite de 20 mensajes por minuto por asesor, para cuidar el número (WhatsApp Business por QR).
+- Para ver las respuestas del postulante, BuilderBot debe llamar a `/genesys/registrar` con **cada mensaje entrante**
+  (ver [docs/fase2-conectar-genesys.md](docs/fase2-conectar-genesys.md), sección 5).
+- Envío: Edge Function `chat` (valida la sesión del usuario y el RLS; la API key de BuilderBot nunca llega al panel).
+
 ### Dashboard
 
 Total de leads, leads por estado, por carrera y por asesor, leads nuevos por día y el embudo de

@@ -17,3 +17,7 @@ enable_signup = false
 # la función se protege con su propio token (header x-genesys-token)
 [functions.genesys]
 verify_jwt = false
+
+# Chat del CRM: la sesión del usuario se valida dentro de la función (auth.getUser)
+[functions.chat]
+verify_jwt = false

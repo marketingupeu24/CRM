@@ -176,3 +176,21 @@ Limpia la prueba: `delete from leads where dni = '70000001';`
 - **Rotación**: el resto va por turnos entre los asesores generales (`carreras` vacío).
 - **DNI de relleno** (`S/D-FORM-…`, `S/D-WEB-…`) no se guarda como DNI.
 - **Celular de 9 dígitos** (`951…`) se guarda como `51951…`.
+
+---
+
+## 5. Chat del CRM: que las respuestas del postulante lleguen al panel
+
+El asesor responde desde la ficha del lead y el mensaje sale por el número de Genesys. Para que el CRM
+muestre lo que el postulante contesta, BuilderBot debe enviar **cada mensaje entrante** a Supabase:
+
+| Campo | Valor |
+|---|---|
+| Dónde | Al **inicio del flujo principal** (el que se activa con cualquier mensaje) |
+| Método | POST |
+| URL | `https://itmwdnttrfbbehoipzzp.supabase.co/functions/v1/genesys/registrar` |
+| Headers | `Content-Type: application/json` y `x-genesys-token: TU_TOKEN` |
+| Body | `telefono` = `{from}` y `mensaje` = la variable de BuilderBot con el texto del mensaje |
+| Rules | Si `bot_atiende` es `false` → enviar a un flow que **no responda** (el lead ya lo atiende su asesor) |
+
+Con esa regla, cuando el asesor conversa con el lead desde el CRM, Genesys no se mete en la conversación.

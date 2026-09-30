@@ -32,6 +32,7 @@ import {
   normalizarTelefono,
   valorResuelto,
 } from '../_shared/dominio.ts'
+import { enviarWhatsApp, problemasBuilderBot } from '../_shared/builderbot.ts'
 
 // Runtime de Supabase Edge Functions: mantiene viva una tarea después de responder
 declare const EdgeRuntime: { waitUntil(promesa: Promise<unknown>): void }
@@ -58,8 +59,6 @@ const supabase = createClient<Database>(
 
 const TOKEN = Deno.env.get('GENESYS_BOT_TOKEN') ?? ''
 const MODO: 'sombra' | 'activo' = Deno.env.get('GENESYS_MODO') === 'activo' ? 'activo' : 'sombra'
-const BUILDERBOT_URL = limpiarCredencial(Deno.env.get('BUILDERBOT_URL'))
-const BUILDERBOT_API_KEY = limpiarCredencial(Deno.env.get('BUILDERBOT_API_KEY'))
 const MAX_INTENTOS_NOTIFICACION = 3
 
 // ---------------------------------------------------------------------
@@ -76,11 +75,6 @@ class ErrorApi extends Error {
   constructor(public codigo: string, mensaje: string, public status = 200) {
     super(mensaje)
   }
-}
-
-/** Quita comillas y caracteres invisibles que suelen colarse al pegar claves. */
-function limpiarCredencial(valor: string | undefined): string {
-  return (valor ?? '').replace(/[​-‍﻿]/g, '').replace(/^["']+|["']+$/g, '').trim()
 }
 
 /** Comparación en tiempo constante para no filtrar el token por tiempos de respuesta. */
@@ -106,25 +100,6 @@ async function buscarLead(telefono: string): Promise<Lead> {
 
 async function registrarEvento(leadId: string, contenido: string) {
   await supabase.from('lead_interacciones').insert({ lead_id: leadId, tipo: 'sistema', contenido })
-}
-
-/** Envía un WhatsApp con la API de BuilderBot Cloud (igual que enviarWhatsApp del Apps Script). */
-async function enviarWhatsApp(numero: string, texto: string): Promise<{ ok: boolean; error?: string }> {
-  if (!BUILDERBOT_URL || !BUILDERBOT_API_KEY) {
-    return { ok: false, error: 'Faltan los secretos BUILDERBOT_URL o BUILDERBOT_API_KEY' }
-  }
-  try {
-    const res = await fetch(BUILDERBOT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-builderbot': BUILDERBOT_API_KEY },
-      body: JSON.stringify({ messages: { content: texto }, number: numero, checkIfExists: false }),
-      signal: AbortSignal.timeout(45_000),
-    })
-    if (res.ok) return { ok: true }
-    return { ok: false, error: `HTTP ${res.status}: ${(await res.text()).slice(0, 300)}` }
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) }
-  }
 }
 
 const ENCABEZADO_POR_FUENTE: Record<Fuente, string> = {
@@ -275,6 +250,13 @@ async function webhook(cuerpo: Cuerpo): Promise<Respuesta> {
     }
   }
 
+  // Lo que el lead respondió a Genesys queda visible en la conversación del CRM
+  const datosBot = [
+    ['Nombre', nombre], ['DNI', dni], ['Carrera', carrera], ['Modalidad', modalidad],
+    ['Consulta', consulta], ['Convocatoria', convocatoria],
+  ].filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`).join('\n')
+  await registrarEvento(r.lead_id, `Datos entregados a Genesys:\n${datosBot}`)
+
   let notificacion = r.asesor_id ? 'omitida' : ''
   if (r.notificar && r.asesor_telefono) {
     const { data: lead } = await supabase.from('leads').select('*').eq('id', r.lead_id).single()
@@ -402,11 +384,7 @@ async function recordatorios(): Promise<Respuesta> {
 
 /** Diagnóstico sin exponer secretos (equivale a doGet ?v=bot + diagnosticarConfigBuilderBot). */
 function ping(): Respuesta {
-  const problemas: string[] = []
-  if (!BUILDERBOT_URL) problemas.push('Falta BUILDERBOT_URL.')
-  else if (!BUILDERBOT_URL.includes('/messages')) problemas.push('BUILDERBOT_URL no parece ser el endpoint /messages.')
-  if (!BUILDERBOT_API_KEY) problemas.push('Falta BUILDERBOT_API_KEY.')
-  else if (!BUILDERBOT_API_KEY.startsWith('bb-')) problemas.push('BUILDERBOT_API_KEY no empieza con bb-.')
+  const problemas = problemasBuilderBot()
   return {
     ok: true,
     mensaje: 'API de Genesys activa. Lista para recibir datos del bot.',

@@ -12,7 +12,7 @@
     "db:types": "supabase gen types typescript --linked --schema public > packages/db/src/database.types.ts && node -e \"require('fs').copyFileSync('packages/db/src/database.types.ts','supabase/functions/_shared/database.types.ts')\"",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "db:test": "node supabase/tests/probar_migraciones.mjs",
-    "fn:deploy": "supabase functions deploy genesys --no-verify-jwt --use-api --project-ref itmwdnttrfbbehoipzzp",
+    "fn:deploy": "supabase functions deploy genesys chat --no-verify-jwt --use-api --project-ref itmwdnttrfbbehoipzzp",
     "db:bundle": "node supabase/tests/empaquetar_sql_editor.mjs",
     "dev": "npm run dev -w panel"
   },
