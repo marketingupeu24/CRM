@@ -83,7 +83,13 @@ Deno.serve(async (req) => {
 
   // 5. Envío por WhatsApp, firmado con el nombre del asesor
   const primerNombre = yo.nombre.split(' ')[0]
-  const envio = await enviarWhatsApp(lead.telefono, `*${primerNombre}:* ${texto}`)
+  // BuilderBot a veces responde 500 de forma pasajera: hasta 2 reintentos rápidos
+  const contenido = `*${primerNombre}:* ${texto}`
+  let envio = await enviarWhatsApp(lead.telefono, contenido)
+  for (let intento = 1; !envio.ok && intento <= 2; intento++) {
+    await new Promise((r) => setTimeout(r, intento * 2_000))
+    envio = await enviarWhatsApp(lead.telefono, contenido)
+  }
 
   const { data: mensaje, error } = await admin.from('lead_interacciones').insert({
     lead_id: lead.id,
@@ -103,7 +109,12 @@ Deno.serve(async (req) => {
 
   if (!envio.ok) {
     console.error('[chat] Error enviando WhatsApp:', envio.error)
-    return responder({ ok: false, error: 'WhatsApp no aceptó el mensaje. Intenta de nuevo.', mensaje }, 502)
+    const detalle = /HTTP 5\d\d/.test(envio.error ?? '')
+      ? 'BuilderBot no pudo enviar el mensaje (error del servicio de WhatsApp). Revisa que el bot esté conectado en BuilderBot e intenta de nuevo.'
+      : /HTTP 4\d\d/.test(envio.error ?? '')
+      ? 'BuilderBot rechazó el mensaje. Revisa la API key y el número del lead.'
+      : 'No hubo respuesta de BuilderBot a tiempo. Intenta de nuevo.'
+    return responder({ ok: false, error: detalle, detalle_tecnico: envio.error, mensaje }, 502)
   }
   return responder({ ok: true, mensaje })
 })
