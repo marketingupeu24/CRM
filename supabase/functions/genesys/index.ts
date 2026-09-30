@@ -44,7 +44,8 @@ type Cuerpo = Record<string, unknown>
 type Respuesta = Record<string, unknown>
 
 interface ResultadoProcesar {
-  status: 'success' | 'duplicate'
+  status: 'success' | 'updated' | 'duplicate'
+  reasignado?: boolean
   lead_id: string
   estado: string
   asesor_id: string | null
@@ -114,15 +115,21 @@ const ENCABEZADO_POR_FUENTE: Record<Fuente, string> = {
   manual: '*REGISTRO MANUAL*',
 }
 
-function mensajeNuevoLead(lead: Lead, fuente: Fuente, reenvio = false): string {
-  const interes = lead.modalidad ?? lead.carrera_interes ?? lead.resumen ?? 'Consulta general'
+type TipoAviso = 'nuevo' | 'reenvio' | 'reconsulta'
+
+function mensajeNuevoLead(lead: Lead, fuente: Fuente, tipo: TipoAviso = 'nuevo'): string {
+  const interes = lead.modalidad ?? lead.carrera_interes ?? 'Consulta general'
+  const encabezado = tipo === 'reenvio' ? '*REENVÍO PENDIENTE*'
+    : tipo === 'reconsulta' ? '*🔁 VOLVIÓ A CONSULTAR*'
+    : ENCABEZADO_POR_FUENTE[fuente]
   return [
-    reenvio ? '*REENVÍO PENDIENTE*' : ENCABEZADO_POR_FUENTE[fuente],
+    encabezado,
     lead.convocatoria ? `*Convocatoria:* ${lead.convocatoria}` : null,
     '',
     `*Nombre:* ${lead.nombre ?? 'Sin nombre'}`,
     `*DNI:* ${lead.dni ?? 'Sin DNI'}`,
     `*Interés:* ${interes}`,
+    lead.resumen ? `*Consulta:* ${lead.resumen}` : null,
     `*Celular:* ${lead.telefono}`,
     `*WhatsApp:* https://wa.me/${lead.telefono}`,
   ].filter((linea) => linea !== null).join('\n')
@@ -132,8 +139,8 @@ function mensajeNuevoLead(lead: Lead, fuente: Fuente, reenvio = false): string {
  * Notifica al asesor y guarda el resultado (intentos, error) en el lead.
  * La API de BuilderBot a veces tarda: se reintenta hasta 3 veces con espera creciente.
  */
-async function notificarAsesor(lead: Lead, telefonoAsesor: string, fuente: Fuente, reenvio = false) {
-  const texto = mensajeNuevoLead(lead, fuente, reenvio)
+async function notificarAsesor(lead: Lead, telefonoAsesor: string, fuente: Fuente, tipo: TipoAviso = 'nuevo') {
+  const texto = mensajeNuevoLead(lead, fuente, tipo)
   let envio = await enviarWhatsApp(telefonoAsesor, texto)
   for (let intento = 1; !envio.ok && intento < 3; intento++) {
     await new Promise((r) => setTimeout(r, intento * 5_000))
@@ -305,8 +312,21 @@ async function webhook(cuerpo: Cuerpo): Promise<Respuesta> {
     const { data: lead } = await supabase.from('leads').select('*').eq('id', r.lead_id).single()
     if (lead) {
       // Se responde a BuilderBot de inmediato (espera máx. 30 s) y el WhatsApp sale en segundo plano
-      EdgeRuntime.waitUntil(notificarAsesor(lead, r.asesor_telefono, fuente))
+      const tipo: TipoAviso = r.status === 'updated' && !r.reasignado ? 'reconsulta' : 'nuevo'
+      EdgeRuntime.waitUntil(notificarAsesor(lead, r.asesor_telefono, fuente, tipo))
       notificacion = 'en_proceso'
+    }
+  }
+
+  if (r.status === 'updated') {
+    return {
+      status: 'updated', accion: 'actualizado', registrado: true, duplicado: false,
+      mensaje: r.asesor_nombre ?? '', telefono_asesor: r.asesor_telefono ?? '',
+      lead_id: r.lead_id, notificacion_asesor: notificacion, bot_atiende: botAtiendeLead(r.estado), modo: MODO,
+      enviar_mensaje_cliente: true,
+      mensaje_cliente: r.asesor_nombre
+        ? `Recibimos tu nueva consulta. ${r.asesor_nombre} te escribirá pronto.`
+        : 'Recibimos tu nueva consulta. Un asesor se comunicará contigo pronto.',
     }
   }
 
@@ -377,7 +397,7 @@ async function recordatorios(): Promise<Respuesta> {
   for (const lead of pendientes.data) {
     if (!lead.asesor?.telefono) continue
     const fuente = (FUENTES as readonly string[]).includes(lead.origen) ? (lead.origen as Fuente) : 'whatsapp_genesys'
-    if (await notificarAsesor(lead, lead.asesor.telefono, fuente, true)) reenviadas++
+    if (await notificarAsesor(lead, lead.asesor.telefono, fuente, 'reenvio')) reenviadas++
   }
 
   // 2) Resumen por asesor de leads sin contactar

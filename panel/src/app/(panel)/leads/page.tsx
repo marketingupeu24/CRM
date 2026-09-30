@@ -32,7 +32,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
 
   let consulta = supabase
     .from('leads')
-    .select('id, nombre, telefono, dni, carrera_interes, modalidad, programa, convocatoria, estado, origen, created_at, ultimo_contacto, sin_responder, asesor:asesores!leads_asesor_id_fkey(nombre)', { count: 'exact' })
+    .select('id, nombre, telefono, dni, carrera_interes, modalidad, programa, convocatoria, estado, origen, created_at, ultimo_contacto, reconsultas, sin_responder, asesor:asesores!leads_asesor_id_fkey(nombre)', { count: 'exact' })
 
   if (filtros.q) {
     // Quita caracteres que alteran la sintaxis del filtro de PostgREST
@@ -51,7 +51,8 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
 
   const desde = (pagina - 1) * POR_PAGINA
   const [{ data: leads, count, error }, { data: carreras }, { data: convocatorias }, { data: asesores }] = await Promise.all([
-    consulta.order('created_at', { ascending: false }).range(desde, desde + POR_PAGINA - 1),
+    // Los que volvieron a escribir suben arriba
+    consulta.order('ultimo_contacto', { ascending: false }).range(desde, desde + POR_PAGINA - 1),
     supabase.from('vista_leads_por_carrera').select('carrera'),
     supabase.from('leads').select('convocatoria').not('convocatoria', 'is', null).limit(2000),
     esAdmin
@@ -104,10 +105,10 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
           </select>
         )}
         <label className="flex items-center gap-2 text-sm text-slate-600">
-          Desde <input type="date" name="desde" defaultValue={filtros.desde} className="campo" />
+          Registrado desde <input type="date" name="desde" defaultValue={filtros.desde} className="campo" />
         </label>
         <label className="flex items-center gap-2 text-sm text-slate-600">
-          Hasta <input type="date" name="hasta" defaultValue={filtros.hasta} className="campo" />
+          hasta <input type="date" name="hasta" defaultValue={filtros.hasta} className="campo" />
         </label>
         <div className="flex gap-2 sm:col-span-2 lg:col-span-4 lg:justify-end">
           {hayFiltros && <Link href="/leads" className="boton-secundario">Limpiar</Link>}
@@ -127,7 +128,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
               <th className="px-4 py-3">Estado</th>
               {esAdmin && <th className="px-4 py-3">Asesor</th>}
               <th className="px-4 py-3">Fuente</th>
-              <th className="px-4 py-3">Registrado</th>
+              <th className="px-4 py-3">Último contacto</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -152,8 +153,11 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
                 <td className="px-4 py-3"><InsigniaEstado estado={l.estado} /></td>
                 {esAdmin && <td className="px-4 py-3">{l.asesor?.nombre ?? <span className="text-slate-400">Sin asesor</span>}</td>}
                 <td className="px-4 py-3 text-slate-600">{ETIQUETAS_FUENTE[l.origen as Fuente] ?? l.origen}</td>
-                <td className="px-4 py-3 whitespace-nowrap" title={fechaHora(l.created_at)}>
-                  {haceCuanto(l.created_at)}
+                <td className="px-4 py-3 whitespace-nowrap" title={`Último contacto: ${fechaHora(l.ultimo_contacto)} · Registrado: ${fechaHora(l.created_at)}`}>
+                  {haceCuanto(l.ultimo_contacto)}
+                  {l.reconsultas > 0 && (
+                    <span className="ml-1 text-xs text-slate-500" title="Veces que volvió a consultar">🔁 {l.reconsultas}</span>
+                  )}
                 </td>
               </tr>
             ))}
