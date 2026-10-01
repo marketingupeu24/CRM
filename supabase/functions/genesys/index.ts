@@ -481,7 +481,9 @@ async function sincronizarBot(cuerpo: Cuerpo): Promise<Respuesta> {
   for (const lead of leads ?? []) {
     // Con la blacklist apagada se quita a todos: así BuilderBot sigue enviando sus mensajes al CRM
     // y la pausa la aplica la regla del flujo (bot_atiende=false -> flujo "Silencio").
-    const debeSilenciar = USAR_BLACKLIST && !botAtiendeLead(lead.estado, lead.bot_pausado_hasta)
+    // Solo se silencia durante la pausa (el asesor escribió desde el CRM en las últimas 5 h)
+    const pausaVigente = !!lead.bot_pausado_hasta && Date.parse(lead.bot_pausado_hasta) > Date.now()
+    const debeSilenciar = USAR_BLACKLIST && pausaVigente
     if (debeSilenciar === lead.en_blacklist) continue
     const r = await cambiarBlacklist(lead.telefono, debeSilenciar)
     if (!r.ok) {
