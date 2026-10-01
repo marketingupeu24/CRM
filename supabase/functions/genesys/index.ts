@@ -511,10 +511,9 @@ function buscarCampo(obj: unknown, claves: string[], profundidad = 0): string | 
  * Se guarda una copia cruda en webhook_eventos y, si es un mensaje del lead, se registra
  * en su conversación (mismo efecto que /registrar: chat, "sin responder" y aviso al asesor).
  */
-async function evento(cuerpo: Cuerpo): Promise<Respuesta> {
-  const { data: guardado } = await supabase.from('webhook_eventos').insert({ payload: cuerpo as never }).select('id').single()
+async function evento(cuerpo: Cuerpo, registroId: number | null): Promise<Respuesta> {
   const marcar = (procesado: string) =>
-    guardado ? supabase.from('webhook_eventos').update({ procesado }).eq('id', guardado.id) : Promise.resolve()
+    registroId ? supabase.from('webhook_eventos').update({ procesado }).eq('id', registroId) : Promise.resolve()
 
   const tipo = (buscarCampo(cuerpo, ['eventName', 'event', 'type', 'evento']) ?? '').toLowerCase()
   const saliente = /out|send|sent|bot/.test(tipo) || (cuerpo as { fromMe?: unknown }).fromMe === true
@@ -547,21 +546,55 @@ const ACCIONES: Record<string, (cuerpo: Cuerpo) => Promise<Respuesta> | Respuest
   'respuesta-bot': respuestaBot,
   'recordatorios': recordatorios,
   'sincronizar-bot': sincronizarBot,
-  'evento': evento,
   'ping': ping,
 }
 
 // ---------------------------------------------------------------------
 // Servidor
 // ---------------------------------------------------------------------
+/** Cuerpo del webhook en cualquier formato: JSON, formulario o parámetros de la URL. */
+function leerCuerpoFlexible(texto: string, contentType: string, url: URL): Cuerpo {
+  if (texto.trim()) {
+    try {
+      return JSON.parse(texto)
+    } catch {
+      if (contentType.includes('form') || texto.includes('=')) return Object.fromEntries(new URLSearchParams(texto))
+      return { texto_crudo: texto.slice(0, 4000) }
+    }
+  }
+  const params = Object.fromEntries(url.searchParams)
+  delete params.token
+  return params
+}
+
 Deno.serve(async (req) => {
+  const url = new URL(req.url)
   // El webhook de BuilderBot puede no permitir headers: también se acepta ?token=
-  const tokenRecibido = req.headers.get('x-genesys-token') ?? new URL(req.url).searchParams.get('token')
+  const tokenRecibido = req.headers.get('x-genesys-token') ?? url.searchParams.get('token')
+  const accion = url.pathname.split('/').filter(Boolean).pop() ?? ''
+
+  // Webhook de BuilderBot: se registra TODA llamada (antes de validar) para poder diagnosticar
+  if (accion === 'evento') {
+    const contentType = req.headers.get('content-type') ?? ''
+    const cuerpo = leerCuerpoFlexible(await req.text(), contentType, url)
+    const autorizado = tokenValido(tokenRecibido)
+    const { data: registro } = await supabase.from('webhook_eventos').insert({
+      payload: { metodo: req.method, content_type: contentType, token_ok: autorizado, cuerpo } as never,
+      procesado: autorizado ? 'recibido' : 'rechazado: token inválido',
+    }).select('id').single()
+    if (!autorizado) return responder({ ok: false, error: 'no_autorizado' }, 401)
+    try {
+      return responder(await evento(cuerpo, registro?.id ?? null))
+    } catch (e) {
+      console.error('[genesys] Error en /evento:', e)
+      return responder({ ok: false, error: 'error_interno' }, 500)
+    }
+  }
+
   if (!tokenValido(tokenRecibido)) {
     return responder({ ok: false, error: 'no_autorizado' }, 401)
   }
 
-  const accion = new URL(req.url).pathname.split('/').filter(Boolean).pop() ?? ''
   const manejar = ACCIONES[accion]
   if (!manejar) {
     return responder({ ok: false, error: 'accion_desconocida', acciones: Object.keys(ACCIONES) }, 404)
