@@ -9,14 +9,20 @@
    los componentes no cambian, solo los valores.
    ===================================================================== */
 @theme {
-  /* Estilo TailAdmin: tipografía Outfit, azul #465FFF, grises cálidos y sombras muy suaves */
+  /* Estilo TailAdmin con la marca UPeU: tipografía Outfit, azul UPeU #003865, dorado #F7A800, grises cálidos y sombras suaves */
   --font-sans: var(--font-outfit), ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
 
-  --color-marca-50: #ecf3ff;
-  --color-marca-100: #dde9ff;
-  --color-marca-600: #465fff;
-  --color-marca-700: #3641f5;
-  --color-marca-800: #252dae;
+  --color-marca-50: #e9f1f8;
+  --color-marca-100: #d2e2f0;
+  --color-marca-200: #a9c6df;
+  --color-marca-600: #003865;
+  --color-marca-700: #0b4f8c;
+  --color-marca-800: #002a4c;
+
+  /* Dorado UPeU (acento) */
+  --color-dorado-50: #fff6e0;
+  --color-dorado-400: #f7a800;
+  --color-dorado-700: #8a5d00;
 
   /* Grises de TailAdmin */
   --color-slate-50: #f9fafb;
@@ -42,8 +48,8 @@
   --color-lateral-texto: #344054;
   --color-lateral-suave: #98a2b3;
   --color-lateral-hover: #f2f4f7;
-  --color-lateral-activo: #ecf3ff;
-  --color-lateral-activo-texto: #465fff;
+  --color-lateral-activo: #e9f1f8;
+  --color-lateral-activo-texto: #003865;
 
   /* Chat estilo WhatsApp */
   --color-chat-fondo: #efeae2;
@@ -92,13 +98,16 @@
   --color-lateral-texto: #98a2b3;
   --color-lateral-suave: #667085;
   --color-lateral-hover: rgba(255, 255, 255, 0.05);
-  --color-lateral-activo: rgba(70, 95, 255, 0.14);
-  --color-lateral-activo-texto: #9cb9ff;
+  --color-lateral-activo: rgba(77, 141, 214, 0.16);
+  --color-lateral-activo-texto: #9cc3ec;
 
-  --color-marca-50: color-mix(in oklab, #465fff 16%, transparent);
-  --color-marca-100: color-mix(in oklab, #465fff 26%, transparent);
-  --color-marca-600: #465fff;
-  --color-marca-700: #9cb9ff;
+  --color-marca-50: color-mix(in oklab, #2e7bd1 16%, transparent);
+  --color-marca-100: color-mix(in oklab, #2e7bd1 26%, transparent);
+  --color-marca-200: color-mix(in oklab, #2e7bd1 40%, transparent);
+  --color-dorado-50: color-mix(in oklab, #f7a800 14%, transparent);
+  --color-dorado-700: #f7c04a;
+  --color-marca-600: #2e6fb7;
+  --color-marca-700: #9cc3ec;
 
   --color-chat-fondo: #0d1520;
   --color-burbuja-propia: #134d3a;
@@ -226,13 +235,16 @@
   --color-lateral-texto: #98a2b3;
   --color-lateral-suave: #667085;
   --color-lateral-hover: rgba(255, 255, 255, 0.05);
-    --color-lateral-activo: rgba(70, 95, 255, 0.14);
-  --color-lateral-activo-texto: #9cb9ff;
+    --color-lateral-activo: rgba(77, 141, 214, 0.16);
+  --color-lateral-activo-texto: #9cc3ec;
 
-    --color-marca-50: color-mix(in oklab, #465fff 16%, transparent);
-    --color-marca-100: color-mix(in oklab, #465fff 26%, transparent);
-    --color-marca-600: #465fff;
-    --color-marca-700: #9cb9ff;
+    --color-marca-50: color-mix(in oklab, #2e7bd1 16%, transparent);
+    --color-marca-100: color-mix(in oklab, #2e7bd1 26%, transparent);
+    --color-marca-200: color-mix(in oklab, #2e7bd1 40%, transparent);
+    --color-dorado-50: color-mix(in oklab, #f7a800 14%, transparent);
+    --color-dorado-700: #f7c04a;
+    --color-marca-600: #2e6fb7;
+    --color-marca-700: #9cc3ec;
 
     --color-chat-fondo: #0d1520;
     --color-burbuja-propia: #134d3a;
@@ -367,4 +379,13 @@ body {
 /* Tecla de atajo: <kbd> */
 @utility tecla {
   @apply rounded border border-slate-300 bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] font-medium text-slate-600;
+}
+
+/* Logo UPeU: versión azul en tema claro y blanca en tema oscuro */
+.solo-oscuro { display: none; }
+:root[data-theme="dark"] .solo-claro { display: none; }
+:root[data-theme="dark"] .solo-oscuro { display: block; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .solo-claro { display: none; }
+  :root:not([data-theme="light"]) .solo-oscuro { display: block; }
 }

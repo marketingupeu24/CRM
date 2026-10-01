@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { AvisosEscritorio } from '@/components/AvisosEscritorio'
 import { BotonBuscar } from '@/components/BotonBuscar'
+import { LogoUpeu } from '@/components/LogoUpeu'
 import { Navegacion } from '@/components/Navegacion'
 import { PaletaComandos } from '@/components/PaletaComandos'
 import { RefrescoEnVivo } from '@/components/RefrescoEnVivo'
@@ -29,13 +30,12 @@ export default async function LayoutPanel({ children }: { children: React.ReactN
 
       {/* Menú lateral (blanco, estilo TailAdmin) */}
       <aside className="border-b border-lateral-borde bg-lateral p-4 md:fixed md:inset-y-0 md:flex md:w-[270px] md:flex-col md:overflow-y-auto md:border-r md:border-b-0 md:px-5 md:py-6">
-        <div className="mb-4 flex items-center gap-3 px-2 md:mb-8">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-marca-600 text-lg font-bold text-white shadow-theme-sm">
-            A
-          </div>
-          <div className="leading-tight">
-            <p className="text-lg font-semibold text-lateral-titulo">CRM Admisión</p>
-            <p className="text-xs text-lateral-suave">{esAdmin ? 'Administrador' : 'Asesor'}</p>
+        {/* Logo oficial UPeU */}
+        <div className="mb-4 px-2 md:mb-8">
+          <LogoUpeu className="h-11" />
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+            <span className="rounded-full bg-dorado-50 px-2.5 py-0.5 font-semibold text-dorado-700">CRM Admisión</span>
+            <span className="text-lateral-suave">Juliaca · {esAdmin ? 'Administrador' : 'Asesor'}</span>
           </div>
         </div>
         {!debeCambiarClave && <Navegacion esAdmin={esAdmin} sinResponder={sinResponder ?? 0} pendientes={pendientes} />}
