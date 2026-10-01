@@ -63,6 +63,9 @@ const supabase = createClient<Database>(
 const TOKEN = Deno.env.get('GENESYS_BOT_TOKEN') ?? ''
 const MODO: 'sombra' | 'activo' = Deno.env.get('GENESYS_MODO') === 'activo' ? 'activo' : 'sombra'
 const MAX_INTENTOS_NOTIFICACION = 3
+// Pausa con la blacklist de BuilderBot (calla al bot, pero BuilderBot deja de enviar los mensajes
+// de ese número al CRM). Apagada por defecto: secreto BLACKLIST_PAUSA=activa para encenderla.
+const USAR_BLACKLIST = Deno.env.get('BLACKLIST_PAUSA') === 'activa'
 const PANEL_URL = (Deno.env.get('PANEL_URL') ?? 'https://crm-admision.vercel.app').replace(/\/+$/, '')
 // Aviso de mensaje nuevo al asesor: como máximo uno cada 10 minutos por lead
 const MINUTOS_ENTRE_AVISOS = 10
@@ -476,7 +479,9 @@ async function sincronizarBot(cuerpo: Cuerpo): Promise<Respuesta> {
 
   let agregados = 0, quitados = 0, errores = 0
   for (const lead of leads ?? []) {
-    const debeSilenciar = !botAtiendeLead(lead.estado, lead.bot_pausado_hasta)
+    // Con la blacklist apagada se quita a todos: así BuilderBot sigue enviando sus mensajes al CRM
+    // y la pausa la aplica la regla del flujo (bot_atiende=false -> flujo "Silencio").
+    const debeSilenciar = USAR_BLACKLIST && !botAtiendeLead(lead.estado, lead.bot_pausado_hasta)
     if (debeSilenciar === lead.en_blacklist) continue
     const r = await cambiarBlacklist(lead.telefono, debeSilenciar)
     if (!r.ok) {
