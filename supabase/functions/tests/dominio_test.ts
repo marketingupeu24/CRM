@@ -45,3 +45,13 @@ Deno.test('botAtiendeLead: pausa del bot', async () => {
   igual(leadEnEtapaBot('lead_matriculado'), false)
   igual(leadEnEtapaBot('lead_en_conversacion'), true)
 })
+
+Deno.test('normalizarOrigen', async () => {
+  const { normalizarOrigen } = await import('../_shared/dominio.ts')
+  igual(normalizarOrigen('fb'), 'Facebook')
+  igual(normalizarOrigen('Por TikTok'), 'TikTok')
+  igual(normalizarOrigen('me recomendó una amiga'), 'Recomendación')
+  igual(normalizarOrigen('feria en mi colegio'), 'Feria / colegio')
+  igual(normalizarOrigen('{refsUzHig_Origen}'), null)
+  igual(normalizarOrigen('otro canal raro'), 'otro canal raro')
+})

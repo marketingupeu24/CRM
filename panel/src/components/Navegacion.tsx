@@ -53,7 +53,7 @@ export function Navegacion(
     <nav className="flex gap-1 overflow-x-auto md:flex-col md:gap-5" aria-label="Menú principal">
       {grupos.map((g) => (
         <div key={g.titulo} className="flex gap-1 md:flex-col md:gap-0.5">
-          <p className="hidden px-3 pb-1 text-[11px] font-semibold tracking-wider text-lateral-texto/70 uppercase md:block">{g.titulo}</p>
+          <p className="hidden px-3 pb-1 text-xs font-medium tracking-wide text-lateral-suave uppercase md:block">{g.titulo}</p>
           {g.enlaces.map((e) => {
             const esActivo = activo === e.href
             return (
@@ -62,11 +62,10 @@ export function Navegacion(
                 href={e.href}
                 aria-current={esActivo ? 'page' : undefined}
                 className={`relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition ${
-                  esActivo ? 'bg-lateral-activo text-white' : 'text-lateral-texto hover:bg-white/5 hover:text-white'
+                  esActivo ? 'bg-lateral-activo text-lateral-activo-texto' : 'text-lateral-texto hover:bg-lateral-hover'
                 }`}
               >
-                {esActivo && <span aria-hidden className="absolute inset-y-1.5 left-0 hidden w-1 rounded-r bg-marca-600 md:block" />}
-                <span aria-hidden className="w-4 text-center">{e.icono}</span>
+                <span aria-hidden className={`w-5 text-center text-base ${esActivo ? '' : 'text-lateral-suave'}`}>{e.icono}</span>
                 {e.texto}
                 {!!e.contador?.valor && (
                   <span className={`ml-auto min-w-5 rounded-full px-1.5 text-center text-xs font-semibold ${e.contador.estilo}`}>

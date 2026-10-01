@@ -22,13 +22,13 @@ export function SelectorTema({ inicial }: { inicial: Tema }) {
   }
 
   return (
-    <div className="flex rounded-lg bg-white/5 p-0.5" role="radiogroup" aria-label="Tema">
+    <div className="flex rounded-full border border-slate-200 bg-slate-100 p-0.5" role="radiogroup" aria-label="Tema">
       {OPCIONES.map((o) => (
         <button
           key={o.valor} role="radio" aria-checked={tema === o.valor} title={o.texto} onClick={() => elegir(o.valor)}
-          className={`flex-1 rounded-md px-2 py-1 text-xs transition ${tema === o.valor ? 'bg-lateral-activo text-white shadow' : 'text-lateral-texto hover:text-white'}`}
+          className={`flex h-8 w-8 items-center justify-center rounded-full text-sm transition ${tema === o.valor ? 'bg-superficie text-marca-600 shadow-theme-xs' : 'text-slate-500 hover:text-slate-800'}`}
         >
-          <span aria-hidden>{o.icono}</span> <span className="sr-only md:not-sr-only">{o.texto}</span>
+          <span aria-hidden>{o.icono}</span> <span className="sr-only">{o.texto}</span>
         </button>
       ))}
     </div>

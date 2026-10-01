@@ -33,7 +33,10 @@ export function RefrescoEnVivo() {
       canal = supabase
         .channel(`panel-en-vivo-${Date.now()}`)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'lead_interacciones' }, (payload) => {
-          if (TIPOS_QUE_ACTUALIZAN.has((payload.new as { tipo?: string }).tipo ?? '')) refrescar()
+          const nuevo = payload.new as { tipo?: string }
+          if (TIPOS_QUE_ACTUALIZAN.has(nuevo.tipo ?? '')) refrescar()
+          // Para los avisos de escritorio y sonido (componente AvisosEscritorio)
+          window.dispatchEvent(new CustomEvent('crm:interaccion', { detail: nuevo }))
         })
         .subscribe((estado) => {
           if (!activo) return

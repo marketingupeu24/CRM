@@ -9,26 +9,46 @@
    los componentes no cambian, solo los valores.
    ===================================================================== */
 @theme {
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  /* Estilo TailAdmin: tipografía Outfit, azul #465FFF, grises cálidos y sombras muy suaves */
+  --font-sans: var(--font-outfit), ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
 
-  /* Acento de la marca (índigo: vivo pero sin cansar la vista) */
-  --color-marca-50: #eef2ff;
-  --color-marca-100: #e0e7ff;
-  --color-marca-600: #4f46e5;
-  --color-marca-700: #4338ca;
-  --color-marca-800: #312e81;
+  --color-marca-50: #ecf3ff;
+  --color-marca-100: #dde9ff;
+  --color-marca-600: #465fff;
+  --color-marca-700: #3641f5;
+  --color-marca-800: #252dae;
 
-  /* Superficies */
+  /* Grises de TailAdmin */
+  --color-slate-50: #f9fafb;
+  --color-slate-100: #f2f4f7;
+  --color-slate-200: #e4e7ec;
+  --color-slate-300: #d0d5dd;
+  --color-slate-400: #98a2b3;
+  --color-slate-500: #667085;
+  --color-slate-600: #475467;
+  --color-slate-700: #344054;
+  --color-slate-800: #1d2939;
+  --color-slate-900: #101828;
+
+  --shadow-theme-xs: 0px 1px 2px 0px rgba(16, 24, 40, 0.05);
+  --shadow-theme-sm: 0px 1px 3px 0px rgba(16, 24, 40, 0.1), 0px 1px 2px 0px rgba(16, 24, 40, 0.06);
+  --shadow-theme-md: 0px 4px 8px -2px rgba(16, 24, 40, 0.1), 0px 2px 4px -2px rgba(16, 24, 40, 0.06);
+
+  /* Superficies y menú lateral (claro, como TailAdmin) */
   --color-superficie: #ffffff;
-  --color-lateral: #111827;          /* menú lateral */
-  --color-lateral-activo: #1f2937;
-  --color-lateral-texto: #aab4c3;
+  --color-lateral: #ffffff;
+  --color-lateral-borde: #e4e7ec;
+  --color-lateral-titulo: #101828;
+  --color-lateral-texto: #344054;
+  --color-lateral-suave: #98a2b3;
+  --color-lateral-hover: #f2f4f7;
+  --color-lateral-activo: #ecf3ff;
+  --color-lateral-activo-texto: #465fff;
 
   /* Chat estilo WhatsApp */
   --color-chat-fondo: #efeae2;
   --color-burbuja-propia: #d9fdd3;
 
-  --color-slate-50: #f4f6fa;         /* fondo de página un poco más suave que el blanco */
 }
 
 :root {
@@ -54,7 +74,7 @@
   color-scheme: dark;
 
   /* Escala de grises invertida: fondos oscuros, texto claro */
-  --color-slate-50: #0e1525;
+  --color-slate-50: #0c111d;
   --color-slate-100: #172134;
   --color-slate-200: #243046;
   --color-slate-300: #34435b;
@@ -65,14 +85,20 @@
   --color-slate-800: #e2e8f0;
   --color-slate-900: #f1f5f9;
 
-  --color-superficie: #141d2f;
-  --color-lateral: #0a0f1c;
-  --color-lateral-activo: #182235;
+  --color-superficie: #161b26;
+  --color-lateral: #101828;
+  --color-lateral-borde: #1d2939;
+  --color-lateral-titulo: #ffffff;
+  --color-lateral-texto: #98a2b3;
+  --color-lateral-suave: #667085;
+  --color-lateral-hover: rgba(255, 255, 255, 0.05);
+  --color-lateral-activo: rgba(70, 95, 255, 0.14);
+  --color-lateral-activo-texto: #9cb9ff;
 
-  --color-marca-50: color-mix(in oklab, #6366f1 16%, transparent);
-  --color-marca-100: color-mix(in oklab, #6366f1 26%, transparent);
-  --color-marca-600: #6366f1;
-  --color-marca-700: #a5b4fc;
+  --color-marca-50: color-mix(in oklab, #465fff 16%, transparent);
+  --color-marca-100: color-mix(in oklab, #465fff 26%, transparent);
+  --color-marca-600: #465fff;
+  --color-marca-700: #9cb9ff;
 
   --color-chat-fondo: #0d1520;
   --color-burbuja-propia: #134d3a;
@@ -182,7 +208,7 @@
     color-scheme: dark;
 
     /* Escala de grises invertida: fondos oscuros, texto claro */
-    --color-slate-50: #0e1525;
+    --color-slate-50: #0c111d;
     --color-slate-100: #172134;
     --color-slate-200: #243046;
     --color-slate-300: #34435b;
@@ -193,14 +219,20 @@
     --color-slate-800: #e2e8f0;
     --color-slate-900: #f1f5f9;
 
-    --color-superficie: #141d2f;
-    --color-lateral: #0a0f1c;
-    --color-lateral-activo: #182235;
+    --color-superficie: #161b26;
+    --color-lateral: #101828;
+  --color-lateral-borde: #1d2939;
+  --color-lateral-titulo: #ffffff;
+  --color-lateral-texto: #98a2b3;
+  --color-lateral-suave: #667085;
+  --color-lateral-hover: rgba(255, 255, 255, 0.05);
+    --color-lateral-activo: rgba(70, 95, 255, 0.14);
+  --color-lateral-activo-texto: #9cb9ff;
 
-    --color-marca-50: color-mix(in oklab, #6366f1 16%, transparent);
-    --color-marca-100: color-mix(in oklab, #6366f1 26%, transparent);
-    --color-marca-600: #6366f1;
-    --color-marca-700: #a5b4fc;
+    --color-marca-50: color-mix(in oklab, #465fff 16%, transparent);
+    --color-marca-100: color-mix(in oklab, #465fff 26%, transparent);
+    --color-marca-600: #465fff;
+    --color-marca-700: #9cb9ff;
 
     --color-chat-fondo: #0d1520;
     --color-burbuja-propia: #134d3a;
@@ -317,19 +349,19 @@ body {
 
 /* Campos de formulario del panel */
 @utility campo {
-  @apply block w-full rounded-lg border border-slate-300 bg-superficie px-3 py-2 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-marca-600 focus:ring-2 focus:ring-marca-100 focus:outline-none disabled:bg-slate-100;
+  @apply block w-full rounded-lg border border-slate-300 bg-superficie px-3.5 py-2.5 text-sm text-slate-900 shadow-theme-xs placeholder:text-slate-400 focus:border-marca-600 focus:ring-2 focus:ring-marca-100 focus:outline-none disabled:bg-slate-100;
 }
 
 @utility boton {
-  @apply inline-flex items-center justify-center gap-2 rounded-lg bg-marca-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-110 focus-visible:ring-2 focus-visible:ring-marca-100 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60;
+  @apply inline-flex items-center justify-center gap-2 rounded-lg bg-marca-600 px-4 py-2 text-sm font-semibold text-white shadow-theme-xs transition hover:brightness-110 focus-visible:ring-2 focus-visible:ring-marca-100 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60;
 }
 
 @utility boton-secundario {
-  @apply inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-superficie px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-100 disabled:opacity-60;
+  @apply inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-superficie px-4 py-2 text-sm font-medium text-slate-700 shadow-theme-xs transition hover:bg-slate-100 disabled:opacity-60;
 }
 
 @utility tarjeta {
-  @apply rounded-xl border border-slate-200 bg-superficie shadow-sm;
+  @apply rounded-2xl border border-slate-200 bg-superficie shadow-theme-xs;
 }
 
 /* Tecla de atajo: <kbd> */

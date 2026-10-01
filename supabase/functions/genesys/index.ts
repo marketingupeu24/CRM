@@ -27,6 +27,7 @@ import {
   botAtiendeLead,
   ESTADOS_AVISO_MENSAJE,
   leadEnEtapaBot,
+  normalizarOrigen,
   elegir,
   type Fuente,
   FUENTES,
@@ -118,12 +119,13 @@ const ENCABEZADO_POR_FUENTE: Record<Fuente, string> = {
   manual: '*REGISTRO MANUAL*',
 }
 
-type TipoAviso = 'nuevo' | 'reenvio' | 'reconsulta'
+type TipoAviso = 'nuevo' | 'reenvio' | 'reconsulta' | 'reasignado'
 
 function mensajeNuevoLead(lead: Lead, fuente: Fuente, tipo: TipoAviso = 'nuevo'): string {
   const interes = lead.modalidad ?? lead.carrera_interes ?? 'Consulta general'
   const encabezado = tipo === 'reenvio' ? '*REENVÍO PENDIENTE*'
     : tipo === 'reconsulta' ? '*🔁 VOLVIÓ A CONSULTAR*'
+    : tipo === 'reasignado' ? '*🔁 LEAD REASIGNADO A TI* (su asesor no lo contactó a tiempo)'
     : ENCABEZADO_POR_FUENTE[fuente]
   return [
     encabezado,
@@ -133,6 +135,7 @@ function mensajeNuevoLead(lead: Lead, fuente: Fuente, tipo: TipoAviso = 'nuevo')
     `*DNI:* ${lead.dni ?? 'Sin DNI'}`,
     `*Interés:* ${interes}`,
     lead.resumen ? `*Consulta:* ${lead.resumen}` : null,
+    lead.origen_campana ? `*Nos conoció por:* ${lead.origen_campana}` : null,
     `*Celular:* ${lead.telefono}`,
     `*WhatsApp:* https://wa.me/${lead.telefono}`,
   ].filter((linea) => linea !== null).join('\n')
@@ -246,6 +249,7 @@ async function webhook(cuerpo: Cuerpo): Promise<Respuesta> {
   const carrera = elegir(cuerpo.Carrera, cuerpo.carrera)
   const consulta = elegir(cuerpo.Consulta, cuerpo.consulta, cuerpo.interes)
   const convocatoria = elegir(cuerpo.NombreHoja, cuerpo.nombreHoja, cuerpo.hoja, cuerpo.convocatoria)
+  const origenCampana = normalizarOrigen(elegir(cuerpo.Origen, cuerpo.origen, cuerpo.ComoNosConocio, cuerpo.Campana, cuerpo.campana, cuerpo.utm_source))
   const fuenteTexto = elegir(cuerpo.fuente)
   const fuente: Fuente = FUENTES.includes(fuenteTexto as Fuente) ? (fuenteTexto as Fuente) : 'whatsapp_genesys'
   const telefonoAsesor = normalizarTelefono(elegir(cuerpo.telefono_asesor))
@@ -303,10 +307,13 @@ async function webhook(cuerpo: Cuerpo): Promise<Respuesta> {
     }
   }
 
+  // Cómo nos conoció (si BuilderBot lo envía): se guarda el último valor recibido
+  if (origenCampana) await supabase.from('leads').update({ origen_campana: origenCampana }).eq('id', r.lead_id)
+
   // Lo que el lead respondió a Genesys queda visible en la conversación del CRM
   const datosBot = [
     ['Nombre', nombre], ['DNI', dni], ['Carrera', carrera], ['Modalidad', modalidad],
-    ['Consulta', consulta], ['Convocatoria', convocatoria],
+    ['Consulta', consulta], ['Convocatoria', convocatoria], ['Nos conoció por', origenCampana],
   ].filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`).join('\n')
   await registrarEvento(r.lead_id, `Datos entregados a Genesys:\n${datosBot}`)
 
@@ -546,6 +553,28 @@ async function evento(cuerpo: Cuerpo, registroId: number | null): Promise<Respue
   return { ok: true, procesado: 'mensaje_lead', bot_atiende: r.bot_atiende }
 }
 
+/**
+ * Reasignación automática (cron cada 15 min, solo en modo activo y en horario de oficina):
+ * leads asignados que su asesor no contactó en REASIGNAR_HORAS pasan al siguiente asesor.
+ */
+async function reasignar(): Promise<Respuesta> {
+  if (MODO !== 'activo') return { ok: true, omitido: 'Solo en modo activo' }
+  const horas = Number(Deno.env.get('REASIGNAR_HORAS') ?? 4) || 4
+  const maximo = Number(Deno.env.get('REASIGNAR_MAXIMO') ?? 2) || 2
+  const { data, error } = await supabase.rpc('reasignar_sin_contacto', { p_horas: horas, p_maximo: maximo })
+  if (error) throw error
+  const cambios = (data ?? []) as { lead_id: string; asesor_telefono: string | null }[]
+  for (const c of cambios) {
+    if (!c.asesor_telefono) continue
+    const { data: lead } = await supabase.from('leads').select('*').eq('id', c.lead_id).single()
+    if (lead) {
+      const fuente = (FUENTES as readonly string[]).includes(lead.origen) ? (lead.origen as Fuente) : 'whatsapp_genesys'
+      await notificarAsesor(lead, c.asesor_telefono, fuente, 'reasignado')
+    }
+  }
+  return { ok: true, reasignados: cambios.length }
+}
+
 const ACCIONES: Record<string, (cuerpo: Cuerpo) => Promise<Respuesta> | Respuesta> = {
   'registrar': registrar,
   'webhook': webhook,
@@ -553,6 +582,7 @@ const ACCIONES: Record<string, (cuerpo: Cuerpo) => Promise<Respuesta> | Respuest
   'respuesta-bot': respuestaBot,
   'recordatorios': recordatorios,
   'sincronizar-bot': sincronizarBot,
+  'reasignar': reasignar,
   'ping': ping,
 }
 

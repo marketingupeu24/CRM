@@ -78,11 +78,13 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
     ['Convocatoria', lead.convocatoria],
     ['Sede', lead.sede],
     ['Fuente', ETIQUETAS_FUENTE[lead.origen as Fuente] ?? lead.origen],
+    ['Nos conoció por', lead.origen_campana],
     ['Consulta', lead.resumen],
     ['Mensajes al bot', lead.total_mensajes],
     ['Primer contacto', fechaHora(lead.primer_contacto)],
     ['Último contacto', `${fechaHora(lead.ultimo_contacto)} (${haceCuanto(lead.ultimo_contacto)})`],
     ['Asignado', fechaHora(lead.fecha_asignado)],
+    ['Reasignado automáticamente', lead.reasignaciones ? `${lead.reasignaciones} ${lead.reasignaciones === 1 ? 'vez' : 'veces'} (no fue contactado a tiempo)` : null],
     ['Motivo no interés / pérdida', lead.motivo_no_interes],
     ['Registros repetidos', lead.duplicados_ignorados || null],
   ]
@@ -182,7 +184,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
             )}
           </section>
 
-          <section id="proxima-accion" className="tarjeta scroll-mt-16 p-6">
+          <section id="proxima-accion" className="tarjeta scroll-mt-36 p-6">
             <h2 className="mb-3 font-semibold">Próxima acción</h2>
             {!!tareas?.length && (
               <ul className="mb-4 space-y-2">
@@ -205,7 +207,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
             <FormularioTarea leadId={lead.id} />
           </section>
 
-          <section id="nueva-nota" className="tarjeta scroll-mt-16 p-6">
+          <section id="nueva-nota" className="tarjeta scroll-mt-36 p-6">
             <h2 className="mb-3 font-semibold">Nueva nota</h2>
             <FormularioNota leadId={lead.id} />
           </section>

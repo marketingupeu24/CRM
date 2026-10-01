@@ -2,7 +2,7 @@
 
 // Controles interactivos de la ficha del lead.
 import { useActionState, useState, useTransition } from 'react'
-import { ESTADOS_LEAD, ETIQUETAS_ESTADO, MOTIVOS_PERDIDA, type Lead, type LeadEstado } from '@crm/db'
+import { ESTADOS_LEAD, ETIQUETAS_ESTADO, MOTIVOS_PERDIDA, ORIGENES, type Lead, type LeadEstado } from '@crm/db'
 import {
   actualizarDatos, agregarNota, cambiarEstado, eliminarNota, reasignarAsesor, type Resultado,
 } from '../acciones'
@@ -115,6 +115,16 @@ export function EditarDatos({ lead }: { lead: Lead }) {
           <input name={campo} defaultValue={(lead[campo] as string | null) ?? ''} className="campo mt-1" />
         </label>
       ))}
+      <label className="text-sm text-slate-600">
+        Nos conoció por
+        <select name="origen_campana" defaultValue={lead.origen_campana ?? ''} className="campo mt-1">
+          <option value="">Sin dato</option>
+          {ORIGENES.map((o) => <option key={o} value={o}>{o}</option>)}
+          {lead.origen_campana && !(ORIGENES as readonly string[]).includes(lead.origen_campana) && (
+            <option value={lead.origen_campana}>{lead.origen_campana}</option>
+          )}
+        </select>
+      </label>
       <div className="flex items-center gap-2 sm:col-span-2">
         <button className="boton" disabled={enviando}>{enviando ? 'Guardando…' : 'Guardar'}</button>
         <button type="button" onClick={() => setAbierto(false)} className="boton-secundario">Cerrar</button>

@@ -14,7 +14,7 @@ export function AccionesRapidas({ telefono }: { telefono: string }) {
   const boton = 'inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-superficie px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-marca-600 hover:text-marca-700'
 
   return (
-    <div className="sticky top-0 z-20 -mx-4 flex flex-wrap items-center gap-2 border-b border-slate-200 bg-slate-50/90 px-4 py-2 backdrop-blur md:-mx-8 md:px-8">
+    <div className="sticky top-16 z-20 -mx-4 flex flex-wrap items-center gap-2 border-b border-slate-200 bg-slate-50/90 px-4 py-2 backdrop-blur md:-mx-8 md:px-8">
       <a href={`https://wa.me/${telefono}`} target="_blank" rel="noreferrer" className={boton} title="Abrir en WhatsApp">
         <span aria-hidden className="text-emerald-600">●</span> WhatsApp
       </a>

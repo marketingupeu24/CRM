@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useActionState, useState } from 'react'
+import { ORIGENES } from '@crm/db'
 import { registrarLeadManual, type ResultadoRegistro } from '../acciones'
 
 interface Props {
@@ -45,6 +46,13 @@ export function FormularioNuevoLead({ esAdmin, asesores, convocatorias }: Props)
         <datalist id="convocatorias">
           {convocatorias.map((c) => <option key={c} value={c} />)}
         </datalist>
+      </label>
+      <label className="text-sm font-medium text-slate-700">
+        ¿Cómo nos conoció?
+        <select name="origen_campana" defaultValue="" className="campo mt-1">
+          <option value="">Sin dato</option>
+          {ORIGENES.map((o) => <option key={o} value={o}>{o}</option>)}
+        </select>
       </label>
       {esAdmin ? (
         <label className="text-sm font-medium text-slate-700">

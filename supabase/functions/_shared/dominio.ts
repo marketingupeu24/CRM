@@ -67,3 +67,23 @@ export function normalizarDni(valor: unknown): string | null {
   const digitos = texto.replace(/\D/g, '')
   return /^\d{8,12}$/.test(digitos) ? digitos : null
 }
+
+/** Orígenes del lead ("¿cómo nos conociste?"). Deben coincidir con los del panel. */
+export const ORIGENES = [
+  'Facebook', 'Instagram', 'TikTok', 'Google', 'Página web', 'Recomendación',
+  'Feria / colegio', 'Volante / afiche', 'Radio / TV', 'Otro',
+] as const
+
+/** Lleva lo que escribió el lead (o la campaña) al origen de la lista: "fb" -> "Facebook". */
+export function normalizarOrigen(valor: unknown): string | null {
+  const texto = valorResuelto(valor)
+  if (!texto) return null
+  const t = texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  const reglas: [RegExp, string][] = [
+    [/face|\bfb\b|meta/, 'Facebook'], [/insta|\big\b/, 'Instagram'], [/tik ?tok/, 'TikTok'],
+    [/google|busca/, 'Google'], [/web|pagina|sitio/, 'Página web'],
+    [/recomend|amig|familia|conocid|referid/, 'Recomendación'], [/feria|colegio|charla|visita/, 'Feria / colegio'],
+    [/volante|afiche|panel|letrero/, 'Volante / afiche'], [/radio|tv|tele/, 'Radio / TV'],
+  ]
+  return reglas.find(([re]) => re.test(t))?.[1] ?? texto.slice(0, 60)
+}

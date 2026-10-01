@@ -4,7 +4,11 @@
 export type Tema = 'claro' | 'oscuro' | 'auto'
 export const COOKIE_TEMA = 'crm-tema'
 
+/** Tema si el usuario aún no eligió: claro (como TailAdmin). */
+export const TEMA_POR_DEFECTO: Tema = 'claro'
+
 /** Valor del atributo data-theme de <html> para cada tema (undefined = automático). */
 export function atributoTema(tema: string | undefined): 'light' | 'dark' | undefined {
-  return tema === 'claro' ? 'light' : tema === 'oscuro' ? 'dark' : undefined
+  const t = tema ?? TEMA_POR_DEFECTO
+  return t === 'claro' ? 'light' : t === 'oscuro' ? 'dark' : undefined
 }

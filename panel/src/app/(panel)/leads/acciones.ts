@@ -95,6 +95,7 @@ export async function actualizarDatos(leadId: string, _previo: Resultado, formDa
     modalidad: texto('modalidad'),
     convocatoria: texto('convocatoria'),
     sede: texto('sede'),
+    origen_campana: texto('origen_campana'),
   }).eq('id', leadId)
   if (error) return { error: mensajeError(error) }
 
@@ -129,6 +130,10 @@ export async function registrarLeadManual(_previo: ResultadoRegistro, formData: 
   if (error) return { error: mensajeError(error) }
 
   const r = data as { status: string; lead_id?: string; mensaje?: string; asesor_nombre?: string }
+  const origen = texto('origen_campana')
+  if (origen && r.lead_id && r.status !== 'duplicate') {
+    await supabase.from('leads').update({ origen_campana: origen }).eq('id', r.lead_id)
+  }
   if (r.status === 'duplicate') {
     return {
       duplicado: true,
@@ -139,6 +144,51 @@ export async function registrarLeadManual(_previo: ResultadoRegistro, formData: 
 
   refrescar()
   redirect(`/leads/${r.lead_id}`)
+}
+
+export interface ResultadoMasivo extends Resultado {
+  cambiados?: number
+}
+
+const ESTADOS_ANTES_DE_ASIGNAR: LeadEstado[] = ['lead_nuevo', 'lead_en_conversacion', 'lead_no_interesado', 'lead_interesado']
+
+/**
+ * Acciones masivas desde la lista de leads: cambiar estado o (solo admin) asignar asesor.
+ * El RLS limita qué filas cambia cada usuario.
+ */
+export async function accionMasiva(
+  ids: string[],
+  accion: { tipo: 'estado'; estado: LeadEstado; motivo?: string } | { tipo: 'asesor'; asesorId: string },
+): Promise<ResultadoMasivo> {
+  const lista = [...new Set(ids)].filter((id) => /^[0-9a-f-]{36}$/i.test(id)).slice(0, 200)
+  if (!lista.length) return { error: 'Selecciona al menos un lead.' }
+  const supabase = await crearClienteServidor()
+
+  if (accion.tipo === 'estado') {
+    if (!ESTADOS_LEAD.includes(accion.estado)) return { error: 'Estado no válido.' }
+    const conMotivo = accion.estado === 'lead_perdido' || accion.estado === 'lead_no_interesado'
+    if (conMotivo && !accion.motivo?.trim()) return { error: 'Elige el motivo.' }
+    const { data, error } = await supabase.from('leads')
+      .update({ estado: accion.estado, ...(conMotivo ? { motivo_no_interes: accion.motivo!.trim() } : {}) })
+      .in('id', lista).select('id')
+    if (error) return { error: mensajeError(error) }
+    refrescar()
+    return { ok: true, cambiados: data.length }
+  }
+
+  const { esAdmin } = await obtenerSesion()
+  if (!esAdmin) return { error: 'Solo un administrador puede asignar leads.' }
+  if (!accion.asesorId) return { error: 'Elige un asesor.' }
+  // Los que aún no tenían asesor pasan a "asignado"; el resto conserva su estado
+  const [{ data: a, error: e1 }, { data: b, error: e2 }] = await Promise.all([
+    supabase.from('leads').update({ asesor_id: accion.asesorId, estado: 'lead_asignado' })
+      .in('id', lista).in('estado', ESTADOS_ANTES_DE_ASIGNAR).select('id'),
+    supabase.from('leads').update({ asesor_id: accion.asesorId })
+      .in('id', lista).not('estado', 'in', `(${ESTADOS_ANTES_DE_ASIGNAR.join(',')})`).select('id'),
+  ])
+  if (e1 || e2) return { error: mensajeError((e1 ?? e2)!) }
+  refrescar()
+  return { ok: true, cambiados: (a?.length ?? 0) + (b?.length ?? 0) }
 }
 
 /** Pausa a Genesys 5 horas para este lead (el asesor conversa con él) o lo reactiva. */

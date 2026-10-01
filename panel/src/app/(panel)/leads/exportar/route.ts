@@ -31,7 +31,7 @@ export async function GET(request: Request) {
   for (let desde = 0; desde < MAXIMO; desde += LOTE) {
     let consulta = supabase
       .from('leads')
-      .select('nombre, telefono, dni, programa, carrera_interes, modalidad, resumen, convocatoria, estado, origen, motivo_no_interes, created_at, ultimo_contacto, fecha_asignado, primer_contacto_asesor_at, reconsultas, total_mensajes, asesor:asesores!leads_asesor_id_fkey(nombre)')
+      .select('nombre, telefono, dni, programa, carrera_interes, modalidad, resumen, convocatoria, estado, origen, origen_campana, reasignaciones, motivo_no_interes, created_at, ultimo_contacto, fecha_asignado, primer_contacto_asesor_at, reconsultas, total_mensajes, asesor:asesores!leads_asesor_id_fkey(nombre)')
 
     if (f('q')) {
       const q = f('q').replace(/[,()*%\\]/g, ' ').trim()
@@ -43,6 +43,8 @@ export async function GET(request: Request) {
     if (f('convocatoria')) consulta = consulta.eq('convocatoria', f('convocatoria'))
     if (esAdmin && f('asesor') === 'sin_asesor') consulta = consulta.is('asesor_id', null)
     else if (esAdmin && f('asesor')) consulta = consulta.eq('asesor_id', f('asesor'))
+    if (f('origen') === 'Sin dato') consulta = consulta.is('origen_campana', null)
+    else if (f('origen')) consulta = consulta.eq('origen_campana', f('origen'))
     if (/^\d{4}-\d{2}-\d{2}$/.test(f('desde'))) consulta = consulta.gte('created_at', `${f('desde')}T00:00:00-05:00`)
     if (/^\d{4}-\d{2}-\d{2}$/.test(f('hasta'))) consulta = consulta.lte('created_at', `${f('hasta')}T23:59:59.999-05:00`)
 
@@ -54,22 +56,23 @@ export async function GET(request: Request) {
 
   const encabezados = [
     'Nombre', 'Celular', 'DNI', 'Programa', 'Carrera', 'Modalidad', 'Consulta', 'Convocatoria', 'Estado',
-    'Asesor', 'Fuente', 'Motivo de pérdida', 'Registrado', 'Último contacto', 'Asignado', 'Primer contacto del asesor',
-    'Veces que volvió a consultar', 'Mensajes al bot',
+    'Asesor', 'Fuente', 'Nos conoció por', 'Motivo de pérdida', 'Registrado', 'Último contacto', 'Asignado', 'Primer contacto del asesor',
+    'Veces que volvió a consultar', 'Mensajes al bot', 'Reasignaciones automáticas',
   ]
   const lineas = filas.map((l) => {
     const lead = l as {
       nombre: string | null; telefono: string; dni: string | null; programa: string; carrera_interes: string | null
       modalidad: string | null; resumen: string | null; convocatoria: string | null; estado: LeadEstado; origen: string
+      origen_campana: string | null; reasignaciones: number
       motivo_no_interes: string | null; created_at: string; ultimo_contacto: string; fecha_asignado: string | null
       primer_contacto_asesor_at: string | null; reconsultas: number; total_mensajes: number; asesor: { nombre: string } | null
     }
     return [
       lead.nombre, lead.telefono, lead.dni, lead.programa === 'cepre' ? 'CePre' : 'Pregrado', lead.carrera_interes,
       lead.modalidad, lead.resumen, lead.convocatoria, ETIQUETAS_ESTADO[lead.estado] ?? lead.estado,
-      lead.asesor?.nombre, ETIQUETAS_FUENTE[lead.origen as Fuente] ?? lead.origen, lead.motivo_no_interes,
+      lead.asesor?.nombre, ETIQUETAS_FUENTE[lead.origen as Fuente] ?? lead.origen, lead.origen_campana, lead.motivo_no_interes,
       fechaLima(lead.created_at), fechaLima(lead.ultimo_contacto), fechaLima(lead.fecha_asignado),
-      fechaLima(lead.primer_contacto_asesor_at), lead.reconsultas, lead.total_mensajes,
+      fechaLima(lead.primer_contacto_asesor_at), lead.reconsultas, lead.total_mensajes, lead.reasignaciones,
     ].map(celda).join(';')
   })
 

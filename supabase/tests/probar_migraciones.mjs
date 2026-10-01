@@ -346,6 +346,28 @@ await q(`select registrar_lead('51955500001', 'otro mensaje')`)
 const dupMsg = await uno(`select count(*)::int n, (select total_mensajes from leads where telefono='51955500001') t from lead_interacciones i join leads l on l.id = i.lead_id where l.telefono='51955500001' and i.tipo='mensaje_lead'`)
 ok(dupMsg.n === 2 && dupMsg.t === 2, 'el mismo texto en menos de 1 minuto se guarda una sola vez')
 
+seccion('reasignación automática y origen del lead')
+await reset()
+const ra = await procesar({ p_telefono: '51944400001', p_nombre: 'Sin contactar', p_carrera: 'Derecho' })
+const rb = await procesar({ p_telefono: '51944400002', p_nombre: 'Contactado a tiempo', p_carrera: 'Derecho' })
+await q(`update leads set fecha_asignado = now() - interval '5 hours' where id in ($1, $2)`, [ra.lead_id, rb.lead_id])
+await q(`insert into lead_interacciones (lead_id, tipo, contenido, autor_id, estado_envio) values ($1, 'mensaje_asesor', 'hola', $2, 'enviado')`, [rb.lead_id, rb.asesor_id])
+const cambios = (await uno(`select reasignar_sin_contacto(4, 2, false) r`)).r
+const lra = await uno(`select asesor_id, reasignaciones, fecha_asignado > now() - interval '1 minute' reciente from leads where id = $1`, [ra.lead_id])
+ok(cambios.some((c) => c.lead_id === ra.lead_id) && lra.asesor_id !== ra.asesor_id && lra.reasignaciones === 1 && lra.reciente, 'lead sin contactar en 4 h pasa a otro asesor (y reinicia su tiempo)')
+ok(!cambios.some((c) => c.lead_id === rb.lead_id), 'lead ya contactado no se reasigna')
+ok((await q(`select 1 from lead_interacciones where lead_id = $1 and contenido like 'Reasignado automáticamente%'`, [ra.lead_id])).length === 1, 'la reasignación queda en el historial')
+await q(`update leads set fecha_asignado = now() - interval '5 hours' where id = $1`, [ra.lead_id])
+await uno(`select reasignar_sin_contacto(4, 2, false) r`)
+await q(`update leads set fecha_asignado = now() - interval '5 hours' where id = $1`, [ra.lead_id])
+const tercera = (await uno(`select reasignar_sin_contacto(4, 2, false) r`)).r
+ok(!tercera.some((c) => c.lead_id === ra.lead_id) && (await uno(`select reasignaciones from leads where id = $1`, [ra.lead_id])).reasignaciones === 2, 'como máximo 2 reasignaciones por lead')
+await q(`update leads set origen_campana = 'TikTok' where id = $1`, [rb.lead_id])
+await comoUsuario('admin@test.pe')
+const rO = (await uno(`select resumen_dashboard() r`)).r
+ok(rO.por_origen.some((o) => o.origen === 'TikTok') && rO.reasignados >= 1, 'el dashboard muestra leads por origen y reasignados')
+await reset()
+
 seccion('anon')
 await db.exec(`reset role; set request.jwt.claim.sub = ''; set role anon`)
 await falla(`select * from tareas`, 'anon no puede ver tareas')

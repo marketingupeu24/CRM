@@ -51,13 +51,13 @@ isOneToOne: false
                   ]
                 },"leads": {
                   Row: {
-                    "asesor_id": string | null,"bot_pausado_hasta": string | null,"carrera_interes": string | null,"convocatoria": string | null,"created_at": string,"dni": string | null,"duplicados_ignorados": number,"en_blacklist": boolean,"estado": Database["public"]['Enums']["lead_estado"],"fecha_asignado": string | null,"fecha_interesado": string | null,"fecha_notificacion": string | null,"fecha_postulacion": string | null,"id": string,"modalidad": string | null,"motivo_no_interes": string | null,"nombre": string | null,"notificacion_error": string | null,"notificacion_estado": string | null,"notificacion_intentos": number,"origen": string,"primer_contacto": string,"primer_contacto_asesor_at": string | null,"programa": string,"reconsultas": number,"recordatorio_enviado": string | null,"resumen": string | null,"sede": string | null,"sin_responder": boolean | null,"telefono": string,"total_mensajes": number,"ultima_respuesta_at": string | null,"ultimo_aviso_mensaje_at": string | null,"ultimo_contacto": string,"ultimo_mensaje_at": string | null,"ultimo_mensaje_lead_at": string | null,"ultimo_mensaje_texto": string | null,"ultimo_registro_at": string | null,"updated_at": string
+                    "asesor_id": string | null,"bot_pausado_hasta": string | null,"carrera_interes": string | null,"convocatoria": string | null,"created_at": string,"dni": string | null,"duplicados_ignorados": number,"en_blacklist": boolean,"estado": Database["public"]['Enums']["lead_estado"],"fecha_asignado": string | null,"fecha_interesado": string | null,"fecha_notificacion": string | null,"fecha_postulacion": string | null,"id": string,"modalidad": string | null,"motivo_no_interes": string | null,"nombre": string | null,"notificacion_error": string | null,"notificacion_estado": string | null,"notificacion_intentos": number,"origen": string,"origen_campana": string | null,"primer_contacto": string,"primer_contacto_asesor_at": string | null,"programa": string,"reasignaciones": number,"reconsultas": number,"recordatorio_enviado": string | null,"resumen": string | null,"sede": string | null,"sin_responder": boolean | null,"telefono": string,"total_mensajes": number,"ultima_respuesta_at": string | null,"ultimo_aviso_mensaje_at": string | null,"ultimo_contacto": string,"ultimo_mensaje_at": string | null,"ultimo_mensaje_lead_at": string | null,"ultimo_mensaje_texto": string | null,"ultimo_registro_at": string | null,"updated_at": string
                   }
                   Insert: {
-                    "asesor_id"?: string | null,"bot_pausado_hasta"?: string | null,"carrera_interes"?: string | null,"convocatoria"?: string | null,"created_at"?: string,"dni"?: string | null,"duplicados_ignorados"?: number,"en_blacklist"?: boolean,"estado"?: Database["public"]['Enums']["lead_estado"],"fecha_asignado"?: string | null,"fecha_interesado"?: string | null,"fecha_notificacion"?: string | null,"fecha_postulacion"?: string | null,"id"?: string,"modalidad"?: string | null,"motivo_no_interes"?: string | null,"nombre"?: string | null,"notificacion_error"?: string | null,"notificacion_estado"?: string | null,"notificacion_intentos"?: number,"origen"?: string,"primer_contacto"?: string,"primer_contacto_asesor_at"?: string | null,"programa"?: string,"reconsultas"?: number,"recordatorio_enviado"?: string | null,"resumen"?: string | null,"sede"?: string | null,"sin_responder"?: never,"telefono": string,"total_mensajes"?: number,"ultima_respuesta_at"?: string | null,"ultimo_aviso_mensaje_at"?: string | null,"ultimo_contacto"?: string,"ultimo_mensaje_at"?: string | null,"ultimo_mensaje_lead_at"?: string | null,"ultimo_mensaje_texto"?: string | null,"ultimo_registro_at"?: string | null,"updated_at"?: string
+                    "asesor_id"?: string | null,"bot_pausado_hasta"?: string | null,"carrera_interes"?: string | null,"convocatoria"?: string | null,"created_at"?: string,"dni"?: string | null,"duplicados_ignorados"?: number,"en_blacklist"?: boolean,"estado"?: Database["public"]['Enums']["lead_estado"],"fecha_asignado"?: string | null,"fecha_interesado"?: string | null,"fecha_notificacion"?: string | null,"fecha_postulacion"?: string | null,"id"?: string,"modalidad"?: string | null,"motivo_no_interes"?: string | null,"nombre"?: string | null,"notificacion_error"?: string | null,"notificacion_estado"?: string | null,"notificacion_intentos"?: number,"origen"?: string,"origen_campana"?: string | null,"primer_contacto"?: string,"primer_contacto_asesor_at"?: string | null,"programa"?: string,"reasignaciones"?: number,"reconsultas"?: number,"recordatorio_enviado"?: string | null,"resumen"?: string | null,"sede"?: string | null,"sin_responder"?: never,"telefono": string,"total_mensajes"?: number,"ultima_respuesta_at"?: string | null,"ultimo_aviso_mensaje_at"?: string | null,"ultimo_contacto"?: string,"ultimo_mensaje_at"?: string | null,"ultimo_mensaje_lead_at"?: string | null,"ultimo_mensaje_texto"?: string | null,"ultimo_registro_at"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "asesor_id"?: string | null,"bot_pausado_hasta"?: string | null,"carrera_interes"?: string | null,"convocatoria"?: string | null,"created_at"?: string,"dni"?: string | null,"duplicados_ignorados"?: number,"en_blacklist"?: boolean,"estado"?: Database["public"]['Enums']["lead_estado"],"fecha_asignado"?: string | null,"fecha_interesado"?: string | null,"fecha_notificacion"?: string | null,"fecha_postulacion"?: string | null,"id"?: string,"modalidad"?: string | null,"motivo_no_interes"?: string | null,"nombre"?: string | null,"notificacion_error"?: string | null,"notificacion_estado"?: string | null,"notificacion_intentos"?: number,"origen"?: string,"primer_contacto"?: string,"primer_contacto_asesor_at"?: string | null,"programa"?: string,"reconsultas"?: number,"recordatorio_enviado"?: string | null,"resumen"?: string | null,"sede"?: string | null,"sin_responder"?: never,"telefono"?: string,"total_mensajes"?: number,"ultima_respuesta_at"?: string | null,"ultimo_aviso_mensaje_at"?: string | null,"ultimo_contacto"?: string,"ultimo_mensaje_at"?: string | null,"ultimo_mensaje_lead_at"?: string | null,"ultimo_mensaje_texto"?: string | null,"ultimo_registro_at"?: string | null,"updated_at"?: string
+                    "asesor_id"?: string | null,"bot_pausado_hasta"?: string | null,"carrera_interes"?: string | null,"convocatoria"?: string | null,"created_at"?: string,"dni"?: string | null,"duplicados_ignorados"?: number,"en_blacklist"?: boolean,"estado"?: Database["public"]['Enums']["lead_estado"],"fecha_asignado"?: string | null,"fecha_interesado"?: string | null,"fecha_notificacion"?: string | null,"fecha_postulacion"?: string | null,"id"?: string,"modalidad"?: string | null,"motivo_no_interes"?: string | null,"nombre"?: string | null,"notificacion_error"?: string | null,"notificacion_estado"?: string | null,"notificacion_intentos"?: number,"origen"?: string,"origen_campana"?: string | null,"primer_contacto"?: string,"primer_contacto_asesor_at"?: string | null,"programa"?: string,"reasignaciones"?: number,"reconsultas"?: number,"recordatorio_enviado"?: string | null,"resumen"?: string | null,"sede"?: string | null,"sin_responder"?: never,"telefono"?: string,"total_mensajes"?: number,"ultima_respuesta_at"?: string | null,"ultimo_aviso_mensaje_at"?: string | null,"ultimo_contacto"?: string,"ultimo_mensaje_at"?: string | null,"ultimo_mensaje_lead_at"?: string | null,"ultimo_mensaje_texto"?: string | null,"ultimo_registro_at"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -213,6 +213,9 @@ isOneToOne: false
 "es_admin":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"llamar_genesys":
+{ Args: { "p_accion": string,"p_cuerpo"?: Json }; Returns: undefined
+                           },
 "marcar_notificacion":
 { Args: { "p_error"?: string,"p_lead_id": string,"p_ok": boolean }; Returns: undefined
                            },
@@ -221,6 +224,9 @@ isOneToOne: false
                            },
 "procesar_lead":
 { Args: { "p_asesor_id"?: string,"p_asignar"?: boolean,"p_carrera"?: string,"p_consulta"?: string,"p_convocatoria"?: string,"p_dni"?: string,"p_modalidad"?: string,"p_nombre"?: string,"p_notificar"?: boolean,"p_origen"?: string,"p_programa"?: string,"p_telefono"?: string }; Returns: Json
+                           },
+"reasignar_sin_contacto":
+{ Args: { "p_horas"?: number,"p_maximo"?: number,"p_solo_horario"?: boolean }; Returns: Json
                            },
 "registrar_lead":
 { Args: { "p_mensaje"?: string,"p_telefono": string }; Returns: {
@@ -245,9 +251,11 @@ isOneToOne: false
 "notificacion_estado": string | null,
 "notificacion_intentos": number,
 "origen": string,
+"origen_campana": string | null,
 "primer_contacto": string,
 "primer_contacto_asesor_at": string | null,
 "programa": string,
+"reasignaciones": number,
 "reconsultas": number,
 "recordatorio_enviado": string | null,
 "resumen": string | null,

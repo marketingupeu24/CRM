@@ -65,6 +65,20 @@ export function emailDeUsuario(usuario: string): string {
 export type Tarea = Tables<'tareas'>
 export type RespuestaRapida = Tables<'respuestas_rapidas'>
 
+/** Cómo nos conoció el lead (leads.origen_campana). Igual que ORIGENES en _shared/dominio.ts. */
+export const ORIGENES = [
+  'Facebook',
+  'Instagram',
+  'TikTok',
+  'Google',
+  'Página web',
+  'Recomendación',
+  'Feria / colegio',
+  'Volante / afiche',
+  'Radio / TV',
+  'Otro',
+] as const
+
 /** Motivos de pérdida / no interés (se guardan en leads.motivo_no_interes; "Otro: detalle"). */
 export const MOTIVOS_PERDIDA = [
   'Costo / pensión',

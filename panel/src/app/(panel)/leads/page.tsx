@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ESTADOS_LEAD, ETIQUETAS_ESTADO, ETIQUETAS_FUENTE, type Fuente, type LeadEstado } from '@crm/db'
+import { ESTADOS_LEAD, ETIQUETAS_ESTADO, ETIQUETAS_FUENTE, ORIGENES, type Fuente, type LeadEstado } from '@crm/db'
 import { InsigniaEstado } from '@/components/InsigniaEstado'
 import { fechaHora, haceCuanto } from '@/lib/formato'
 import { obtenerSesion } from '@/lib/sesion'
+import { BarraMasiva } from './BarraMasiva'
 import { crearClienteServidor } from '@/lib/supabase/server'
 
 export const metadata: Metadata = { title: 'Leads' }
@@ -22,6 +23,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
     carrera: parametro(sp.carrera),
     convocatoria: parametro(sp.convocatoria),
     asesor: parametro(sp.asesor),
+    origen: parametro(sp.origen),
     desde: parametro(sp.desde),
     hasta: parametro(sp.hasta),
   }
@@ -32,7 +34,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
 
   let consulta = supabase
     .from('leads')
-    .select('id, nombre, telefono, dni, carrera_interes, modalidad, programa, convocatoria, estado, origen, created_at, ultimo_contacto, reconsultas, sin_responder, asesor:asesores!leads_asesor_id_fkey(nombre)', { count: 'exact' })
+    .select('id, nombre, telefono, dni, carrera_interes, modalidad, programa, convocatoria, estado, origen, origen_campana, reasignaciones, created_at, ultimo_contacto, reconsultas, sin_responder, asesor:asesores!leads_asesor_id_fkey(nombre)', { count: 'exact' })
 
   if (filtros.q) {
     // Quita caracteres que alteran la sintaxis del filtro de PostgREST
@@ -45,6 +47,8 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
   if (filtros.convocatoria) consulta = consulta.eq('convocatoria', filtros.convocatoria)
   if (esAdmin && filtros.asesor === 'sin_asesor') consulta = consulta.is('asesor_id', null)
   else if (esAdmin && filtros.asesor) consulta = consulta.eq('asesor_id', filtros.asesor)
+  if (filtros.origen === 'Sin dato') consulta = consulta.is('origen_campana', null)
+  else if (filtros.origen) consulta = consulta.eq('origen_campana', filtros.origen)
   // Fechas en hora de Lima (UTC-5)
   if (/^\d{4}-\d{2}-\d{2}$/.test(filtros.desde)) consulta = consulta.gte('created_at', `${filtros.desde}T00:00:00-05:00`)
   if (/^\d{4}-\d{2}-\d{2}$/.test(filtros.hasta)) consulta = consulta.lte('created_at', `${filtros.hasta}T23:59:59.999-05:00`)
@@ -113,6 +117,11 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
             {(asesores ?? []).map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
           </select>
         )}
+        <select name="origen" defaultValue={filtros.origen} className="campo" aria-label="Nos conoció por">
+          <option value="">Todos los orígenes</option>
+          {ORIGENES.map((o) => <option key={o} value={o}>{o}</option>)}
+          <option value="Sin dato">Sin dato</option>
+        </select>
         <label className="flex items-center gap-2 text-sm text-slate-600">
           Registrado desde <input type="date" name="desde" defaultValue={filtros.desde} className="campo" />
         </label>
@@ -127,10 +136,15 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
 
       {error && <p className="rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-700">Error cargando leads: {error.message}</p>}
 
+      <BarraMasiva asesores={asesores ?? []} />
+
       <div className="tarjeta overflow-x-auto">
         <table className="min-w-full divide-y divide-slate-200 text-sm">
           <thead className="bg-slate-50 text-left text-xs font-semibold tracking-wide text-slate-500 uppercase">
             <tr>
+              <th className="w-10 py-3 pl-4">
+                <input type="checkbox" data-lead-todos aria-label="Seleccionar todos los de esta página" className="h-4 w-4 accent-marca-600" />
+              </th>
               <th className="px-4 py-3">Lead</th>
               <th className="px-4 py-3">Interés</th>
               <th className="px-4 py-3">Convocatoria</th>
@@ -142,7 +156,10 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {(leads ?? []).map((l) => (
-              <tr key={l.id} className="hover:bg-slate-50">
+              <tr key={l.id} className="hover:bg-slate-50 has-checked:bg-marca-50">
+                <td className="py-3 pl-4">
+                  <input type="checkbox" data-lead-sel value={l.id} aria-label={`Seleccionar ${l.nombre ?? l.telefono}`} className="h-4 w-4 accent-marca-600" />
+                </td>
                 <td className="px-4 py-3">
                   <Link href={`/leads/${l.id}`} className="font-medium text-marca-700 hover:underline">
                     {l.nombre ?? 'Sin nombre'}
@@ -161,18 +178,24 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
                 <td className="px-4 py-3">{l.convocatoria ?? <span className="text-slate-400">—</span>}</td>
                 <td className="px-4 py-3"><InsigniaEstado estado={l.estado} /></td>
                 {esAdmin && <td className="px-4 py-3">{l.asesor?.nombre ?? <span className="text-slate-400">Sin asesor</span>}</td>}
-                <td className="px-4 py-3 text-slate-600">{ETIQUETAS_FUENTE[l.origen as Fuente] ?? l.origen}</td>
+                <td className="px-4 py-3 text-slate-600">
+                  {ETIQUETAS_FUENTE[l.origen as Fuente] ?? l.origen}
+                  {l.origen_campana && <p className="text-xs text-slate-500">📣 {l.origen_campana}</p>}
+                </td>
                 <td className="px-4 py-3 whitespace-nowrap" title={`Último contacto: ${fechaHora(l.ultimo_contacto)} · Registrado: ${fechaHora(l.created_at)}`}>
                   {haceCuanto(l.ultimo_contacto)}
                   {l.reconsultas > 0 && (
                     <span className="ml-1 text-xs text-slate-500" title="Veces que volvió a consultar">🔁 {l.reconsultas}</span>
+                  )}
+                  {l.reasignaciones > 0 && (
+                    <span className="ml-1 text-xs text-amber-600" title="Veces que se reasignó por no ser contactado a tiempo">⇄ {l.reasignaciones}</span>
                   )}
                 </td>
               </tr>
             ))}
             {!leads?.length && (
               <tr>
-                <td colSpan={esAdmin ? 7 : 6} className="px-4 py-12 text-center text-slate-500">
+                <td colSpan={esAdmin ? 8 : 7} className="px-4 py-12 text-center text-slate-500">
                   {hayFiltros ? 'No hay leads con estos filtros.' : 'Todavía no hay leads.'}
                 </td>
               </tr>

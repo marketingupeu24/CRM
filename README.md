@@ -156,6 +156,19 @@ Se actualiza en vivo (Supabase Realtime).
 - **Respuestas rápidas** (botón ⚡ del chat) con `{nombre}`, `{carrera}` y `{asesor}`; el admin las administra.
 - **Motivo de pérdida** obligatorio (lista fija) al marcar *Perdido* o *No interesado*.
 - **Exportar Excel** en la lista de leads (CSV con los mismos filtros; el asesor solo exporta sus leads).
+- **Acciones masivas** en la lista de leads: marca casillas (o todas las de la página) y cambia el estado
+  (con motivo si es *Perdido*) o, si eres admin, asígnalos a un asesor.
+- **Avisos de escritorio** (botón 🔔 de la barra superior): sonido y notificación del navegador cuando un
+  lead escribe, aunque la pestaña esté en segundo plano. Se activa por usuario y navegador.
+- **Reasignación automática**: cada 15 min (de 8:00 a 19:00, hora de Lima) un lead *Asignado* que no fue
+  contactado en 4 h pasa al siguiente asesor de la rotación y este recibe el aviso por WhatsApp
+  ("🔁 LEAD REASIGNADO A TI"). Máximo 2 veces por lead; se ajusta con los secretos `REASIGNAR_HORAS` y
+  `REASIGNAR_MAXIMO` de la función `genesys`. La ficha muestra cuántas veces se reasignó.
+- **Origen del lead** ("Nos conoció por": Facebook, Instagram, TikTok, ferias…): se elige en el registro
+  manual o en *Editar datos*, se filtra en la lista, sale en el Excel y en el gráfico *Leads por origen*
+  del dashboard. Desde Genesys llega si el webhook de BuilderBot envía el campo `Origen` (también acepta
+  `ComoNosConocio`, `Campana` o `utm_source`): agrega en el flujo la pregunta "¿Cómo nos conociste?",
+  guarda la respuesta en una variable y súmala al body como `"Origen": "{{variable}}"`.
 
 ### Dashboard
 

@@ -27,6 +27,8 @@ interface Resumen {
   por_asesor: (FilaAsesor & { asesor_id: string })[]
   por_periodo: { periodo: string; total: number }[]
   por_motivo: { motivo: string; total: number }[]
+  por_origen?: { origen: string; total: number; matriculados: number }[]
+  reasignados?: number
   unidad_periodo: 'dia' | 'semana'
   desde: string
   hasta: string
@@ -159,7 +161,7 @@ export default async function PaginaDashboard(props: PageProps<'/dashboard'>) {
         <Indicador titulo="Conversión global" valor={pct(r.matriculados, r.total)} detalle="lead → matriculado" />
         <Indicador
           titulo="Primera respuesta" valor={duracion(r.primera_respuesta_min)}
-          detalle={`mediana · ${pct(r.contactados_a_tiempo, r.con_primer_contacto)} en menos de 2 h${r.sin_contactar_2h ? ` · ${r.sin_contactar_2h} sin contactar` : ''}`}
+          detalle={`mediana · ${pct(r.contactados_a_tiempo, r.con_primer_contacto)} en menos de 2 h${r.sin_contactar_2h ? ` · ${r.sin_contactar_2h} sin contactar` : ''}${r.reasignados ? ` · ${r.reasignados} reasignados` : ''}`}
         />
       </div>
 
@@ -196,12 +198,25 @@ export default async function PaginaDashboard(props: PageProps<'/dashboard'>) {
         </Tarjeta>
       </div>
 
-      <Tarjeta titulo="Motivos de pérdida" descripcion="Leads perdidos o no interesados, según el motivo registrado">
-        <BarrasHorizontales
-          total={r.por_motivo.reduce((s, m) => s + m.total, 0)}
-          filas={r.por_motivo.map((m) => ({ etiqueta: m.motivo, valor: m.total }))}
-        />
-      </Tarjeta>
+      <div className="grid gap-6 xl:grid-cols-2">
+        <Tarjeta titulo="Leads por origen" descripcion="Cómo nos conocieron (campaña o canal)">
+          <BarrasHorizontales
+            total={r.total}
+            filas={(r.por_origen ?? []).map((o) => ({
+              etiqueta: o.origen,
+              valor: o.total,
+              detalle: <p className="text-slate-300">Matriculados: {num(o.matriculados)} ({pct(o.matriculados, o.total)})</p>,
+            }))}
+          />
+        </Tarjeta>
+
+        <Tarjeta titulo="Motivos de pérdida" descripcion="Leads perdidos o no interesados, según el motivo registrado">
+          <BarrasHorizontales
+            total={r.por_motivo.reduce((s, m) => s + m.total, 0)}
+            filas={r.por_motivo.map((m) => ({ etiqueta: m.motivo, valor: m.total }))}
+          />
+        </Tarjeta>
+      </div>
 
       <Tarjeta titulo="Leads por asesor" descripcion={esAdmin ? 'Estado actual de los leads asignados a cada asesor' : 'Estado actual de tus leads'}>
         <BarrasPorAsesor filas={r.por_asesor} />

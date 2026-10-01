@@ -161,7 +161,7 @@ export function Conversacion(
     m.autor_nombre ?? (m.autor_id ? nombresAutores[m.autor_id] : undefined) ?? 'Asesor'
 
   return (
-    <section className="tarjeta flex scroll-mt-16 flex-col overflow-hidden" id="chat">
+    <section className="tarjeta flex scroll-mt-36 flex-col overflow-hidden" id="chat">
       <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
         <div>
           <h2 className="font-semibold">Conversación de WhatsApp</h2>
