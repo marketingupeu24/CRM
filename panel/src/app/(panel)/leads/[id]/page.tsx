@@ -10,6 +10,7 @@ import { BotonEliminarNota, EditarDatos, FormularioNota, ReasignarAsesor, Select
 import { esDelChat } from '@/lib/chat'
 import { Conversacion, type MensajeChat } from './Conversacion'
 import { ControlesChat } from './ControlesChat'
+import { BotonesTarea, FormularioTarea } from '@/components/Tareas'
 
 export const metadata: Metadata = { title: 'Ficha del lead' }
 
@@ -46,7 +47,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
   const { esAdmin, perfil } = await obtenerSesion()
   const supabase = await crearClienteServidor()
 
-  const [{ data: lead }, { data: historial }, { data: asesores }] = await Promise.all([
+  const [{ data: lead }, { data: historial }, { data: asesores }, { data: tareas }, { data: respuestas }] = await Promise.all([
     supabase.from('leads').select('*, asesor:asesores!leads_asesor_id_fkey(id, nombre, telefono)').eq('id', id).maybeSingle(),
     supabase.from('lead_interacciones')
       .select('*, autor:asesores!lead_interacciones_autor_id_fkey(nombre)')
@@ -54,6 +55,8 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
     esAdmin
       ? supabase.from('asesores').select('id, nombre, activo').eq('rol', 'asesor').order('nombre')
       : Promise.resolve({ data: [] as { id: string; nombre: string; activo: boolean }[] }),
+    supabase.from('tareas').select('id, titulo, vence_at').eq('lead_id', id).is('completada_at', null).order('vence_at'),
+    supabase.from('respuestas_rapidas').select('id, titulo, contenido').eq('activa', true).order('orden').order('titulo'),
   ])
   if (!lead) notFound()
 
@@ -97,6 +100,12 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
           <Conversacion
             leadId={lead.id} telefono={lead.telefono} inicial={chat}
             miNombre={perfil.nombre} nombresAutores={nombresAutores}
+            respuestas={respuestas ?? []}
+            variables={{
+              nombre: (lead.nombre ?? '').split(' ')[0] ?? '',
+              carrera: lead.carrera_interes ?? lead.modalidad ?? 'la carrera de tu interés',
+              asesor: perfil.nombre.split(' ')[0] ?? perfil.nombre,
+            }}
             encabezado={
               <ControlesChat
                 leadId={lead.id} estado={lead.estado} botPausadoHasta={lead.bot_pausado_hasta}
@@ -168,6 +177,29 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
                 <ReasignarAsesor key={lead.asesor_id} leadId={lead.id} asesorId={lead.asesor_id} asesores={asesores ?? []} />
               </div>
             )}
+          </section>
+
+          <section className="tarjeta p-6">
+            <h2 className="mb-3 font-semibold">Próxima acción</h2>
+            {!!tareas?.length && (
+              <ul className="mb-4 space-y-2">
+                {tareas.map((t) => {
+                  const vencida = Date.parse(t.vence_at) < Date.now()
+                  return (
+                    <li key={t.id} className={`rounded-lg border p-2 text-sm ${vencida ? 'border-rose-200 bg-rose-50' : 'border-slate-200'}`}>
+                      <p className="font-medium">{t.titulo}</p>
+                      <div className="mt-1 flex items-center justify-between gap-2">
+                        <span className={`text-xs ${vencida ? 'font-semibold text-rose-600' : 'text-slate-500'}`}>
+                          {vencida ? 'Venció ' : ''}{fechaHora(t.vence_at)}
+                        </span>
+                        <BotonesTarea tareaId={t.id} leadId={lead.id} />
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+            <FormularioTarea leadId={lead.id} />
           </section>
 
           <section className="tarjeta p-6">

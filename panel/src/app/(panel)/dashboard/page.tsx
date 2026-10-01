@@ -22,6 +22,7 @@ interface Resumen {
   por_carrera: { carrera: string; total: number; interesados: number; matriculados: number }[]
   por_asesor: (FilaAsesor & { asesor_id: string })[]
   por_periodo: { periodo: string; total: number }[]
+  por_motivo: { motivo: string; total: number }[]
   unidad_periodo: 'dia' | 'semana'
   desde: string
   hasta: string
@@ -186,6 +187,13 @@ export default async function PaginaDashboard(props: PageProps<'/dashboard'>) {
           />
         </Tarjeta>
       </div>
+
+      <Tarjeta titulo="Motivos de pérdida" descripcion="Leads perdidos o no interesados, según el motivo registrado">
+        <BarrasHorizontales
+          total={r.por_motivo.reduce((s, m) => s + m.total, 0)}
+          filas={r.por_motivo.map((m) => ({ etiqueta: m.motivo, valor: m.total }))}
+        />
+      </Tarjeta>
 
       <Tarjeta titulo="Leads por asesor" descripcion={esAdmin ? 'Estado actual de los leads asignados a cada asesor' : 'Estado actual de tus leads'}>
         <BarrasPorAsesor filas={r.por_asesor} />

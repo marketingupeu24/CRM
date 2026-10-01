@@ -61,3 +61,19 @@ export const DOMINIO_EMAIL_INTERNO = 'crm.local'
 export function emailDeUsuario(usuario: string): string {
   return `${usuario.trim().toLowerCase()}@${DOMINIO_EMAIL_INTERNO}`
 }
+
+export type Tarea = Tables<'tareas'>
+export type RespuestaRapida = Tables<'respuestas_rapidas'>
+
+/** Motivos de pérdida / no interés (se guardan en leads.motivo_no_interes; "Otro: detalle"). */
+export const MOTIVOS_PERDIDA = [
+  'Costo / pensión',
+  'Eligió otra universidad',
+  'Distancia / ubicación',
+  'Horarios',
+  'No ofrecemos la carrera',
+  'No cumple requisitos',
+  'Postergó para otro periodo',
+  'No responde',
+  'Otro',
+] as const

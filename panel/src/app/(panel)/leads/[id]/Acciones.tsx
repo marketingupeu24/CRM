@@ -2,7 +2,7 @@
 
 // Controles interactivos de la ficha del lead.
 import { useActionState, useState, useTransition } from 'react'
-import { ESTADOS_LEAD, ETIQUETAS_ESTADO, type Lead, type LeadEstado } from '@crm/db'
+import { ESTADOS_LEAD, ETIQUETAS_ESTADO, MOTIVOS_PERDIDA, type Lead, type LeadEstado } from '@crm/db'
 import {
   actualizarDatos, agregarNota, cambiarEstado, eliminarNota, reasignarAsesor, type Resultado,
 } from '../acciones'
@@ -16,21 +16,29 @@ function Mensaje({ resultado, textoOk }: { resultado: Resultado; textoOk?: strin
 export function SelectorEstado({ leadId, estado }: { leadId: string; estado: LeadEstado }) {
   const [nuevo, setNuevo] = useState<LeadEstado>(estado)
   const [motivo, setMotivo] = useState('')
+  const [detalle, setDetalle] = useState('')
   const [resultado, setResultado] = useState<Resultado>({})
   const [pendiente, iniciar] = useTransition()
-  const pideMotivo = nuevo === 'lead_perdido' || nuevo === 'lead_no_interesado'
+  const pideMotivo = (nuevo === 'lead_perdido' || nuevo === 'lead_no_interesado') && nuevo !== estado
+  const motivoFinal = motivo === 'Otro' ? `Otro: ${detalle.trim() || 'sin detalle'}` : motivo
 
   return (
     <div className="space-y-3">
       <select value={nuevo} onChange={(e) => { setNuevo(e.target.value as LeadEstado); setResultado({}) }} className="campo">
         {ESTADOS_LEAD.map((e) => <option key={e} value={e}>{ETIQUETAS_ESTADO[e]}</option>)}
       </select>
-      {pideMotivo && nuevo !== estado && (
-        <input value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Motivo (opcional): eligió otra universidad, costo…" className="campo" />
+      {pideMotivo && (
+        <select value={motivo} onChange={(e) => setMotivo(e.target.value)} className="campo" aria-label="Motivo">
+          <option value="" disabled>Elige el motivo…</option>
+          {MOTIVOS_PERDIDA.map((m) => <option key={m} value={m}>{m}</option>)}
+        </select>
+      )}
+      {pideMotivo && motivo === 'Otro' && (
+        <input value={detalle} onChange={(e) => setDetalle(e.target.value)} maxLength={150} placeholder="Detalle del motivo" className="campo" />
       )}
       <button
-        className="boton w-full" disabled={pendiente || nuevo === estado}
-        onClick={() => iniciar(async () => setResultado(await cambiarEstado(leadId, nuevo, motivo)))}
+        className="boton w-full" disabled={pendiente || nuevo === estado || (pideMotivo && !motivo)}
+        onClick={() => iniciar(async () => setResultado(await cambiarEstado(leadId, nuevo, pideMotivo ? motivoFinal : undefined)))}
       >
         {pendiente ? 'Guardando…' : 'Cambiar estado'}
       </button>

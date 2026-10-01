@@ -21,13 +21,32 @@ interface Props {
   inicial: MensajeChat[]
   miNombre: string
   nombresAutores: Record<string, string>
+  /** Plantillas del chat; {nombre}, {carrera} y {asesor} se reemplazan con `variables` */
+  respuestas?: { id: number; titulo: string; contenido: string }[]
+  variables?: { nombre: string; carrera: string; asesor: string }
   /** Barra con el estado del bot y los botones Atendido / Matriculado */
   encabezado?: React.ReactNode
 }
 
-export function Conversacion({ leadId, telefono, inicial, miNombre, nombresAutores, encabezado }: Props) {
+export function Conversacion(
+  { leadId, telefono, inicial, miNombre, nombresAutores, encabezado, respuestas = [], variables }: Props,
+) {
   const [mensajes, setMensajes] = useState<MensajeChat[]>(inicial)
   const [texto, setTexto] = useState('')
+  const [verRespuestas, setVerRespuestas] = useState(false)
+
+  /** Aplica una respuesta rápida: reemplaza las variables y la deja lista para editar */
+  function usarRespuesta(contenido: string) {
+    const v = variables ?? { nombre: '', carrera: '', asesor: miNombre }
+    const final = contenido
+      .replaceAll('{nombre}', v.nombre)
+      .replaceAll('{carrera}', v.carrera)
+      .replaceAll('{asesor}', v.asesor)
+      // "Hola , ..." cuando falta el nombre -> "Hola, ..."
+      .replace(/\s+([,.!?])/g, '$1')
+    setTexto((actual) => (actual.trim() ? `${actual.trimEnd()}\n${final}` : final))
+    setVerRespuestas(false)
+  }
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [enVivo, setEnVivo] = useState(false)
@@ -141,10 +160,32 @@ export function Conversacion({ leadId, telefono, inicial, miNombre, nombresAutor
         })}
       </div>
 
+      {verRespuestas && (
+        <div className="max-h-56 overflow-y-auto border-t border-slate-200 bg-slate-50 p-2">
+          {respuestas.length === 0 && (
+            <p className="px-2 py-3 text-center text-xs text-slate-500">No hay respuestas rápidas. El administrador las crea en «Respuestas rápidas».</p>
+          )}
+          {respuestas.map((rr) => (
+            <button
+              key={rr.id} type="button" onClick={() => usarRespuesta(rr.contenido)}
+              className="block w-full rounded-lg px-3 py-2 text-left hover:bg-white"
+            >
+              <span className="text-sm font-medium text-slate-800">{rr.titulo}</span>
+              <span className="block truncate text-xs text-slate-500">{rr.contenido}</span>
+            </button>
+          ))}
+        </div>
+      )}
       <form
         className="flex items-end gap-2 border-t border-slate-200 bg-white p-3"
         onSubmit={(e) => { e.preventDefault(); enviar(texto) }}
       >
+        <button
+          type="button" onClick={() => setVerRespuestas((v) => !v)} title="Respuestas rápidas"
+          className={`h-10 shrink-0 rounded-lg border px-3 text-sm ${verRespuestas ? 'border-marca-600 bg-marca-50 text-marca-700' : 'border-slate-300 text-slate-600 hover:bg-slate-50'}`}
+        >
+          ⚡
+        </button>
         <textarea
           value={texto}
           onChange={(e) => setTexto(e.target.value)}

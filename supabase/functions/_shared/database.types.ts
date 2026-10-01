@@ -74,6 +74,62 @@ isOneToOne: false
       referencedColumns: ["asesor_id"]
     }
                   ]
+                },"respuestas_rapidas": {
+                  Row: {
+                    "activa": boolean,"contenido": string,"created_at": string,"id": number,"orden": number,"titulo": string
+                  }
+                  Insert: {
+                    "activa"?: boolean,"contenido": string,"created_at"?: string,"id"?: never,"orden"?: number,"titulo": string
+                  }
+                  Update: {
+                    "activa"?: boolean,"contenido"?: string,"created_at"?: string,"id"?: never,"orden"?: number,"titulo"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"tareas": {
+                  Row: {
+                    "asesor_id": string,"completada_at": string | null,"creada_por": string | null,"created_at": string,"id": number,"lead_id": string,"titulo": string,"vence_at": string
+                  }
+                  Insert: {
+                    "asesor_id": string,"completada_at"?: string | null,"creada_por"?: string | null,"created_at"?: string,"id"?: never,"lead_id": string,"titulo": string,"vence_at": string
+                  }
+                  Update: {
+                    "asesor_id"?: string,"completada_at"?: string | null,"creada_por"?: string | null,"created_at"?: string,"id"?: never,"lead_id"?: string,"titulo"?: string,"vence_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "tareas_asesor_id_fkey"
+      columns: ["asesor_id"]
+isOneToOne: false
+      referencedRelation: "asesores"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "tareas_asesor_id_fkey"
+      columns: ["asesor_id"]
+isOneToOne: false
+      referencedRelation: "vista_leads_por_asesor"
+      referencedColumns: ["asesor_id"]
+    },{
+      foreignKeyName: "tareas_creada_por_fkey"
+      columns: ["creada_por"]
+isOneToOne: false
+      referencedRelation: "asesores"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "tareas_creada_por_fkey"
+      columns: ["creada_por"]
+isOneToOne: false
+      referencedRelation: "vista_leads_por_asesor"
+      referencedColumns: ["asesor_id"]
+    },{
+      foreignKeyName: "tareas_lead_id_fkey"
+      columns: ["lead_id"]
+isOneToOne: false
+      referencedRelation: "leads"
+      referencedColumns: ["id"]
+    }
+                  ]
                 }
           }
           Views: {

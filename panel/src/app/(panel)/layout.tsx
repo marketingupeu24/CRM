@@ -1,5 +1,6 @@
 import { Navegacion } from '@/components/Navegacion'
 import { obtenerSesion } from '@/lib/sesion'
+import { contarPendientes } from '@/lib/pendientes'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { cerrarSesion } from '../login/acciones'
 import { FormularioClave } from './cuenta/FormularioClave'
@@ -7,7 +8,10 @@ import { FormularioClave } from './cuenta/FormularioClave'
 export default async function LayoutPanel({ children }: { children: React.ReactNode }) {
   const { perfil, esAdmin, debeCambiarClave } = await obtenerSesion()
   const supabase = await crearClienteServidor()
-  const { count: sinResponder } = await supabase.from('leads').select('id', { count: 'exact', head: true }).eq('sin_responder', true)
+  const [{ count: sinResponder }, pendientes] = await Promise.all([
+    supabase.from('leads').select('id', { count: 'exact', head: true }).eq('sin_responder', true),
+    contarPendientes(supabase),
+  ])
 
   return (
     <div className="min-h-screen md:flex">
@@ -19,7 +23,7 @@ export default async function LayoutPanel({ children }: { children: React.ReactN
             <p className="text-xs text-marca-100">{esAdmin ? 'Administrador' : 'Asesor'}</p>
           </div>
         </div>
-        {!debeCambiarClave && <Navegacion esAdmin={esAdmin} sinResponder={sinResponder ?? 0} />}
+        {!debeCambiarClave && <Navegacion esAdmin={esAdmin} sinResponder={sinResponder ?? 0} pendientes={pendientes} />}
         <div className="mt-4 border-t border-white/15 pt-4 md:mt-auto">
           <p className="truncate px-2 text-sm font-medium text-white">{perfil.nombre}</p>
           <p className="truncate px-2 font-mono text-xs text-marca-100">{perfil.usuario}</p>
