@@ -163,6 +163,10 @@ Se actualiza en vivo (Supabase Realtime).
   matriculados y perdidos, con botones *Ver leads* y *⬇ Excel*; también se elige en los filtros de Leads.
 - **Acciones masivas** en la lista de leads: marca casillas (o todas las de la página) y cambia el estado
   (con motivo si es *Perdido*) o, si eres admin, asígnalos a un asesor.
+- **Aviso al asignar desde el panel**: si un usuario asigna o reasigna un lead a *otro* asesor (ficha,
+  acciones masivas o registro manual), ese asesor recibe "📌 LEAD ASIGNADO A TI" por WhatsApp con el
+  enlace a la ficha. Con más de 3 leads a la vez recibe un solo resumen. Lo hace el trigger
+  `leads_aviso_asignacion_*`, que llama a `/genesys/notificar`.
 - **Avisos de escritorio** (botón 🔔 de la barra superior): sonido y notificación del navegador cuando un
   lead escribe, aunque la pestaña esté en segundo plano. Se activa por usuario y navegador.
 - **Reasignación automática**: cada 15 min (de 8:00 a 19:00, hora de Lima) un lead *Asignado* que no fue

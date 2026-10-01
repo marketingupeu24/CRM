@@ -379,6 +379,39 @@ await falla(`insert into campanas (nombre, inicio, fin) values ('Asesor', curren
 ok((await q(`select * from campanas`)).length === 3, 'el asesor ve las campañas')
 await reset()
 
+seccion('aviso al asignar desde el panel')
+// En PGlite no hay pg_net: se reemplaza llamar_genesys por una versión que anota las llamadas
+await db.exec(`
+  create table llamadas_genesys (accion text, cuerpo jsonb);
+  create or replace function public.llamar_genesys(p_accion text, p_cuerpo jsonb default '{}'::jsonb)
+  returns void language sql security definer set search_path = '' as
+  $f$ insert into public.llamadas_genesys values (p_accion, p_cuerpo) $f$;
+`)
+const llamadas = async () => (await q(`select accion, cuerpo from llamadas_genesys`))
+const otroAsesor = (await uno(`select id from asesores where rol = 'asesor' and activo and id <> $1 limit 1`, [ga.id])).id
+const [aa1, aa2, aa3] = (await q(`select id from leads where asesor_id = $1 order by id limit 3`, [ga.id])).map((r) => r.id)
+await comoUsuario('admin@test.pe')
+await q(`update leads set asesor_id = $1 where id = $2`, [otroAsesor, aa1])
+let ll = await llamadas()
+ok(ll.length === 1 && ll[0].accion === 'notificar' && ll[0].cuerpo.lead_ids.length === 1 && ll[0].cuerpo.lead_ids[0] === aa1 && !!ll[0].cuerpo.asignado_por,
+  'el admin reasigna desde el panel -> se avisa al asesor nuevo')
+await q(`update leads set asesor_id = $1 where id in ($2, $3)`, [otroAsesor, aa2, aa3])
+ll = await llamadas()
+ok(ll.length === 2 && ll[1].cuerpo.lead_ids.length === 2, 'asignación masiva -> una sola llamada con todos los leads')
+await q(`update leads set resumen = 'otra consulta' where id = $1`, [aa1])
+await q(`update leads set asesor_id = $1 where id = $2`, [otroAsesor, aa1])
+ok((await llamadas()).length === 2, 'sin cambio de asesor no se avisa')
+await comoUsuario('a@test.pe')
+await uno(`select registrar_lead_manual('Lead propio', '51955500001') r`)
+ok((await llamadas()).length === 2, 'el asesor que registra un lead para sí mismo no recibe aviso')
+await comoUsuario('admin@test.pe')
+await uno(`select registrar_lead_manual(p_nombre => 'Lead para otro', p_telefono => '51955500002', p_asesor_id => $1) r`, [otroAsesor])
+ll = await llamadas()
+ok(ll.length === 3 && ll[2].cuerpo.lead_ids.length === 1, 'el admin registra un lead para otro asesor -> se avisa')
+await reset()
+await q(`update leads set asesor_id = $1 where id = $2`, [ga.id, aa1])
+ok((await llamadas()).length === 3, 'los cambios del bot o del cron (sin usuario del panel) no disparan este aviso')
+
 seccion('anon')
 await db.exec(`reset role; set request.jwt.claim.sub = ''; set role anon`)
 await falla(`select * from tareas`, 'anon no puede ver tareas')

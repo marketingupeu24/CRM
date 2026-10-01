@@ -119,13 +119,14 @@ const ENCABEZADO_POR_FUENTE: Record<Fuente, string> = {
   manual: '*REGISTRO MANUAL*',
 }
 
-type TipoAviso = 'nuevo' | 'reenvio' | 'reconsulta' | 'reasignado'
+type TipoAviso = 'nuevo' | 'reenvio' | 'reconsulta' | 'reasignado' | 'asignado'
 
-function mensajeNuevoLead(lead: Lead, fuente: Fuente, tipo: TipoAviso = 'nuevo'): string {
+function mensajeNuevoLead(lead: Lead, fuente: Fuente, tipo: TipoAviso = 'nuevo', asignadoPor?: string | null): string {
   const interes = lead.modalidad ?? lead.carrera_interes ?? 'Consulta general'
   const encabezado = tipo === 'reenvio' ? '*REENVÍO PENDIENTE*'
     : tipo === 'reconsulta' ? '*🔁 VOLVIÓ A CONSULTAR*'
     : tipo === 'reasignado' ? '*🔁 LEAD REASIGNADO A TI* (su asesor no lo contactó a tiempo)'
+    : tipo === 'asignado' ? `*📌 LEAD ASIGNADO A TI*${asignadoPor ? ` (por ${asignadoPor})` : ''}`
     : ENCABEZADO_POR_FUENTE[fuente]
   return [
     encabezado,
@@ -138,6 +139,7 @@ function mensajeNuevoLead(lead: Lead, fuente: Fuente, tipo: TipoAviso = 'nuevo')
     lead.origen_campana ? `*Nos conoció por:* ${lead.origen_campana}` : null,
     `*Celular:* ${lead.telefono}`,
     `*WhatsApp:* https://wa.me/${lead.telefono}`,
+    tipo === 'asignado' ? `*Ficha en el CRM:* ${PANEL_URL}/leads/${lead.id}` : null,
   ].filter((linea) => linea !== null).join('\n')
 }
 
@@ -145,8 +147,8 @@ function mensajeNuevoLead(lead: Lead, fuente: Fuente, tipo: TipoAviso = 'nuevo')
  * Notifica al asesor y guarda el resultado (intentos, error) en el lead.
  * La API de BuilderBot a veces tarda: se reintenta hasta 3 veces con espera creciente.
  */
-async function notificarAsesor(lead: Lead, telefonoAsesor: string, fuente: Fuente, tipo: TipoAviso = 'nuevo') {
-  const texto = mensajeNuevoLead(lead, fuente, tipo)
+async function notificarAsesor(lead: Lead, telefonoAsesor: string, fuente: Fuente, tipo: TipoAviso = 'nuevo', asignadoPor?: string | null) {
+  const texto = mensajeNuevoLead(lead, fuente, tipo, asignadoPor)
   let envio = await enviarWhatsApp(telefonoAsesor, texto)
   for (let intento = 1; !envio.ok && intento < 3; intento++) {
     await new Promise((r) => setTimeout(r, intento * 5_000))
@@ -575,6 +577,60 @@ async function reasignar(): Promise<Respuesta> {
   return { ok: true, reasignados: cambios.length }
 }
 
+/** Más leads que esto para un mismo asesor: un solo mensaje de resumen en vez de uno por lead. */
+const MAXIMO_AVISOS_DETALLADOS = 3
+
+/**
+ * Un usuario del panel asignó leads a un asesor (trigger leads_aviso_asignacion_*).
+ * Se avisa al asesor nuevo por WhatsApp, en cualquier modo (sombra o activo).
+ */
+async function notificarAsignacion(cuerpo: Cuerpo): Promise<Respuesta> {
+  const ids = (Array.isArray(cuerpo.lead_ids) ? cuerpo.lead_ids : [])
+    .filter((id): id is string => typeof id === 'string').slice(0, 500)
+  if (!ids.length) return { ok: true, avisados: 0 }
+  const asignadoPor = typeof cuerpo.asignado_por === 'string' ? cuerpo.asignado_por : null
+
+  const { data: leads, error } = await supabase.from('leads').select('*').in('id', ids)
+  if (error) throw error
+  const asesorIds = [...new Set((leads ?? []).map((l) => l.asesor_id).filter((id): id is string => !!id))]
+  const { data: asesores } = await supabase.from('asesores').select('id, telefono').in('id', asesorIds)
+  const telefonos = new Map((asesores ?? []).map((a) => [a.id, a.telefono]))
+
+  const porAsesor = new Map<string, Lead[]>()
+  for (const l of leads ?? []) {
+    if (l.asesor_id) porAsesor.set(l.asesor_id, [...(porAsesor.get(l.asesor_id) ?? []), l])
+  }
+
+  let avisados = 0
+  for (const [asesorId, suyos] of porAsesor) {
+    const telefono = telefonos.get(asesorId)
+    if (!telefono) continue
+    if (suyos.length <= MAXIMO_AVISOS_DETALLADOS) {
+      for (const lead of suyos) {
+        const fuente = (FUENTES as readonly string[]).includes(lead.origen) ? (lead.origen as Fuente) : 'whatsapp_genesys'
+        if (await notificarAsesor(lead, telefono, fuente, 'asignado', asignadoPor)) avisados++
+      }
+      continue
+    }
+    const lista = suyos.slice(0, 15).map((l) => `• ${l.nombre ?? 'Sin nombre'} (${l.telefono})`)
+    const texto = [
+      `*📌 ${suyos.length} LEADS ASIGNADOS A TI*${asignadoPor ? ` (por ${asignadoPor})` : ''}`,
+      '',
+      ...lista,
+      suyos.length > lista.length ? `…y ${suyos.length - lista.length} más` : null,
+      '',
+      `Revísalos en el CRM: ${PANEL_URL}/leads`,
+    ].filter((linea) => linea !== null).join('\n')
+    const envio = await enviarWhatsApp(telefono, texto)
+    for (const lead of suyos) {
+      await supabase.rpc('marcar_notificacion', { p_lead_id: lead.id, p_ok: envio.ok, p_error: envio.error })
+    }
+    if (envio.ok) avisados += suyos.length
+    else console.error('[genesys] Error avisando asignación masiva:', envio.error)
+  }
+  return { ok: true, avisados }
+}
+
 const ACCIONES: Record<string, (cuerpo: Cuerpo) => Promise<Respuesta> | Respuesta> = {
   'registrar': registrar,
   'webhook': webhook,
@@ -583,6 +639,7 @@ const ACCIONES: Record<string, (cuerpo: Cuerpo) => Promise<Respuesta> | Respuest
   'recordatorios': recordatorios,
   'sincronizar-bot': sincronizarBot,
   'reasignar': reasignar,
+  'notificar': notificarAsignacion,
   'ping': ping,
 }
 
