@@ -40,3 +40,26 @@ export async function enviarWhatsApp(numero: string, texto: string): Promise<{ o
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
   }
 }
+
+/**
+ * Agrega o quita un número de la blacklist de BuilderBot (el bot no responde a los números de la lista).
+ * Endpoint: <base del bot>/blacklist  { number, intent: 'add' | 'remove' }
+ */
+export async function cambiarBlacklist(numero: string, agregar: boolean): Promise<{ ok: boolean; error?: string }> {
+  if (!BUILDERBOT_URL || !BUILDERBOT_API_KEY) {
+    return { ok: false, error: 'Faltan los secretos BUILDERBOT_URL o BUILDERBOT_API_KEY' }
+  }
+  const base = BUILDERBOT_URL.replace(/\/messages\/?$/, '')
+  try {
+    const res = await fetch(`${base}/blacklist`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-builderbot': BUILDERBOT_API_KEY },
+      body: JSON.stringify({ number: numero, intent: agregar ? 'add' : 'remove' }),
+      signal: AbortSignal.timeout(20_000),
+    })
+    if (res.ok) return { ok: true }
+    return { ok: false, error: `HTTP ${res.status}: ${(await res.text()).slice(0, 200)}` }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+}

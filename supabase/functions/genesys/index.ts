@@ -34,7 +34,7 @@ import {
   normalizarTelefono,
   valorResuelto,
 } from '../_shared/dominio.ts'
-import { enviarWhatsApp, problemasBuilderBot } from '../_shared/builderbot.ts'
+import { cambiarBlacklist, enviarWhatsApp, problemasBuilderBot } from '../_shared/builderbot.ts'
 
 // Runtime de Supabase Edge Functions: mantiene viva una tarea después de responder
 declare const EdgeRuntime: { waitUntil(promesa: Promise<unknown>): void }
@@ -457,12 +457,97 @@ function ping(): Respuesta {
   }
 }
 
+/**
+ * Pone o quita números de la blacklist de BuilderBot según la regla del bot:
+ * si Genesys NO debe responder (pausa de 5 h o lead esperando a su asesor) -> blacklist.
+ * Con lead_id sincroniza ese lead; sin él revisa todos los que podrían haber cambiado.
+ */
+async function sincronizarBot(cuerpo: Cuerpo): Promise<Respuesta> {
+  if (MODO !== 'activo') return { ok: true, omitido: 'Solo en modo activo' }
+  const leadId = valorResuelto(cuerpo.lead_id)
+  const campos = 'id, telefono, estado, bot_pausado_hasta, en_blacklist'
+  const consulta = leadId
+    ? supabase.from('leads').select(campos).eq('id', leadId)
+    : supabase.from('leads').select(campos)
+        .or(`en_blacklist.eq.true,estado.in.(lead_interesado,lead_asignado),bot_pausado_hasta.gt.${new Date().toISOString()}`)
+        .limit(500)
+  const { data: leads, error } = await consulta
+  if (error) throw error
+
+  let agregados = 0, quitados = 0, errores = 0
+  for (const lead of leads ?? []) {
+    const debeSilenciar = !botAtiendeLead(lead.estado, lead.bot_pausado_hasta)
+    if (debeSilenciar === lead.en_blacklist) continue
+    const r = await cambiarBlacklist(lead.telefono, debeSilenciar)
+    if (!r.ok) {
+      errores++
+      console.error(`[genesys] Blacklist ${debeSilenciar ? 'agregar' : 'quitar'} ${lead.telefono}:`, r.error)
+      continue
+    }
+    await supabase.from('leads').update({ en_blacklist: debeSilenciar }).eq('id', lead.id)
+    if (debeSilenciar) agregados++
+    else quitados++
+  }
+  return { ok: true, revisados: leads?.length ?? 0, agregados, quitados, errores }
+}
+
+/** Busca el primer valor de texto bajo alguna de estas claves (en cualquier nivel del JSON). */
+function buscarCampo(obj: unknown, claves: string[], profundidad = 0): string | null {
+  if (!obj || typeof obj !== 'object' || profundidad > 4) return null
+  for (const clave of claves) {
+    const valor = (obj as Record<string, unknown>)[clave]
+    if (typeof valor === 'string' && valor.trim()) return valor.trim()
+    if (typeof valor === 'number') return String(valor)
+  }
+  for (const valor of Object.values(obj as Record<string, unknown>)) {
+    const encontrado = buscarCampo(valor, claves, profundidad + 1)
+    if (encontrado) return encontrado
+  }
+  return null
+}
+
+/**
+ * Webhook de BuilderBot: llega cada mensaje (también los de números en blacklist).
+ * Se guarda una copia cruda en webhook_eventos y, si es un mensaje del lead, se registra
+ * en su conversación (mismo efecto que /registrar: chat, "sin responder" y aviso al asesor).
+ */
+async function evento(cuerpo: Cuerpo): Promise<Respuesta> {
+  const { data: guardado } = await supabase.from('webhook_eventos').insert({ payload: cuerpo as never }).select('id').single()
+  const marcar = (procesado: string) =>
+    guardado ? supabase.from('webhook_eventos').update({ procesado }).eq('id', guardado.id) : Promise.resolve()
+
+  const tipo = (buscarCampo(cuerpo, ['eventName', 'event', 'type', 'evento']) ?? '').toLowerCase()
+  const saliente = /out|send|sent|bot/.test(tipo) || (cuerpo as { fromMe?: unknown }).fromMe === true
+  const telefono = normalizarTelefono(buscarCampo(cuerpo, ['from', 'phone', 'number', 'remoteJid', 'telefono', 'to']))
+  const texto = valorResuelto(buscarCampo(cuerpo, ['body', 'message', 'text', 'content', 'mensaje', 'answer']))
+
+  if (!telefono) { await marcar('sin teléfono'); return { ok: true, procesado: 'sin teléfono' } }
+  if (saliente) {
+    // Respuesta del bot: se guarda en la conversación (los mensajes del CRM ya están guardados)
+    if (texto && !/^\*[^*\n]{1,40}:\* /.test(texto)) {
+      const { data: lead } = await supabase.from('leads').select('id').eq('telefono', telefono).maybeSingle()
+      if (lead) {
+        await supabase.from('lead_interacciones').insert({ lead_id: lead.id, tipo: 'respuesta_bot', contenido: texto.slice(0, 4000) })
+        await marcar('respuesta del bot guardada')
+        return { ok: true, procesado: 'respuesta_bot' }
+      }
+    }
+    await marcar('saliente ignorado')
+    return { ok: true, procesado: 'saliente ignorado' }
+  }
+  const r = await registrar({ telefono, mensaje: texto ?? undefined })
+  await marcar(texto ? 'mensaje del lead guardado' : 'contacto registrado (sin texto)')
+  return { ok: true, procesado: 'mensaje_lead', bot_atiende: r.bot_atiende }
+}
+
 const ACCIONES: Record<string, (cuerpo: Cuerpo) => Promise<Respuesta> | Respuesta> = {
   'registrar': registrar,
   'webhook': webhook,
   'no-interesado': noInteresado,
   'respuesta-bot': respuestaBot,
   'recordatorios': recordatorios,
+  'sincronizar-bot': sincronizarBot,
+  'evento': evento,
   'ping': ping,
 }
 
@@ -470,7 +555,9 @@ const ACCIONES: Record<string, (cuerpo: Cuerpo) => Promise<Respuesta> | Respuest
 // Servidor
 // ---------------------------------------------------------------------
 Deno.serve(async (req) => {
-  if (!tokenValido(req.headers.get('x-genesys-token'))) {
+  // El webhook de BuilderBot puede no permitir headers: también se acepta ?token=
+  const tokenRecibido = req.headers.get('x-genesys-token') ?? new URL(req.url).searchParams.get('token')
+  if (!tokenValido(tokenRecibido)) {
     return responder({ ok: false, error: 'no_autorizado' }, 401)
   }
 
