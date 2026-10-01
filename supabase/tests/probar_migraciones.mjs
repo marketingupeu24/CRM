@@ -366,6 +366,17 @@ await q(`update leads set origen_campana = 'TikTok' where id = $1`, [rb.lead_id]
 await comoUsuario('admin@test.pe')
 const rO = (await uno(`select resumen_dashboard() r`)).r
 ok(rO.por_origen.some((o) => o.origen === 'TikTok') && rO.reasignados >= 1, 'el dashboard muestra leads por origen y reasignados')
+
+seccion('campañas')
+await q(`insert into campanas (nombre, origen, inicio, fin) values ('TikTok hoy', 'TikTok', current_date - 1, current_date + 1), ('Todo hoy', null, current_date - 1, current_date + 1), ('Pasada', null, '2020-01-01', '2020-01-31')`)
+const rc = (await uno(`select resumen_campanas() r`)).r
+const porNombre = Object.fromEntries(rc.map((c) => [c.nombre, c]))
+ok(porNombre['TikTok hoy'].total === 1, 'campaña con origen cuenta solo leads de ese origen')
+ok(porNombre['Todo hoy'].total >= 2 && porNombre['Pasada'].total === 0, 'campaña sin origen cuenta por fechas')
+await falla(`insert into campanas (nombre, inicio, fin) values ('Al revés', '2026-02-01', '2026-01-01')`, 'fin no puede ser antes del inicio')
+await comoUsuario('a@test.pe')
+await falla(`insert into campanas (nombre, inicio, fin) values ('Asesor', current_date, current_date)`, 'un asesor no crea campañas')
+ok((await q(`select * from campanas`)).length === 3, 'el asesor ve las campañas')
 await reset()
 
 seccion('anon')
@@ -373,6 +384,7 @@ await db.exec(`reset role; set request.jwt.claim.sub = ''; set role anon`)
 await falla(`select * from tareas`, 'anon no puede ver tareas')
 await falla(`select * from respuestas_rapidas`, 'anon no puede ver respuestas rápidas')
 await falla(`select resumen_dashboard()`, 'anon no puede ver el dashboard')
+await falla(`select * from campanas`, 'anon no puede ver campañas')
 await falla(`select * from leads`, 'anon no puede leer leads')
 await falla(`select * from vista_leads_por_estado`, 'anon no puede leer las vistas')
 await falla(`select registrar_lead_manual('x','51999999999')`, 'anon no puede registrar leads')

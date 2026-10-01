@@ -156,6 +156,11 @@ Se actualiza en vivo (Supabase Realtime).
 - **Respuestas rápidas** (botón ⚡ del chat) con `{nombre}`, `{carrera}` y `{asesor}`; el admin las administra.
 - **Motivo de pérdida** obligatorio (lista fija) al marcar *Perdido* o *No interesado*.
 - **Exportar Excel** en la lista de leads (CSV con los mismos filtros; el asesor solo exporta sus leads).
+  Para descargar por mes usa *Este mes*, *Mes pasado* o "elige un mes" en los filtros; el archivo se llama
+  con el periodo o la campaña (ej. `leads-crm-2026-09-01_a_2026-09-30.csv`).
+- **Campañas** (menú Análisis): el admin crea campañas con nombre, fechas de inicio y fin y, opcional, un
+  origen (ej. "Facebook Octubre": Facebook, 01/10 al 31/10). Cada campaña muestra leads, contactados,
+  matriculados y perdidos, con botones *Ver leads* y *⬇ Excel*; también se elige en los filtros de Leads.
 - **Acciones masivas** en la lista de leads: marca casillas (o todas las de la página) y cambia el estado
   (con motivo si es *Perdido*) o, si eres admin, asígnalos a un asesor.
 - **Avisos de escritorio** (botón 🔔 de la barra superior): sonido y notificación del navegador cuando un

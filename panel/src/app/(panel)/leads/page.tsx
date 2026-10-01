@@ -4,6 +4,7 @@ import { ESTADOS_LEAD, ETIQUETAS_ESTADO, ETIQUETAS_FUENTE, ORIGENES, type Fuente
 import { InsigniaEstado } from '@/components/InsigniaEstado'
 import { fechaHora, haceCuanto } from '@/lib/formato'
 import { obtenerSesion } from '@/lib/sesion'
+import { fechaCorta, mesLima, nombreMes, rangoMes } from '@/lib/periodos'
 import { BarraMasiva } from './BarraMasiva'
 import { crearClienteServidor } from '@/lib/supabase/server'
 
@@ -17,6 +18,8 @@ function parametro(valor: string | string[] | undefined): string {
 
 export default async function PaginaLeads(props: PageProps<'/leads'>) {
   const sp = await props.searchParams
+  // "mes=2026-09" (selector de mes) se convierte en desde/hasta
+  const mes = rangoMes(parametro(sp.mes))
   const filtros = {
     q: parametro(sp.q),
     estado: parametro(sp.estado),
@@ -24,13 +27,17 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
     convocatoria: parametro(sp.convocatoria),
     asesor: parametro(sp.asesor),
     origen: parametro(sp.origen),
-    desde: parametro(sp.desde),
-    hasta: parametro(sp.hasta),
+    campana: parametro(sp.campana),
+    desde: mes?.desde ?? parametro(sp.desde),
+    hasta: mes?.hasta ?? parametro(sp.hasta),
   }
   const pagina = Math.max(1, Number.parseInt(parametro(sp.pagina) || '1', 10) || 1)
 
   const { esAdmin } = await obtenerSesion()
   const supabase = await crearClienteServidor()
+  const { data: campanas } = await supabase.from('campanas').select('id, nombre, origen, inicio, fin, activa')
+    .order('inicio', { ascending: false })
+  const campana = (campanas ?? []).find((c) => String(c.id) === filtros.campana)
 
   let consulta = supabase
     .from('leads')
@@ -49,6 +56,11 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
   else if (esAdmin && filtros.asesor) consulta = consulta.eq('asesor_id', filtros.asesor)
   if (filtros.origen === 'Sin dato') consulta = consulta.is('origen_campana', null)
   else if (filtros.origen) consulta = consulta.eq('origen_campana', filtros.origen)
+  // Campaña: sus fechas y, si tiene, su origen
+  if (campana) {
+    consulta = consulta.gte('created_at', `${campana.inicio}T00:00:00-05:00`).lte('created_at', `${campana.fin}T23:59:59.999-05:00`)
+    if (campana.origen) consulta = consulta.eq('origen_campana', campana.origen)
+  }
   // Fechas en hora de Lima (UTC-5)
   if (/^\d{4}-\d{2}-\d{2}$/.test(filtros.desde)) consulta = consulta.gte('created_at', `${filtros.desde}T00:00:00-05:00`)
   if (/^\d{4}-\d{2}-\d{2}$/.test(filtros.hasta)) consulta = consulta.lte('created_at', `${filtros.hasta}T23:59:59.999-05:00`)
@@ -75,6 +87,19 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
     return `/leads?${p.toString()}`
   }
 
+  // Atajos de periodo: conservan los demás filtros y reemplazan fechas y campaña
+  const enlacePeriodo = (desdeP: string, hastaP: string) => {
+    const p = new URLSearchParams(Object.entries(filtros).filter(([k, v]) => v && !['desde', 'hasta', 'campana'].includes(k)))
+    if (desdeP) p.set('desde', desdeP)
+    if (hastaP) p.set('hasta', hastaP)
+    return `/leads?${p.toString()}` as `/leads?${string}`
+  }
+  const periodos = [0, -1, -2].map((n) => {
+    const m = mesLima(n)
+    const r = rangoMes(m)!
+    return { texto: n === 0 ? 'Este mes' : n === -1 ? 'Mes pasado' : nombreMes(m), ...r }
+  })
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -97,6 +122,40 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
       </div>
 
       <form className="tarjeta grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Periodo rápido: mes o campaña */}
+        <div className="flex flex-wrap items-center gap-2 sm:col-span-2 lg:col-span-4">
+          <span className="text-sm text-slate-500">Periodo:</span>
+          <div className="flex overflow-hidden rounded-lg border border-slate-300 text-sm">
+            {periodos.map((q) => {
+              const activo = !filtros.campana && q.desde === filtros.desde && q.hasta === filtros.hasta
+              return (
+                <Link
+                  key={q.texto} href={enlacePeriodo(q.desde, q.hasta)}
+                  className={`border-r border-slate-300 px-3 py-1.5 first-letter:uppercase last:border-r-0 ${activo ? 'bg-marca-600 text-white' : 'bg-superficie text-slate-700 hover:bg-slate-50'}`}
+                >
+                  {q.texto}
+                </Link>
+              )
+            })}
+          </div>
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            o elige un mes <input type="month" name="mes" aria-label="Mes" className="campo w-auto py-1.5" />
+          </label>
+          {(campanas ?? []).length > 0 && (
+            <select name="campana" defaultValue={filtros.campana} className="campo w-auto py-1.5" aria-label="Campaña">
+              <option value="">Todas las campañas</option>
+              {(campanas ?? []).map((c) => (
+                <option key={c.id} value={c.id}>{c.nombre} ({fechaCorta(c.inicio)} – {fechaCorta(c.fin)})</option>
+              ))}
+            </select>
+          )}
+        </div>
+        {campana && (
+          <p className="rounded-lg bg-marca-50 px-3 py-2 text-sm text-marca-700 sm:col-span-2 lg:col-span-4">
+            Campaña <strong>{campana.nombre}</strong>: leads registrados del {fechaCorta(campana.inicio)} al {fechaCorta(campana.fin)}
+            {campana.origen ? <> que nos conocieron por <strong>{campana.origen}</strong></> : null}.
+          </p>
+        )}
         <input name="q" defaultValue={filtros.q} placeholder="Buscar nombre, celular o DNI" className="campo sm:col-span-2" />
         <select name="estado" defaultValue={filtros.estado} className="campo" aria-label="Estado">
           <option value="">Todos los estados</option>

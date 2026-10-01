@@ -2,6 +2,7 @@
 // Usa la sesión del usuario: el RLS limita las filas (el asesor solo exporta sus leads).
 // Aplica los mismos filtros que la página /leads.
 import { ESTADOS_LEAD, ETIQUETAS_ESTADO, ETIQUETAS_FUENTE, type Fuente, type LeadEstado } from '@crm/db'
+import { rangoMes } from '@/lib/periodos'
 import { obtenerSesion } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 
@@ -25,7 +26,11 @@ export async function GET(request: Request) {
   const { esAdmin } = await obtenerSesion()
   const supabase = await crearClienteServidor()
   const sp = new URL(request.url).searchParams
-  const f = (k: string) => sp.get(k)?.trim() ?? ''
+  const mes = rangoMes(sp.get('mes')?.trim() ?? '')
+  const f = (k: string) => (mes && (k === 'desde' || k === 'hasta') ? mes[k] : sp.get(k)?.trim() ?? '')
+  const { data: campana } = /^\d+$/.test(f('campana'))
+    ? await supabase.from('campanas').select('nombre, origen, inicio, fin').eq('id', Number(f('campana'))).maybeSingle()
+    : { data: null }
 
   const filas: Record<string, unknown>[] = []
   for (let desde = 0; desde < MAXIMO; desde += LOTE) {
@@ -45,6 +50,10 @@ export async function GET(request: Request) {
     else if (esAdmin && f('asesor')) consulta = consulta.eq('asesor_id', f('asesor'))
     if (f('origen') === 'Sin dato') consulta = consulta.is('origen_campana', null)
     else if (f('origen')) consulta = consulta.eq('origen_campana', f('origen'))
+    if (campana) {
+      consulta = consulta.gte('created_at', `${campana.inicio}T00:00:00-05:00`).lte('created_at', `${campana.fin}T23:59:59.999-05:00`)
+      if (campana.origen) consulta = consulta.eq('origen_campana', campana.origen)
+    }
     if (/^\d{4}-\d{2}-\d{2}$/.test(f('desde'))) consulta = consulta.gte('created_at', `${f('desde')}T00:00:00-05:00`)
     if (/^\d{4}-\d{2}-\d{2}$/.test(f('hasta'))) consulta = consulta.lte('created_at', `${f('hasta')}T23:59:59.999-05:00`)
 
@@ -79,10 +88,15 @@ export async function GET(request: Request) {
   // BOM para que Excel reconozca tildes; ";" es el separador que usa Excel en español
   const csv = '﻿' + [encabezados.join(';'), ...lineas].join('\r\n')
   const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date())
+  // El nombre del archivo dice qué periodo o campaña contiene
+  const sufijo = campana
+    ? campana.nombre.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase()
+    : f('desde') || f('hasta') ? `${f('desde') || 'inicio'}_a_${f('hasta') || hoy}` : hoy
+  const nombreArchivo = `leads-crm-${sufijo || hoy}`
   return new Response(csv, {
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="leads-crm-${hoy}.csv"`,
+      'Content-Disposition': `attachment; filename="${nombreArchivo}.csv"`,
       'Cache-Control': 'no-store',
     },
   })

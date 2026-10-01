@@ -31,7 +31,13 @@ export function Navegacion(
         { href: '/leads/nuevo', texto: 'Registrar lead', icono: '+' },
       ],
     },
-    { titulo: 'Análisis', enlaces: [{ href: '/dashboard', texto: 'Dashboard', icono: '◔' }] },
+    {
+      titulo: 'Análisis',
+      enlaces: [
+        { href: '/dashboard', texto: 'Dashboard', icono: '◔' },
+        { href: '/campanas', texto: 'Campañas', icono: '📣' },
+      ],
+    },
     ...(esAdmin
       ? [{
           titulo: 'Administración',

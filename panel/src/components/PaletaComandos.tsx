@@ -23,6 +23,7 @@ const PAGINAS: Omit<Item, 'id' | 'grupo'>[] = [
   { titulo: 'Kanban', icono: '▦', ir: '/kanban', detalle: 'Tablero por estado' },
   { titulo: 'Registrar lead', icono: '+', ir: '/leads/nuevo', detalle: 'Nuevo lead manual' },
   { titulo: 'Dashboard', icono: '◔', ir: '/dashboard', detalle: 'Indicadores y gráficos' },
+  { titulo: 'Campañas', icono: '📣', ir: '/campanas', detalle: 'Resultados y Excel por campaña' },
   { titulo: 'Leads sin responder', icono: '●', ir: '/chats?filtro=sin_responder', detalle: 'Escribieron y esperan respuesta' },
   { titulo: 'Mi cuenta', icono: '⚙', ir: '/cuenta', detalle: 'Contraseña' },
 ]

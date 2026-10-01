@@ -18,6 +18,19 @@ export type Database = {
                   Relationships: [
                     
                   ]
+                },"campanas": {
+                  Row: {
+                    "activa": boolean,"created_at": string,"fin": string,"id": number,"inicio": string,"nombre": string,"origen": string | null
+                  }
+                  Insert: {
+                    "activa"?: boolean,"created_at"?: string,"fin": string,"id"?: never,"inicio": string,"nombre": string,"origen"?: string | null
+                  }
+                  Update: {
+                    "activa"?: boolean,"created_at"?: string,"fin"?: string,"id"?: never,"inicio"?: string,"nombre"?: string,"origen"?: string | null
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"lead_interacciones": {
                   Row: {
                     "autor_id": string | null,"contenido": string | null,"created_at": string,"error_envio": string | null,"estado_envio": string | null,"id": number,"lead_id": string,"tipo": Database["public"]['Enums']["interaccion_tipo"]
@@ -283,6 +296,9 @@ isOneToOne: false
                            },
 "restablecer_clave_usuario":
 { Args: { "p_asesor_id": string,"p_clave": string,"p_debe_cambiar"?: boolean }; Returns: undefined
+                           },
+"resumen_campanas":
+{ Args: Record<PropertyKey, never>; Returns: Json
                            },
 "resumen_dashboard":
 { Args: { "p_asesor_id"?: string,"p_convocatoria"?: string,"p_desde"?: string,"p_hasta"?: string }; Returns: Json
