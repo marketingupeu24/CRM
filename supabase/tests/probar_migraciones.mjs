@@ -338,6 +338,14 @@ const rPR = (await uno(`select resumen_dashboard() r`)).r
 ok(typeof Number(rPR.primera_respuesta_min) === 'number' && rPR.con_primer_contacto >= 2 && rPR.por_asesor.some((a) => a.primera_respuesta_min !== null), 'el dashboard calcula la mediana total y por asesor')
 await reset()
 
+seccion('mensajes sin duplicar (webhook + bloque /registrar)')
+await reset()
+await q(`select registrar_lead('51955500001', 'hola, ¿costos?')`)
+await q(`select registrar_lead('51955500001', 'hola, ¿costos?')`)
+await q(`select registrar_lead('51955500001', 'otro mensaje')`)
+const dupMsg = await uno(`select count(*)::int n, (select total_mensajes from leads where telefono='51955500001') t from lead_interacciones i join leads l on l.id = i.lead_id where l.telefono='51955500001' and i.tipo='mensaje_lead'`)
+ok(dupMsg.n === 2 && dupMsg.t === 2, 'el mismo texto en menos de 1 minuto se guarda una sola vez')
+
 seccion('anon')
 await db.exec(`reset role; set request.jwt.claim.sub = ''; set role anon`)
 await falla(`select * from tareas`, 'anon no puede ver tareas')
