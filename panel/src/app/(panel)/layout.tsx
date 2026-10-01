@@ -1,4 +1,5 @@
 import { Navegacion } from '@/components/Navegacion'
+import { RefrescoEnVivo } from '@/components/RefrescoEnVivo'
 import { obtenerSesion } from '@/lib/sesion'
 import { contarPendientes } from '@/lib/pendientes'
 import { crearClienteServidor } from '@/lib/supabase/server'
@@ -15,6 +16,7 @@ export default async function LayoutPanel({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen md:flex">
+      {!debeCambiarClave && <RefrescoEnVivo />}
       <aside className="bg-marca-800 p-4 md:fixed md:inset-y-0 md:flex md:w-60 md:flex-col">
         <div className="mb-4 flex items-center gap-3 px-2 md:mb-8">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white font-bold text-marca-700">A</div>

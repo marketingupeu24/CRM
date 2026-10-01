@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { LeadInteraccion } from '@crm/db'
 import { esDelChat } from '@/lib/chat'
-import { crearClienteNavegador } from '@/lib/supabase/client'
+import { crearClienteNavegador, prepararTiempoReal } from '@/lib/supabase/client'
 
 export type MensajeChat = LeadInteraccion & { autor_nombre?: string | null }
 
@@ -52,27 +52,87 @@ export function Conversacion(
   const [enVivo, setEnVivo] = useState(false)
   const fondo = useRef<HTMLDivElement>(null)
 
-  const agregar = (m: MensajeChat) =>
-    setMensajes((previos) => (previos.some((p) => p.id === m.id) ? previos : [...previos, m]))
+  /** Agrega mensajes sin repetir y mantiene el orden por fecha. */
+  const agregarVarios = (nuevos: MensajeChat[]) =>
+    setMensajes((previos) => {
+      const ids = new Set(previos.map((p) => p.id))
+      const sumar = nuevos.filter((m) => !ids.has(m.id))
+      if (!sumar.length) return previos
+      return [...previos, ...sumar].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))
+    })
+  const agregar = (m: MensajeChat) => agregarVarios([m])
 
-  // Mensajes nuevos en tiempo real
+  // Mensajes nuevos: tiempo real con reconexión automática + revisión periódica de respaldo
+  const ultimaFecha = useRef<string | null>(inicial.at(-1)?.created_at ?? null)
+  useEffect(() => {
+    ultimaFecha.current = mensajes.at(-1)?.created_at ?? ultimaFecha.current
+  }, [mensajes])
+
   useEffect(() => {
     const supabase = crearClienteNavegador()
-    const canal = supabase
-      .channel(`chat-${leadId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'lead_interacciones', filter: `lead_id=eq.${leadId}` },
-        (payload) => {
-          const m = payload.new as MensajeChat
-          if (esDelChat(m)) agregar(m)
-        },
-      )
-      .subscribe((estado, err) => {
-        setEnVivo(estado === 'SUBSCRIBED')
-        if (err) console.warn('[chat] tiempo real:', estado, err.message)
-      })
-    return () => { supabase.removeChannel(canal) }
+    let canal: ReturnType<typeof supabase.channel> | null = null
+    let reintento: ReturnType<typeof setTimeout> | undefined
+    let espera = 2_000
+    let activo = true
+
+    /** Trae lo que llegó desde el último mensaje mostrado (por si el tiempo real se cortó). */
+    async function revisar() {
+      let consulta = supabase.from('lead_interacciones').select('*').eq('lead_id', leadId)
+        .order('created_at', { ascending: true }).limit(100)
+      if (ultimaFecha.current) consulta = consulta.gte('created_at', ultimaFecha.current)
+      const { data } = await consulta
+      if (activo && data?.length) agregarVarios((data as MensajeChat[]).filter(esDelChat))
+    }
+
+    async function conectar() {
+      if (!activo) return
+      await prepararTiempoReal(supabase)
+      if (!activo) return
+      canal = supabase
+        .channel(`chat-${leadId}-${Date.now()}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'lead_interacciones', filter: `lead_id=eq.${leadId}` },
+          (payload) => {
+            const m = payload.new as MensajeChat
+            if (esDelChat(m)) agregar(m)
+          },
+        )
+        .subscribe((estado, err) => {
+          if (!activo) return
+          if (estado === 'SUBSCRIBED') {
+            setEnVivo(true)
+            espera = 2_000
+            void revisar() // lo que haya llegado mientras estaba desconectado
+          } else if (estado === 'CHANNEL_ERROR' || estado === 'TIMED_OUT' || estado === 'CLOSED') {
+            setEnVivo(false)
+            if (err) console.warn('[chat] tiempo real:', estado, err.message)
+            // Reconexión con espera creciente (2 s, 4 s, 8 s… hasta 30 s)
+            clearTimeout(reintento)
+            reintento = setTimeout(() => {
+              if (canal) void supabase.removeChannel(canal)
+              void conectar()
+            }, espera)
+            espera = Math.min(espera * 2, 30_000)
+          }
+        })
+    }
+
+    void conectar()
+    // Respaldo: cada 10 s con la pestaña visible, y al volver a la pestaña
+    const intervalo = setInterval(() => { if (document.visibilityState === 'visible') void revisar() }, 10_000)
+    const alVolver = () => { if (document.visibilityState === 'visible') void revisar() }
+    document.addEventListener('visibilitychange', alVolver)
+    window.addEventListener('focus', alVolver)
+
+    return () => {
+      activo = false
+      clearTimeout(reintento)
+      clearInterval(intervalo)
+      document.removeEventListener('visibilitychange', alVolver)
+      window.removeEventListener('focus', alVolver)
+      if (canal) void supabase.removeChannel(canal)
+    }
   }, [leadId])
 
   // Bajar al último mensaje

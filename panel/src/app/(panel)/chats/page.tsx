@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { InsigniaEstado } from '@/components/InsigniaEstado'
-import { RefrescoEnVivo } from '@/components/RefrescoEnVivo'
 import { fechaHora, haceCuanto } from '@/lib/formato'
 import { obtenerSesion } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
@@ -30,7 +29,6 @@ export default async function PaginaChats(props: PageProps<'/chats'>) {
 
   return (
     <div className="max-w-4xl space-y-6">
-      <RefrescoEnVivo />
       <div>
         <h1 className="text-2xl font-semibold">Chats</h1>
         <p className="text-sm text-slate-500">
