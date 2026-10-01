@@ -52,7 +52,7 @@ export function ControlesChat({ leadId, estado, botPausadoHasta, tieneAsesor, ah
       {estado !== 'lead_atendido' && estado !== 'lead_matriculado' && (
         <button
           disabled={pendiente} onClick={() => ejecutar(() => cambiarEstado(leadId, 'lead_atendido'))}
-          className="rounded bg-teal-600 px-2.5 py-1 font-semibold text-white hover:bg-teal-700"
+          className="rounded bg-teal-600 px-2.5 py-1 font-semibold text-white hover:brightness-110"
         >
           ✓ Atendido
         </button>
@@ -60,7 +60,7 @@ export function ControlesChat({ leadId, estado, botPausadoHasta, tieneAsesor, ah
       {estado !== 'lead_matriculado' && (
         <button
           disabled={pendiente} onClick={() => ejecutar(() => cambiarEstado(leadId, 'lead_matriculado'))}
-          className="rounded bg-emerald-600 px-2.5 py-1 font-semibold text-white hover:bg-emerald-700"
+          className="rounded bg-emerald-600 px-2.5 py-1 font-semibold text-white hover:brightness-110"
         >
           🎓 Matriculado
         </button>

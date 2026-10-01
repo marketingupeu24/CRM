@@ -28,7 +28,7 @@ function Tarjeta({ lead, mostrarAsesor, ahora }: { lead: TarjetaLead; mostrarAse
   return (
     <div
       ref={setNodeRef} style={estilo} {...listeners} {...attributes}
-      className={`cursor-grab rounded-lg border border-slate-200 bg-white p-3 text-sm shadow-sm active:cursor-grabbing ${
+      className={`cursor-grab rounded-lg border border-slate-200 bg-superficie p-3 text-sm shadow-sm active:cursor-grabbing ${
         isDragging ? 'z-50 opacity-80 shadow-lg ring-2 ring-marca-600' : ''
       }`}
     >

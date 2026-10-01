@@ -122,7 +122,7 @@ export default async function PaginaDashboard(props: PageProps<'/dashboard'>) {
             return (
               <Link
                 key={q.texto} href={rango(q.desde, q.hasta)}
-                className={`border-r border-slate-300 px-3 py-1.5 last:border-r-0 ${activo ? 'bg-marca-600 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'}`}
+                className={`border-r border-slate-300 px-3 py-1.5 last:border-r-0 ${activo ? 'bg-marca-600 text-white' : 'bg-superficie text-slate-700 hover:bg-slate-50'}`}
               >
                 {q.texto}
               </Link>

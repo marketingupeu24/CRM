@@ -10,6 +10,7 @@ import { BotonEliminarNota, EditarDatos, FormularioNota, ReasignarAsesor, Select
 import { esDelChat } from '@/lib/chat'
 import { Conversacion, type MensajeChat } from './Conversacion'
 import { ControlesChat } from './ControlesChat'
+import { AccionesRapidas } from './AccionesRapidas'
 import { BotonesTarea, FormularioTarea } from '@/components/Tareas'
 
 export const metadata: Metadata = { title: 'Ficha del lead' }
@@ -95,6 +96,8 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
         <InsigniaEstado estado={lead.estado} />
       </div>
 
+      <AccionesRapidas telefono={lead.telefono} />
+
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <Conversacion
@@ -179,7 +182,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
             )}
           </section>
 
-          <section className="tarjeta p-6">
+          <section id="proxima-accion" className="tarjeta scroll-mt-16 p-6">
             <h2 className="mb-3 font-semibold">Próxima acción</h2>
             {!!tareas?.length && (
               <ul className="mb-4 space-y-2">
@@ -202,7 +205,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
             <FormularioTarea leadId={lead.id} />
           </section>
 
-          <section className="tarjeta p-6">
+          <section id="nueva-nota" className="tarjeta scroll-mt-16 p-6">
             <h2 className="mb-3 font-semibold">Nueva nota</h2>
             <FormularioNota leadId={lead.id} />
           </section>

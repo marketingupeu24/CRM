@@ -254,7 +254,7 @@ export function ColumnasPorPeriodo(
     <div>
       <div className="relative">
         <div className="absolute inset-x-0 top-0 border-t border-dashed border-[var(--rejilla)]" />
-        <span className="absolute -top-2 right-0 bg-white pl-1 text-[10px] text-slate-400 tabular-nums">{num(max)}</span>
+        <span className="absolute -top-2 right-0 bg-superficie pl-1 text-[10px] text-slate-400 tabular-nums">{num(max)}</span>
         <div className="flex h-44 items-end gap-[2px] border-b border-slate-300">
           {puntos.map((p) => (
             <div

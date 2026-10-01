@@ -70,7 +70,7 @@ export function BotonesTarea({ tareaId, leadId }: { tareaId: number; leadId: str
 
   return (
     <div className="flex shrink-0 gap-1 text-xs">
-      <button disabled={pendiente} onClick={() => ejecutar(() => completarTarea(tareaId, leadId))} className="rounded bg-emerald-600 px-2 py-0.5 font-semibold text-white hover:bg-emerald-700">
+      <button disabled={pendiente} onClick={() => ejecutar(() => completarTarea(tareaId, leadId))} className="rounded bg-emerald-600 px-2 py-0.5 font-semibold text-white hover:brightness-110">
         ✓ Hecho
       </button>
       <button disabled={pendiente} onClick={() => ejecutar(() => posponerTarea(tareaId, leadId))} className="rounded border border-slate-300 px-2 py-0.5 text-slate-600 hover:bg-slate-50" title="Posponer un día">
