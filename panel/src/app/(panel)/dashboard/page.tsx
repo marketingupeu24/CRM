@@ -6,7 +6,7 @@ import { crearClienteServidor } from '@/lib/supabase/server'
 import {
   BarrasHorizontales, BarrasPorAsesor, ColumnasPorPeriodo, Embudo, Tarjeta, type FilaAsesor,
 } from './Graficos'
-import { num, pct } from '@/lib/formato'
+import { duracion, num, pct } from '@/lib/formato'
 
 export const metadata: Metadata = { title: 'Dashboard' }
 
@@ -18,6 +18,10 @@ interface Resumen {
   matriculados: number
   no_interesados: number
   perdidos: number
+  primera_respuesta_min: number | null
+  contactados_a_tiempo: number
+  con_primer_contacto: number
+  sin_contactar_2h: number
   por_estado: { estado: LeadEstado; total: number }[]
   por_carrera: { carrera: string; total: number; interesados: number; matriculados: number }[]
   por_asesor: (FilaAsesor & { asesor_id: string })[]
@@ -148,11 +152,15 @@ export default async function PaginaDashboard(props: PageProps<'/dashboard'>) {
         </form>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <Indicador titulo="Total de leads" valor={num(r.total)} detalle={`${num(r.no_interesados)} no interesados`} />
         <Indicador titulo="Leads interesados" valor={num(r.interesados)} detalle={`${pct(r.interesados, r.total)} del total`} />
         <Indicador titulo="Matriculados" valor={num(r.matriculados)} detalle={`${pct(r.matriculados, r.interesados)} de los interesados`} />
         <Indicador titulo="Conversión global" valor={pct(r.matriculados, r.total)} detalle="lead → matriculado" />
+        <Indicador
+          titulo="Primera respuesta" valor={duracion(r.primera_respuesta_min)}
+          detalle={`mediana · ${pct(r.contactados_a_tiempo, r.con_primer_contacto)} en menos de 2 h${r.sin_contactar_2h ? ` · ${r.sin_contactar_2h} sin contactar` : ''}`}
+        />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">

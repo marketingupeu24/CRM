@@ -80,7 +80,16 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
             {esAdmin ? 'Todos los leads' : 'Tus leads asignados'} · {total} {total === 1 ? 'resultado' : 'resultados'}
           </p>
         </div>
-        <Link href="/leads/nuevo" className="boton">+ Registrar lead</Link>
+        <div className="flex gap-2">
+          {/* Descarga con los mismos filtros de la lista */}
+          <a
+            href={`/leads/exportar?${new URLSearchParams(Object.entries(filtros).filter(([, v]) => v)).toString()}`}
+            className="boton-secundario" download
+          >
+            ⬇ Exportar Excel
+          </a>
+          <Link href="/leads/nuevo" className="boton">+ Registrar lead</Link>
+        </div>
       </div>
 
       <form className="tarjeta grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">

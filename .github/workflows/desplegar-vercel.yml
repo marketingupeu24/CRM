@@ -1,0 +1,43 @@
+# Despliega el panel en Vercel (https://crm-admision.vercel.app) en cada push a main.
+# Requiere el secreto VERCEL_TOKEN en GitHub: Settings > Secrets and variables > Actions.
+# Sin el secreto, el despliegue se omite (no falla).
+name: Desplegar panel en Vercel
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: vercel-produccion
+  cancel-in-progress: true
+
+jobs:
+  desplegar:
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: team_pzoNmPxmOntLtDwjuiLw1CMC
+      VERCEL_PROJECT_ID: prj_00flZyIpZal364jiAgdWnK8z9q1b
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - name: Verificar token
+        id: token
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "Falta el secreto VERCEL_TOKEN: se omite el despliegue."
+            echo "hay=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "hay=si" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.token.outputs.hay == 'si'
+
+      - uses: actions/setup-node@v4
+        if: steps.token.outputs.hay == 'si'
+        with:
+          node-version: 22
+
+      - name: Desplegar en producción
+        if: steps.token.outputs.hay == 'si'
+        run: npx --yes vercel@latest deploy --prod --yes --token "$VERCEL_TOKEN"

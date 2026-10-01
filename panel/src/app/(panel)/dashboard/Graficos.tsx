@@ -3,7 +3,7 @@
 // Gráficos del dashboard en HTML/CSS: barras finas, extremo redondeado de 4px,
 // separación de 2px entre segmentos, tooltip al pasar el mouse y tabla alternativa.
 import { useState, type ReactNode } from 'react'
-import { num, pct } from '@/lib/formato'
+import { duracion, num, pct } from '@/lib/formato'
 
 // ---------------------------------------------------------------------
 // Tooltip que sigue al mouse
@@ -160,6 +160,9 @@ export interface FilaAsesor {
   inscritos: number
   matriculados: number
   perdidos: number
+  /** Mediana de minutos entre la asignación y el primer contacto */
+  primera_respuesta_min?: number | null
+  sin_contactar_2h?: number
 }
 
 const SEGMENTOS = [
@@ -208,14 +211,23 @@ export function BarrasPorAsesor({ filas }: { filas: FilaAsesor[] }) {
                 ))}
               </div>
               <span className="text-xs font-medium text-slate-700 tabular-nums">{num(f.total)}</span>
+              {f.primera_respuesta_min != null && (
+                <span className="text-xs whitespace-nowrap text-slate-500" title="Mediana del tiempo hasta el primer contacto">⏱ {duracion(f.primera_respuesta_min)}</span>
+              )}
+              {!!f.sin_contactar_2h && (
+                <span className="text-xs font-medium whitespace-nowrap text-rose-600" title="Asignados hace más de 2 h sin contactar">{f.sin_contactar_2h} sin contactar</span>
+              )}
             </div>
           </li>
         ))}
       </ul>
       {nodo}
       <VerTabla
-        encabezados={['Asesor', 'Total', ...SEGMENTOS.map((s) => s.etiqueta), 'Conversión']}
-        filas={filas.map((f) => [f.asesor, f.total, ...SEGMENTOS.map((s) => f[s.clave]), pct(f.matriculados, f.total)])}
+        encabezados={['Asesor', 'Total', ...SEGMENTOS.map((s) => s.etiqueta), 'Conversión', '1.ª respuesta (mediana)', 'Sin contactar > 2 h']}
+        filas={filas.map((f) => [
+          f.asesor, f.total, ...SEGMENTOS.map((s) => f[s.clave]), pct(f.matriculados, f.total),
+          duracion(f.primera_respuesta_min), f.sin_contactar_2h ?? 0,
+        ])}
       />
     </div>
   )

@@ -114,7 +114,8 @@ Panel publicado en **https://crm-admision.vercel.app** (proyecto `crm-admision`)
 Configuración del proyecto en Vercel: *Root Directory* = `panel`, framework Next.js y las variables
 `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (Production, Preview y Development).
 
-- Con el repositorio de GitHub conectado (*Settings > Git*), cada push a `main` se despliega solo.
+- Despliegue automático en cada push a `main` con GitHub Actions (`.github/workflows/desplegar-vercel.yml`):
+  requiere el secreto `VERCEL_TOKEN` en *GitHub > Settings > Secrets and variables > Actions*.
 - Despliegue manual desde la raíz del repo: `npx vercel deploy --prod`.
 
 ### Qué ve cada rol
@@ -147,6 +148,14 @@ Se actualiza en vivo (Supabase Realtime).
 - Para ver las respuestas del postulante, BuilderBot debe llamar a `/genesys/registrar` con **cada mensaje entrante**
   (ver [docs/fase2-conectar-genesys.md](docs/fase2-conectar-genesys.md), sección 5).
 - Envío: Edge Function `chat` (valida la sesión del usuario y el RLS; la API key de BuilderBot nunca llega al panel).
+
+### Seguimiento del asesor
+
+- **Pendientes**: tareas agendadas ("próxima acción", desde la ficha del lead) y alertas automáticas:
+  asignados sin contactar en 2 h, leads sin responder y contactados sin actividad en 3 días. Contador en el menú.
+- **Respuestas rápidas** (botón ⚡ del chat) con `{nombre}`, `{carrera}` y `{asesor}`; el admin las administra.
+- **Motivo de pérdida** obligatorio (lista fija) al marcar *Perdido* o *No interesado*.
+- **Exportar Excel** en la lista de leads (CSV con los mismos filtros; el asesor solo exporta sus leads).
 
 ### Dashboard
 

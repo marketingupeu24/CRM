@@ -61,3 +61,14 @@ export const num = (n: number) => formatoNumero.format(n)
 
 /** Porcentaje con un decimal; '—' si el total es 0. */
 export const pct = (parte: number, total: number) => (total > 0 ? `${((parte / total) * 100).toFixed(1)}%` : '—')
+
+/** Minutos a texto corto: 35 -> "35 min", 130 -> "2 h 10 min", 1600 -> "1 d 2 h". */
+export function duracion(minutos: number | string | null | undefined): string {
+  if (minutos === null || minutos === undefined || minutos === '') return '—'
+  const m = Math.round(Number(minutos))
+  if (!Number.isFinite(m)) return '—'
+  if (m < 60) return `${m} min`
+  if (m < 1440) return `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ''}`
+  const horas = Math.floor((m % 1440) / 60)
+  return `${Math.floor(m / 1440)} d${horas ? ` ${horas} h` : ''}`
+}

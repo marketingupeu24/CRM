@@ -321,6 +321,23 @@ const rM = (await uno(`select resumen_dashboard() r`)).r
 ok(rM.por_motivo.some((m) => m.motivo === 'Otro'), '"Otro: detalle" se agrupa como "Otro" en el dashboard')
 await reset()
 
+seccion('tiempo de primera respuesta')
+await reset()
+const pr = await procesar({ p_telefono: '51966600001', p_nombre: 'Primer contacto', p_carrera: 'Derecho' })
+await q(`update leads set fecha_asignado = now() - interval '90 minutes' where id = $1`, [pr.lead_id])
+await q(`insert into lead_interacciones (lead_id, tipo, contenido, autor_id, estado_envio) values ($1, 'mensaje_asesor', 'hola', $2, 'enviado')`, [pr.lead_id, pr.asesor_id])
+const lpr = await uno(`select primer_contacto_asesor_at p, extract(epoch from primer_contacto_asesor_at - fecha_asignado)/60 m from leads where id = $1`, [pr.lead_id])
+ok(lpr.p && Math.round(lpr.m) === 90, 'el primer mensaje del asesor registra el primer contacto (90 min después de asignado)')
+await q(`insert into lead_interacciones (lead_id, tipo, contenido, autor_id, estado_envio, created_at) values ($1, 'mensaje_asesor', 'otro', $2, 'enviado', now() + interval '1 hour')`, [pr.lead_id, pr.asesor_id])
+ok(Math.round((await uno(`select extract(epoch from primer_contacto_asesor_at - fecha_asignado)/60 m from leads where id = $1`, [pr.lead_id])).m) === 90, 'los mensajes siguientes no cambian el primer contacto')
+const pr2 = await procesar({ p_telefono: '51966600002', p_nombre: 'Por teléfono', p_carrera: 'Derecho' })
+await q(`update leads set estado = 'lead_contactado' where id = $1`, [pr2.lead_id])
+ok((await uno(`select primer_contacto_asesor_at p from leads where id = $1`, [pr2.lead_id])).p !== null, 'pasar a contactado (llamada) también cuenta como primer contacto')
+await comoUsuario('admin@test.pe')
+const rPR = (await uno(`select resumen_dashboard() r`)).r
+ok(typeof Number(rPR.primera_respuesta_min) === 'number' && rPR.con_primer_contacto >= 2 && rPR.por_asesor.some((a) => a.primera_respuesta_min !== null), 'el dashboard calcula la mediana total y por asesor')
+await reset()
+
 seccion('anon')
 await db.exec(`reset role; set request.jwt.claim.sub = ''; set role anon`)
 await falla(`select * from tareas`, 'anon no puede ver tareas')
