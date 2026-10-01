@@ -83,17 +83,35 @@ export async function restablecerClave(asesorId: string, _previo: Resultado, for
   return { ok: 'Contraseña restablecida.' }
 }
 
-/** Celular y carreras exclusivas (vacío = asesor general de la rotación). */
+/** Nombre, celular y carreras exclusivas (vacío = asesor general de la rotación). */
 export async function actualizarAsesor(asesorId: string, _previo: Resultado, formData: FormData): Promise<Resultado> {
   await exigirAdmin()
+  const nombre = String(formData.get('nombre') ?? '').trim()
+  const telefono = normalizarTelefono(String(formData.get('telefono') ?? ''))
+  if (!nombre) return { error: 'El nombre es obligatorio.' }
+  if (telefono && !/^\d{9,15}$/.test(telefono)) return { error: 'Revisa el celular (9 dígitos, o con código de país).' }
+
   const supabase = await crearClienteServidor()
   const { error } = await supabase.from('asesores').update({
-    telefono: normalizarTelefono(String(formData.get('telefono') ?? '')),
+    nombre,
+    telefono,
     carreras: listaCarreras(String(formData.get('carreras') ?? '')),
   }).eq('id', asesorId)
+  if (error?.code === '23505') return { error: 'Ese celular ya lo tiene otro asesor.' }
   if (error) return { error: mensajeError(error) }
   revalidatePath('/usuarios')
   return { ok: 'Datos guardados.' }
+}
+
+/** Papelera: el usuario deja de entrar al panel y de recibir leads (se puede restaurar). */
+export async function eliminarAsesor(asesorId: string): Promise<Resultado> {
+  await exigirAdmin()
+  const supabase = await crearClienteServidor()
+  const { error } = await supabase.rpc('eliminar_asesor', { p_id: asesorId })
+  if (error) return { error: mensajeError(error) }
+  revalidatePath('/usuarios')
+  revalidatePath('/papelera')
+  return { ok: 'Enviado a la papelera.' }
 }
 
 /** Un asesor inactivo no recibe leads nuevos (sigue viendo los suyos). */

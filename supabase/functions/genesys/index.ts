@@ -148,6 +148,8 @@ function mensajeNuevoLead(lead: Lead, fuente: Fuente, tipo: TipoAviso = 'nuevo',
  * La API de BuilderBot a veces tarda: se reintenta hasta 3 veces con espera creciente.
  */
 async function notificarAsesor(lead: Lead, telefonoAsesor: string, fuente: Fuente, tipo: TipoAviso = 'nuevo', asignadoPor?: string | null) {
+  // Lead en la papelera: no se molesta al asesor
+  if (lead.eliminado_at) return false
   const texto = mensajeNuevoLead(lead, fuente, tipo, asignadoPor)
   let envio = await enviarWhatsApp(telefonoAsesor, texto)
   for (let intento = 1; !envio.ok && intento < 3; intento++) {
@@ -169,7 +171,7 @@ async function notificarAsesor(lead: Lead, telefonoAsesor: string, fuente: Fuent
  * Se "reserva" el aviso en la base antes de enviarlo, así dos mensajes seguidos no generan dos avisos.
  */
 async function avisarMensajeNuevo(lead: Lead, mensaje: string) {
-  if (!lead.asesor_id) return
+  if (!lead.asesor_id || lead.eliminado_at) return
   const avisar = (ESTADOS_AVISO_MENSAJE as readonly string[]).includes(lead.estado) ||
     (!!lead.bot_pausado_hasta && Date.parse(lead.bot_pausado_hasta) > Date.now())
   if (!avisar) return
@@ -402,6 +404,7 @@ async function recordatorios(): Promise<Respuesta> {
   const pendientes = await supabase.from('leads').select(seleccion)
     .in('notificacion_estado', ['pendiente', 'error'])
     .lt('notificacion_intentos', MAX_INTENTOS_NOTIFICACION)
+    .is('eliminado_at', null)
     .not('asesor_id', 'is', null)
     .lt('fecha_asignado', new Date(Date.now() - 5 * 60_000).toISOString())
   if (pendientes.error) throw pendientes.error
@@ -416,6 +419,7 @@ async function recordatorios(): Promise<Respuesta> {
   const sinContactar = await supabase.from('leads').select(seleccion)
     .eq('estado', 'lead_asignado')
     .is('recordatorio_enviado', null)
+    .is('eliminado_at', null)
     .lt('fecha_asignado', new Date(Date.now() - 12 * 3_600_000).toISOString())
     .order('fecha_asignado')
   if (sinContactar.error) throw sinContactar.error

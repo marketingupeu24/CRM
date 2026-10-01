@@ -44,6 +44,7 @@ export function Navegacion(
           enlaces: [
             { href: '/usuarios' as Route, texto: 'Asesores y usuarios', icono: '◉' },
             { href: '/respuestas' as Route, texto: 'Respuestas rápidas', icono: '⚡' },
+            { href: '/papelera' as Route, texto: 'Papelera', icono: '🗑' },
           ],
         }]
       : []),

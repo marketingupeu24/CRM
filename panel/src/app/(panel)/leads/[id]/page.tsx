@@ -6,7 +6,7 @@ import { InsigniaEstado } from '@/components/InsigniaEstado'
 import { fechaHora, haceCuanto } from '@/lib/formato'
 import { obtenerSesion } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
-import { BotonEliminarNota, EditarDatos, FormularioNota, ReasignarAsesor, SelectorEstado } from './Acciones'
+import { BotonEliminarNota, BotonPapelera, EditarDatos, FormularioNota, ReasignarAsesor, SelectorEstado } from './Acciones'
 import { esDelChat } from '@/lib/chat'
 import { Conversacion, type MensajeChat } from './Conversacion'
 import { ControlesChat } from './ControlesChat'
@@ -54,7 +54,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
       .select('*, autor:asesores!lead_interacciones_autor_id_fkey(nombre)')
       .eq('lead_id', id).order('created_at', { ascending: false }).limit(300),
     esAdmin
-      ? supabase.from('asesores').select('id, nombre, activo').eq('rol', 'asesor').order('nombre')
+      ? supabase.from('asesores').select('id, nombre, activo').eq('rol', 'asesor').is('eliminado_at', null).order('nombre')
       : Promise.resolve({ data: [] as { id: string; nombre: string; activo: boolean }[] }),
     supabase.from('tareas').select('id, titulo, vence_at').eq('lead_id', id).is('completada_at', null).order('vence_at'),
     supabase.from('respuestas_rapidas').select('id, titulo, contenido').eq('activa', true).order('orden').order('titulo'),
@@ -96,6 +96,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold">{lead.nombre ?? 'Lead sin nombre'}</h1>
         <InsigniaEstado estado={lead.estado} />
+        {esAdmin && <span className="ml-auto"><BotonPapelera leadId={lead.id} nombre={lead.nombre ?? lead.telefono} /></span>}
       </div>
 
       <AccionesRapidas telefono={lead.telefono} />
@@ -122,7 +123,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
           <section className="tarjeta p-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-semibold">Datos del lead</h2>
-              <EditarDatos lead={lead} />
+              <EditarDatos lead={lead} esAdmin={esAdmin} />
             </div>
             <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
               {datos.map(([etiqueta, valor]) => (

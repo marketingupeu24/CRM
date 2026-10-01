@@ -72,7 +72,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
     supabase.from('vista_leads_por_carrera').select('carrera'),
     supabase.from('leads').select('convocatoria').not('convocatoria', 'is', null).limit(2000),
     esAdmin
-      ? supabase.from('asesores').select('id, nombre').eq('rol', 'asesor').order('nombre')
+      ? supabase.from('asesores').select('id, nombre').eq('rol', 'asesor').is('eliminado_at', null).order('nombre')
       : Promise.resolve({ data: [] as { id: string; nombre: string }[] }),
   ])
 
@@ -195,7 +195,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
 
       {error && <p className="rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-700">Error cargando leads: {error.message}</p>}
 
-      <BarraMasiva asesores={asesores ?? []} />
+      <BarraMasiva asesores={asesores ?? []} esAdmin={esAdmin} />
 
       <div className="tarjeta overflow-x-auto">
         <table className="min-w-full divide-y divide-slate-200 text-sm">

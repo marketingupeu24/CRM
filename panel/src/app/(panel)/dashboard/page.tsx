@@ -72,7 +72,7 @@ export default async function PaginaDashboard(props: PageProps<'/dashboard'>) {
     }),
     supabase.from('leads').select('convocatoria').not('convocatoria', 'is', null).limit(2000),
     esAdmin
-      ? supabase.from('asesores').select('id, nombre').eq('rol', 'asesor').order('nombre')
+      ? supabase.from('asesores').select('id, nombre').eq('rol', 'asesor').is('eliminado_at', null).order('nombre')
       : Promise.resolve({ data: [] as { id: string; nombre: string }[] }),
   ])
 

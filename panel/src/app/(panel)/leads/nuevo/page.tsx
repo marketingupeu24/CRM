@@ -12,7 +12,7 @@ export default async function PaginaNuevoLead() {
 
   const [{ data: asesores }, { data: convocatorias }] = await Promise.all([
     esAdmin
-      ? supabase.from('asesores').select('id, nombre').eq('rol', 'asesor').eq('activo', true).order('nombre')
+      ? supabase.from('asesores').select('id, nombre').eq('rol', 'asesor').eq('activo', true).is('eliminado_at', null).order('nombre')
       : Promise.resolve({ data: [] as { id: string; nombre: string }[] }),
     supabase.from('leads').select('convocatoria').not('convocatoria', 'is', null).limit(2000),
   ])

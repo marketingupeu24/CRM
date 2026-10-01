@@ -4,7 +4,7 @@
 // data-lead-sel; esta barra las lee, y aparece cuando hay alguna marcada.
 import { useEffect, useState, useTransition } from 'react'
 import { ESTADOS_LEAD, ETIQUETAS_ESTADO, MOTIVOS_PERDIDA, type LeadEstado } from '@crm/db'
-import { accionMasiva } from './acciones'
+import { accionMasiva, enviarAPapelera } from './acciones'
 
 const SELECTOR = 'input[data-lead-sel]'
 
@@ -12,7 +12,7 @@ function casillas() {
   return [...document.querySelectorAll<HTMLInputElement>(SELECTOR)]
 }
 
-export function BarraMasiva({ asesores }: { asesores: { id: string; nombre: string }[] }) {
+export function BarraMasiva({ asesores, esAdmin = false }: { asesores: { id: string; nombre: string }[]; esAdmin?: boolean }) {
   const [ids, setIds] = useState<string[]>([])
   const [estado, setEstado] = useState<LeadEstado | ''>('')
   const [motivo, setMotivo] = useState('')
@@ -39,10 +39,10 @@ export function BarraMasiva({ asesores }: { asesores: { id: string; nombre: stri
     setIds([])
   }
 
-  const ejecutar = (accion: Parameters<typeof accionMasiva>[1]) => {
+  const ejecutar = (accion: Parameters<typeof accionMasiva>[1] | 'papelera') => {
     setAviso(null)
     iniciar(async () => {
-      const r = await accionMasiva(ids, accion)
+      const r = accion === 'papelera' ? await enviarAPapelera(ids) : await accionMasiva(ids, accion)
       if (r.error) return setAviso({ texto: r.error, error: true })
       setAviso({ texto: `Listo: ${r.cambiados} ${r.cambiados === 1 ? 'lead actualizado' : 'leads actualizados'}.` })
       setEstado(''); setMotivo(''); setAsesorId('')
@@ -92,6 +92,17 @@ export function BarraMasiva({ asesores }: { asesores: { id: string; nombre: stri
           </select>
           <button type="button" className="boton-secundario" disabled={!asesorId || pendiente} onClick={() => ejecutar({ tipo: 'asesor', asesorId })}>
             Asignar
+          </button>
+        </>
+      )}
+      {esAdmin && (
+        <>
+          <span className="mx-1 hidden h-6 border-l border-marca-200 sm:block" />
+          <button
+            type="button" disabled={pendiente} className="rounded-lg px-3 py-2 font-medium text-rose-600 hover:bg-rose-50"
+            onClick={() => { if (confirm(`¿Enviar ${ids.length} lead(s) a la papelera? Puedes restaurarlos desde la Papelera.`)) ejecutar('papelera') }}
+          >
+            🗑 Papelera
           </button>
         </>
       )}

@@ -87,8 +87,18 @@ export async function actualizarDatos(leadId: string, _previo: Resultado, formDa
   const dni = texto('dni')?.replace(/\D/g, '') || null
   if (dni && !/^\d{8,12}$/.test(dni)) return { error: 'El DNI debe tener entre 8 y 12 dígitos.' }
 
+  // El celular solo lo cambia el admin: es el número al que escribe el chat del CRM
+  const { esAdmin } = await obtenerSesion()
+  let telefono: string | undefined
+  if (esAdmin && formData.has('telefono')) {
+    const digitos = String(formData.get('telefono') ?? '').replace(/\D/g, '')
+    telefono = /^9\d{8}$/.test(digitos) ? `51${digitos}` : digitos
+    if (!/^\d{9,15}$/.test(telefono)) return { error: 'Revisa el celular (9 dígitos, o con código de país).' }
+  }
+
   const supabase = await crearClienteServidor()
   const { error } = await supabase.from('leads').update({
+    ...(telefono ? { telefono } : {}),
     nombre: texto('nombre'),
     dni,
     carrera_interes: texto('carrera_interes'),
@@ -97,6 +107,9 @@ export async function actualizarDatos(leadId: string, _previo: Resultado, formDa
     sede: texto('sede'),
     origen_campana: texto('origen_campana'),
   }).eq('id', leadId)
+  if (error?.code === '23505') {
+    return { error: error.message.includes('dni') ? 'Ya existe otro lead con ese DNI.' : 'Ya existe otro lead con ese celular.' }
+  }
   if (error) return { error: mensajeError(error) }
 
   refrescar(leadId)
@@ -189,6 +202,20 @@ export async function accionMasiva(
   if (e1 || e2) return { error: mensajeError((e1 ?? e2)!) }
   refrescar()
   return { ok: true, cambiados: (a?.length ?? 0) + (b?.length ?? 0) }
+}
+
+/** Papelera (solo admin): el lead desaparece del panel y se puede restaurar desde /papelera. */
+export async function enviarAPapelera(ids: string[]): Promise<ResultadoMasivo> {
+  const { esAdmin } = await obtenerSesion()
+  if (!esAdmin) return { error: 'Solo un administrador puede eliminar leads.' }
+  const lista = [...new Set(ids)].filter((id) => /^[0-9a-f-]{36}$/i.test(id)).slice(0, 500)
+  if (!lista.length) return { error: 'Selecciona al menos un lead.' }
+  const supabase = await crearClienteServidor()
+  const { data, error } = await supabase.rpc('eliminar_leads', { p_ids: lista })
+  if (error) return { error: mensajeError(error) }
+  refrescar()
+  revalidatePath('/papelera')
+  return { ok: true, cambiados: data ?? 0 }
 }
 
 /** Pausa a Genesys 5 horas para este lead (el asesor conversa con él) o lo reactiva. */

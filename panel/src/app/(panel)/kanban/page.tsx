@@ -31,7 +31,7 @@ export default async function PaginaKanban(props: PageProps<'/kanban'>) {
   const [{ data, error }, { data: asesores }] = await Promise.all([
     consulta.order('updated_at', { ascending: false }).limit(LIMITE),
     esAdmin
-      ? supabase.from('asesores').select('id, nombre').eq('rol', 'asesor').order('nombre')
+      ? supabase.from('asesores').select('id, nombre').eq('rol', 'asesor').is('eliminado_at', null).order('nombre')
       : Promise.resolve({ data: [] as { id: string; nombre: string }[] }),
   ])
 

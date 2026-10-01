@@ -7,9 +7,9 @@ import { AccionesAsesor, FormularioNuevoAsesor } from './Formularios'
 export const metadata: Metadata = { title: 'Asesores y usuarios' }
 
 export default async function PaginaUsuarios() {
-  await exigirAdmin()
+  const { perfil } = await exigirAdmin()
   const supabase = await crearClienteServidor()
-  const { data: asesores, error } = await supabase.from('asesores').select('*').order('rol').order('nombre')
+  const { data: asesores, error } = await supabase.from('asesores').select('*').is('eliminado_at', null).order('rol').order('nombre')
 
   return (
     <div className="space-y-6">
@@ -56,7 +56,7 @@ export default async function PaginaUsuarios() {
                   {a.rol === 'admin' ? '—' : a.carreras.length ? a.carreras.join(', ') : 'Rotación general'}
                 </td>
                 <td className="px-4 py-3 text-xs whitespace-nowrap">{fechaHora(a.ultimo_lead_asignado)}</td>
-                <td className="w-72 px-4 py-3"><AccionesAsesor asesor={a} /></td>
+                <td className="w-72 px-4 py-3"><AccionesAsesor asesor={a} esYo={a.id === perfil.id} /></td>
               </tr>
             ))}
           </tbody>

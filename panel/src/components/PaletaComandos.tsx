@@ -30,6 +30,7 @@ const PAGINAS: Omit<Item, 'id' | 'grupo'>[] = [
 const PAGINAS_ADMIN: Omit<Item, 'id' | 'grupo'>[] = [
   { titulo: 'Asesores y usuarios', icono: '◉', ir: '/usuarios' },
   { titulo: 'Respuestas rápidas', icono: '⚡', ir: '/respuestas' },
+  { titulo: 'Papelera', icono: '🗑', ir: '/papelera', detalle: 'Leads y usuarios eliminados' },
 ]
 
 const normalizar = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()

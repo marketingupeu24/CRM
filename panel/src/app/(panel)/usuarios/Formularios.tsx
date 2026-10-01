@@ -3,7 +3,7 @@
 import { useActionState, useState, useTransition } from 'react'
 import type { Asesor } from '@crm/db'
 import {
-  actualizarAsesor, cambiarActivo, crearAsesor, crearCuenta, restablecerClave, type Resultado,
+  actualizarAsesor, cambiarActivo, crearAsesor, crearCuenta, eliminarAsesor, restablecerClave, type Resultado,
 } from './acciones'
 
 /** "Danna Lima" -> "danna.lima" (primer nombre.primer apellido, sin tildes) */
@@ -73,7 +73,7 @@ export function FormularioNuevoAsesor() {
 
 type Panel = 'cuenta' | 'clave' | 'editar' | null
 
-export function AccionesAsesor({ asesor }: { asesor: Asesor }) {
+export function AccionesAsesor({ asesor, esYo = false }: { asesor: Asesor; esYo?: boolean }) {
   const [abierto, setAbierto] = useState<Panel>(null)
   const [rActivo, setRActivo] = useState<Resultado>({})
   const [pendiente, iniciar] = useTransition()
@@ -98,6 +98,18 @@ export function AccionesAsesor({ asesor }: { asesor: Asesor }) {
             {asesor.activo ? 'Desactivar' : 'Activar'}
           </button>
         )}
+        {!esYo && (
+          <button
+            disabled={pendiente} className="text-rose-600 hover:underline"
+            onClick={() => {
+              if (confirm(`¿Enviar a ${asesor.nombre} a la papelera? No podrá entrar al panel ni recibirá leads. Puedes restaurarlo desde la Papelera.`)) {
+                iniciar(async () => setRActivo(await eliminarAsesor(asesor.id)))
+              }
+            }}
+          >
+            🗑 Papelera
+          </button>
+        )}
       </div>
       <Mensaje r={rActivo} />
 
@@ -120,6 +132,7 @@ export function AccionesAsesor({ asesor }: { asesor: Asesor }) {
       )}
       {abierto === 'editar' && (
         <form action={accionEditar} className="space-y-2">
+          <input name="nombre" required defaultValue={asesor.nombre} placeholder="Nombre completo" className="campo" aria-label="Nombre" />
           <input name="telefono" defaultValue={asesor.telefono ?? ''} placeholder="Celular" className="campo" aria-label="Celular" />
           <input name="carreras" defaultValue={asesor.carreras.join(', ')} placeholder="Carreras exclusivas (vacío = general)" className="campo" aria-label="Carreras" />
           <button className="boton" disabled={guardando}>{guardando ? 'Guardando…' : 'Guardar'}</button>

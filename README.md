@@ -163,6 +163,14 @@ Se actualiza en vivo (Supabase Realtime).
   matriculados y perdidos, con botones *Ver leads* y *⬇ Excel*; también se elige en los filtros de Leads.
 - **Acciones masivas** en la lista de leads: marca casillas (o todas las de la página) y cambia el estado
   (con motivo si es *Perdido*) o, si eres admin, asígnalos a un asesor.
+- **Papelera** (menú Administración, solo admin): "🗑 Enviar a la papelera" en la ficha del lead, en las
+  acciones masivas y en *Asesores y usuarios*. Lo eliminado desaparece del panel, el dashboard y el Excel, y
+  no genera avisos; se puede restaurar o borrar para siempre. Un lead en la papelera que vuelve a escribir
+  se sigue guardando (la papelera lo marca "Volvió a escribir") y sale de ella si se registra a mano otra
+  vez. Un usuario en la papelera no puede entrar al panel; para enviarlo no debe tener leads abiertos, y al
+  restaurarlo vuelve inactivo.
+- **Editar asesores y leads**: el admin cambia nombre y celular de los asesores (*Editar* en Asesores y
+  usuarios) y el celular de un lead (*Editar datos* en la ficha; el chat del CRM escribe a ese número).
 - **Aviso al asignar desde el panel**: si un usuario asigna o reasigna un lead a *otro* asesor (ficha,
   acciones masivas o registro manual), ese asesor recibe "📌 LEAD ASIGNADO A TI" por WhatsApp con el
   enlace a la ficha. Con más de 3 leads a la vez recibe un solo resumen. Lo hace el trigger

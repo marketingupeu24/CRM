@@ -2,9 +2,10 @@
 
 // Controles interactivos de la ficha del lead.
 import { useActionState, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { ESTADOS_LEAD, ETIQUETAS_ESTADO, MOTIVOS_PERDIDA, ORIGENES, type Lead, type LeadEstado } from '@crm/db'
 import {
-  actualizarDatos, agregarNota, cambiarEstado, eliminarNota, reasignarAsesor, type Resultado,
+  actualizarDatos, agregarNota, cambiarEstado, eliminarNota, enviarAPapelera, reasignarAsesor, type Resultado,
 } from '../acciones'
 
 function Mensaje({ resultado, textoOk }: { resultado: Resultado; textoOk?: string }) {
@@ -96,7 +97,7 @@ export function ReasignarAsesor(
   )
 }
 
-export function EditarDatos({ lead }: { lead: Lead }) {
+export function EditarDatos({ lead, esAdmin = false }: { lead: Lead; esAdmin?: boolean }) {
   const [abierto, setAbierto] = useState(false)
   const [resultado, accion, enviando] = useActionState<Resultado, FormData>(actualizarDatos.bind(null, lead.id), {})
 
@@ -109,6 +110,13 @@ export function EditarDatos({ lead }: { lead: Lead }) {
   ]
   return (
     <form action={accion} className="mt-4 grid gap-3 sm:grid-cols-2">
+      {esAdmin && (
+        <label className="text-sm text-slate-600 sm:col-span-2">
+          Celular (WhatsApp)
+          <input name="telefono" required inputMode="tel" defaultValue={lead.telefono} className="campo mt-1" />
+          <span className="text-xs text-slate-500">Los mensajes del chat del CRM se envían a este número.</span>
+        </label>
+      )}
       {campos.map(([campo, etiqueta]) => (
         <label key={campo} className="text-sm text-slate-600">
           {etiqueta}
@@ -131,5 +139,30 @@ export function EditarDatos({ lead }: { lead: Lead }) {
         <Mensaje resultado={resultado} textoOk="Datos guardados." />
       </div>
     </form>
+  )
+}
+
+/** Solo admin: manda el lead a la papelera y vuelve a la lista. */
+export function BotonPapelera({ leadId, nombre }: { leadId: string; nombre: string }) {
+  const router = useRouter()
+  const [error, setError] = useState('')
+  const [pendiente, iniciar] = useTransition()
+  return (
+    <span className="inline-flex items-center gap-2">
+      <button
+        disabled={pendiente} className="text-sm font-medium text-rose-600 hover:underline"
+        onClick={() => {
+          if (!confirm(`¿Enviar a "${nombre}" a la papelera? Desaparece del panel; puedes restaurarlo desde la Papelera.`)) return
+          iniciar(async () => {
+            const r = await enviarAPapelera([leadId])
+            if (r.error) setError(r.error)
+            else router.push('/leads')
+          })
+        }}
+      >
+        {pendiente ? 'Eliminando…' : '🗑 Enviar a la papelera'}
+      </button>
+      {error && <span role="alert" className="text-sm text-rose-600">{error}</span>}
+    </span>
   )
 }

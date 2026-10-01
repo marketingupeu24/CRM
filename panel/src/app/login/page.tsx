@@ -21,6 +21,11 @@ export default async function PaginaLogin(props: PageProps<'/login'>) {
             Tu usuario no está vinculado a un asesor. Contacta al administrador.
           </p>
         )}
+        {error === 'eliminado' && (
+          <p className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            Tu usuario fue dado de baja. Si es un error, contacta al administrador.
+          </p>
+        )}
         <FormularioLogin />
       </div>
     </main>

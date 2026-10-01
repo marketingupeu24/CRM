@@ -7,13 +7,13 @@ export type Database = {
           Tables: {
             "asesores": {
                   Row: {
-                    "activo": boolean,"carreras": (string)[],"created_at": string,"email": string | null,"id": string,"nombre": string,"rol": Database["public"]['Enums']["asesor_rol"],"telefono": string | null,"ultimo_lead_asignado": string | null,"user_id": string | null,"usuario": string | null
+                    "activo": boolean,"carreras": (string)[],"created_at": string,"eliminado_at": string | null,"email": string | null,"id": string,"nombre": string,"rol": Database["public"]['Enums']["asesor_rol"],"telefono": string | null,"ultimo_lead_asignado": string | null,"user_id": string | null,"usuario": string | null
                   }
                   Insert: {
-                    "activo"?: boolean,"carreras"?: (string)[],"created_at"?: string,"email"?: string | null,"id"?: string,"nombre": string,"rol"?: Database["public"]['Enums']["asesor_rol"],"telefono"?: string | null,"ultimo_lead_asignado"?: string | null,"user_id"?: string | null,"usuario"?: string | null
+                    "activo"?: boolean,"carreras"?: (string)[],"created_at"?: string,"eliminado_at"?: string | null,"email"?: string | null,"id"?: string,"nombre": string,"rol"?: Database["public"]['Enums']["asesor_rol"],"telefono"?: string | null,"ultimo_lead_asignado"?: string | null,"user_id"?: string | null,"usuario"?: string | null
                   }
                   Update: {
-                    "activo"?: boolean,"carreras"?: (string)[],"created_at"?: string,"email"?: string | null,"id"?: string,"nombre"?: string,"rol"?: Database["public"]['Enums']["asesor_rol"],"telefono"?: string | null,"ultimo_lead_asignado"?: string | null,"user_id"?: string | null,"usuario"?: string | null
+                    "activo"?: boolean,"carreras"?: (string)[],"created_at"?: string,"eliminado_at"?: string | null,"email"?: string | null,"id"?: string,"nombre"?: string,"rol"?: Database["public"]['Enums']["asesor_rol"],"telefono"?: string | null,"ultimo_lead_asignado"?: string | null,"user_id"?: string | null,"usuario"?: string | null
                   }
                   Relationships: [
                     
@@ -64,13 +64,13 @@ isOneToOne: false
                   ]
                 },"leads": {
                   Row: {
-                    "asesor_id": string | null,"bot_pausado_hasta": string | null,"carrera_interes": string | null,"convocatoria": string | null,"created_at": string,"dni": string | null,"duplicados_ignorados": number,"en_blacklist": boolean,"estado": Database["public"]['Enums']["lead_estado"],"fecha_asignado": string | null,"fecha_interesado": string | null,"fecha_notificacion": string | null,"fecha_postulacion": string | null,"id": string,"modalidad": string | null,"motivo_no_interes": string | null,"nombre": string | null,"notificacion_error": string | null,"notificacion_estado": string | null,"notificacion_intentos": number,"origen": string,"origen_campana": string | null,"primer_contacto": string,"primer_contacto_asesor_at": string | null,"programa": string,"reasignaciones": number,"reconsultas": number,"recordatorio_enviado": string | null,"resumen": string | null,"sede": string | null,"sin_responder": boolean | null,"telefono": string,"total_mensajes": number,"ultima_respuesta_at": string | null,"ultimo_aviso_mensaje_at": string | null,"ultimo_contacto": string,"ultimo_mensaje_at": string | null,"ultimo_mensaje_lead_at": string | null,"ultimo_mensaje_texto": string | null,"ultimo_registro_at": string | null,"updated_at": string
+                    "asesor_id": string | null,"bot_pausado_hasta": string | null,"carrera_interes": string | null,"convocatoria": string | null,"created_at": string,"dni": string | null,"duplicados_ignorados": number,"eliminado_at": string | null,"eliminado_por": string | null,"en_blacklist": boolean,"estado": Database["public"]['Enums']["lead_estado"],"fecha_asignado": string | null,"fecha_interesado": string | null,"fecha_notificacion": string | null,"fecha_postulacion": string | null,"id": string,"modalidad": string | null,"motivo_no_interes": string | null,"nombre": string | null,"notificacion_error": string | null,"notificacion_estado": string | null,"notificacion_intentos": number,"origen": string,"origen_campana": string | null,"primer_contacto": string,"primer_contacto_asesor_at": string | null,"programa": string,"reasignaciones": number,"reconsultas": number,"recordatorio_enviado": string | null,"resumen": string | null,"sede": string | null,"sin_responder": boolean | null,"telefono": string,"total_mensajes": number,"ultima_respuesta_at": string | null,"ultimo_aviso_mensaje_at": string | null,"ultimo_contacto": string,"ultimo_mensaje_at": string | null,"ultimo_mensaje_lead_at": string | null,"ultimo_mensaje_texto": string | null,"ultimo_registro_at": string | null,"updated_at": string
                   }
                   Insert: {
-                    "asesor_id"?: string | null,"bot_pausado_hasta"?: string | null,"carrera_interes"?: string | null,"convocatoria"?: string | null,"created_at"?: string,"dni"?: string | null,"duplicados_ignorados"?: number,"en_blacklist"?: boolean,"estado"?: Database["public"]['Enums']["lead_estado"],"fecha_asignado"?: string | null,"fecha_interesado"?: string | null,"fecha_notificacion"?: string | null,"fecha_postulacion"?: string | null,"id"?: string,"modalidad"?: string | null,"motivo_no_interes"?: string | null,"nombre"?: string | null,"notificacion_error"?: string | null,"notificacion_estado"?: string | null,"notificacion_intentos"?: number,"origen"?: string,"origen_campana"?: string | null,"primer_contacto"?: string,"primer_contacto_asesor_at"?: string | null,"programa"?: string,"reasignaciones"?: number,"reconsultas"?: number,"recordatorio_enviado"?: string | null,"resumen"?: string | null,"sede"?: string | null,"sin_responder"?: never,"telefono": string,"total_mensajes"?: number,"ultima_respuesta_at"?: string | null,"ultimo_aviso_mensaje_at"?: string | null,"ultimo_contacto"?: string,"ultimo_mensaje_at"?: string | null,"ultimo_mensaje_lead_at"?: string | null,"ultimo_mensaje_texto"?: string | null,"ultimo_registro_at"?: string | null,"updated_at"?: string
+                    "asesor_id"?: string | null,"bot_pausado_hasta"?: string | null,"carrera_interes"?: string | null,"convocatoria"?: string | null,"created_at"?: string,"dni"?: string | null,"duplicados_ignorados"?: number,"eliminado_at"?: string | null,"eliminado_por"?: string | null,"en_blacklist"?: boolean,"estado"?: Database["public"]['Enums']["lead_estado"],"fecha_asignado"?: string | null,"fecha_interesado"?: string | null,"fecha_notificacion"?: string | null,"fecha_postulacion"?: string | null,"id"?: string,"modalidad"?: string | null,"motivo_no_interes"?: string | null,"nombre"?: string | null,"notificacion_error"?: string | null,"notificacion_estado"?: string | null,"notificacion_intentos"?: number,"origen"?: string,"origen_campana"?: string | null,"primer_contacto"?: string,"primer_contacto_asesor_at"?: string | null,"programa"?: string,"reasignaciones"?: number,"reconsultas"?: number,"recordatorio_enviado"?: string | null,"resumen"?: string | null,"sede"?: string | null,"sin_responder"?: never,"telefono": string,"total_mensajes"?: number,"ultima_respuesta_at"?: string | null,"ultimo_aviso_mensaje_at"?: string | null,"ultimo_contacto"?: string,"ultimo_mensaje_at"?: string | null,"ultimo_mensaje_lead_at"?: string | null,"ultimo_mensaje_texto"?: string | null,"ultimo_registro_at"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "asesor_id"?: string | null,"bot_pausado_hasta"?: string | null,"carrera_interes"?: string | null,"convocatoria"?: string | null,"created_at"?: string,"dni"?: string | null,"duplicados_ignorados"?: number,"en_blacklist"?: boolean,"estado"?: Database["public"]['Enums']["lead_estado"],"fecha_asignado"?: string | null,"fecha_interesado"?: string | null,"fecha_notificacion"?: string | null,"fecha_postulacion"?: string | null,"id"?: string,"modalidad"?: string | null,"motivo_no_interes"?: string | null,"nombre"?: string | null,"notificacion_error"?: string | null,"notificacion_estado"?: string | null,"notificacion_intentos"?: number,"origen"?: string,"origen_campana"?: string | null,"primer_contacto"?: string,"primer_contacto_asesor_at"?: string | null,"programa"?: string,"reasignaciones"?: number,"reconsultas"?: number,"recordatorio_enviado"?: string | null,"resumen"?: string | null,"sede"?: string | null,"sin_responder"?: never,"telefono"?: string,"total_mensajes"?: number,"ultima_respuesta_at"?: string | null,"ultimo_aviso_mensaje_at"?: string | null,"ultimo_contacto"?: string,"ultimo_mensaje_at"?: string | null,"ultimo_mensaje_lead_at"?: string | null,"ultimo_mensaje_texto"?: string | null,"ultimo_registro_at"?: string | null,"updated_at"?: string
+                    "asesor_id"?: string | null,"bot_pausado_hasta"?: string | null,"carrera_interes"?: string | null,"convocatoria"?: string | null,"created_at"?: string,"dni"?: string | null,"duplicados_ignorados"?: number,"eliminado_at"?: string | null,"eliminado_por"?: string | null,"en_blacklist"?: boolean,"estado"?: Database["public"]['Enums']["lead_estado"],"fecha_asignado"?: string | null,"fecha_interesado"?: string | null,"fecha_notificacion"?: string | null,"fecha_postulacion"?: string | null,"id"?: string,"modalidad"?: string | null,"motivo_no_interes"?: string | null,"nombre"?: string | null,"notificacion_error"?: string | null,"notificacion_estado"?: string | null,"notificacion_intentos"?: number,"origen"?: string,"origen_campana"?: string | null,"primer_contacto"?: string,"primer_contacto_asesor_at"?: string | null,"programa"?: string,"reasignaciones"?: number,"reconsultas"?: number,"recordatorio_enviado"?: string | null,"resumen"?: string | null,"sede"?: string | null,"sin_responder"?: never,"telefono"?: string,"total_mensajes"?: number,"ultima_respuesta_at"?: string | null,"ultimo_aviso_mensaje_at"?: string | null,"ultimo_contacto"?: string,"ultimo_mensaje_at"?: string | null,"ultimo_mensaje_lead_at"?: string | null,"ultimo_mensaje_texto"?: string | null,"ultimo_registro_at"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -82,6 +82,18 @@ isOneToOne: false
     },{
       foreignKeyName: "leads_asesor_id_fkey"
       columns: ["asesor_id"]
+isOneToOne: false
+      referencedRelation: "vista_leads_por_asesor"
+      referencedColumns: ["asesor_id"]
+    },{
+      foreignKeyName: "leads_eliminado_por_fkey"
+      columns: ["eliminado_por"]
+isOneToOne: false
+      referencedRelation: "asesores"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "leads_eliminado_por_fkey"
+      columns: ["eliminado_por"]
 isOneToOne: false
       referencedRelation: "vista_leads_por_asesor"
       referencedColumns: ["asesor_id"]
@@ -202,6 +214,7 @@ isOneToOne: false
               "activo": boolean,
 "carreras": (string)[],
 "created_at": string,
+"eliminado_at": string | null,
 "email": string | null,
 "id": string,
 "nombre": string,
@@ -217,8 +230,20 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"borrar_asesor_definitivo":
+{ Args: { "p_id": string }; Returns: undefined
+                           },
+"borrar_leads_definitivo":
+{ Args: { "p_ids": (string)[] }; Returns: number
+                           },
 "crear_usuario_panel":
 { Args: { "p_asesor_id": string,"p_clave": string,"p_debe_cambiar"?: boolean,"p_usuario": string }; Returns: string
+                           },
+"eliminar_asesor":
+{ Args: { "p_id": string }; Returns: undefined
+                           },
+"eliminar_leads":
+{ Args: { "p_ids": (string)[] }; Returns: number
                            },
 "email_de_usuario":
 { Args: { "p_usuario": string }; Returns: string
@@ -235,6 +260,9 @@ isOneToOne: false
 "mi_asesor_id":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
+"papelera":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
 "procesar_lead":
 { Args: { "p_asesor_id"?: string,"p_asignar"?: boolean,"p_carrera"?: string,"p_consulta"?: string,"p_convocatoria"?: string,"p_dni"?: string,"p_modalidad"?: string,"p_nombre"?: string,"p_notificar"?: boolean,"p_origen"?: string,"p_programa"?: string,"p_telefono"?: string }; Returns: Json
                            },
@@ -250,6 +278,8 @@ isOneToOne: false
 "created_at": string,
 "dni": string | null,
 "duplicados_ignorados": number,
+"eliminado_at": string | null,
+"eliminado_por": string | null,
 "en_blacklist": boolean,
 "estado": Database["public"]['Enums']["lead_estado"],
 "fecha_asignado": string | null,
@@ -296,6 +326,12 @@ isOneToOne: false
                            },
 "restablecer_clave_usuario":
 { Args: { "p_asesor_id": string,"p_clave": string,"p_debe_cambiar"?: boolean }; Returns: undefined
+                           },
+"restaurar_asesor":
+{ Args: { "p_id": string }; Returns: undefined
+                           },
+"restaurar_leads":
+{ Args: { "p_ids": (string)[] }; Returns: number
                            },
 "resumen_campanas":
 { Args: Record<PropertyKey, never>; Returns: Json

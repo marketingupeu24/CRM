@@ -17,7 +17,8 @@ export const obtenerSesion = cache(async (): Promise<Sesion> => {
   if (!user) redirect('/login')
 
   const { data: perfil } = await supabase.from('asesores').select('*').eq('user_id', user.id).maybeSingle()
-  if (!perfil) redirect('/login?error=sin_perfil')
+  if (!perfil) redirect('/salir?motivo=sin_perfil')
+  if (perfil.eliminado_at) redirect('/salir?motivo=eliminado')
 
   return {
     userId: user.id,
