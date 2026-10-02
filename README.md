@@ -120,7 +120,7 @@ Configuración del proyecto en Vercel: *Root Directory* = `panel`, framework Nex
 
 ### Super admin y módulos (qué ve cada usuario)
 
-El **super admin** (usuario ) tiene acceso a todo y es el único que entra a **Módulos y permisos**.
+El **super admin** (usuario `cris`) tiene acceso a todo y es el único que entra a **Módulos y permisos**.
 Ahí elige, usuario por usuario, qué módulos puede ver y usar (con plantillas *Asesor*, *Supervisor*,
 *Coordinador* y *Ninguno*), y puede nombrar a otros super admin. Siempre queda al menos uno.
 
@@ -133,7 +133,7 @@ Ahí elige, usuario por usuario, qué módulos puede ver y usar (con plantillas 
 
 - Un asesor nuevo recibe: Pendientes, Chats, Leads, Kanban, Registrar lead, Dashboard, Campañas y Exportar.
 - Sin *Ver leads de todo el equipo* el usuario solo ve los leads asignados a él.
-- El menú, las páginas y la base de datos (RLS y funciones, con ) respetan los permisos.
+- El menú, las páginas y la base de datos (RLS y funciones, con `tiene_permiso()`) respetan los permisos.
   Un usuario con *Asesores y usuarios* no puede modificar a un super admin ni darse permisos.
 - El *rol* (Asesor / Administrador) solo decide si la persona recibe leads en la rotación.
 
