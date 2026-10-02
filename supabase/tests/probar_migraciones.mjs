@@ -51,6 +51,7 @@ await db.exec(`
     ('Judith',    '51900000099', 'j@test.pe',     'asesor', '{CEPRE}',             true),
     ('Enfermera', '51900000050', 'e@test.pe',     'asesor', '{Enfermería}',        true),
     ('Inactivo',  '51900000077', 'x@test.pe',     'asesor', '{}',                  false);
+  update asesores set superadmin = true where rol = 'admin';
 `)
 const asesor = async (nombre) => (await uno(`select * from asesores where nombre=$1`, [nombre]))
 const procesar = async (args) => {
@@ -460,6 +461,46 @@ await uno(`select borrar_asesor_definitivo('${up}') r`)
 ok((await q(`select 1 from asesores where id = $1`, [up])).length === 0, 'usuario borrado para siempre')
 await q(`update asesores set activo = true where id = $1`, [ga.id])
 await reset()
+
+seccion('super admin y módulos')
+{
+const usrB = await asesor('General B')
+const adminRow = await asesor('Admin')
+const permisosDe = async (lista) => {
+  await comoUsuario('admin@test.pe')
+  await uno(`select guardar_permisos($1, $2::text[]) r`, [usrB.id, lista])
+  await comoUsuario('b@test.pe')
+}
+await permisosDe(['leads'])
+const propiosB = (await q(`select asesor_id from leads`))
+ok(propiosB.every((l) => l.asesor_id === usrB.id), 'sin "ver_todos" el usuario solo ve sus leads')
+await permisosDe(['leads', 'ver_todos'])
+await reset()
+const totalLeads = (await uno(`select count(*)::int c from leads where eliminado_at is null`)).c
+await comoUsuario('b@test.pe')
+ok((await q(`select 1 from leads`)).length === totalLeads, 'con "ver_todos" ve los leads de todo el equipo')
+await falla(`select guardar_permisos('${usrB.id}', '{usuarios}')`, 'solo el super admin asigna permisos')
+ok((await q(`update asesores set permisos = '{usuarios}' where id = $1 returning id`, [usrB.id])).length === 0, 'sin "usuarios" no puede editarse los permisos')
+await falla(`select registrar_lead_manual('Sin permiso', '51977700001')`, 'sin "registrar" no registra leads')
+await falla(`select papelera()`, 'sin "papelera" no ve la papelera')
+await permisosDe(['leads', 'registrar', 'papelera', 'usuarios', 'asignar', 'ver_todos'])
+await falla(`update asesores set permisos = '{usuarios,respuestas}' where id = '${usrB.id}'`, 'con "usuarios" tampoco se da permisos a sí mismo')
+await falla(`update asesores set superadmin = true where id = '${usrB.id}'`, 'ni se hace super admin')
+ok((await uno(`select registrar_lead_manual('Con permiso', '51977700002') r`)).r.status === 'success', 'con "registrar" sí registra')
+ok(!!(await uno(`select papelera() r`)).r, 'con "papelera" ve la papelera')
+const usrC = await asesor('General C')
+ok((await q(`update asesores set telefono = '51900000033' where id = $1 returning id`, [usrC.id])).length === 1, 'con "usuarios" edita a un asesor')
+ok((await q(`update asesores set telefono = '51900000010' where id = $1 returning id`, [adminRow.id])).length === 0, 'pero no puede tocar al super admin')
+await falla(`select restablecer_clave_usuario('${adminRow.id}', 'otra-clave', false)`, 'ni cambiarle la contraseña al super admin')
+const leadDeC = (await uno(`select id from leads where asesor_id = $1 and eliminado_at is null limit 1`, [usrC.id])).id
+ok((await q(`update leads set asesor_id = $1 where id = $2 returning id`, [usrB.id, leadDeC])).length === 1, 'con "asignar" reasigna leads')
+await comoUsuario('admin@test.pe')
+await falla(`select guardar_permisos('${adminRow.id}', '{}', false)`, 'debe quedar al menos un super admin')
+await uno(`select guardar_permisos($1, '{pendientes,chats,leads,kanban,registrar,dashboard,campanas,exportar}'::text[]) r`, [usrB.id])
+await falla(`select guardar_permisos('${usrB.id}', '{inventado}')`, 'solo se aceptan módulos conocidos')
+await reset()
+
+}
 
 seccion('anon')
 await db.exec(`reset role; set request.jwt.claim.sub = ''; set role anon`)

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ETIQUETAS_ESTADO, type LeadEstado } from '@crm/db'
-import { obtenerSesion } from '@/lib/sesion'
+import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import {
   BarrasHorizontales, BarrasPorAsesor, ColumnasPorPeriodo, Embudo, Tarjeta, type FilaAsesor,
@@ -60,7 +60,7 @@ export default async function PaginaDashboard(props: PageProps<'/dashboard'>) {
   const convocatoria = texto(sp.convocatoria)
   const asesor = texto(sp.asesor)
 
-  const { esAdmin } = await obtenerSesion()
+  const { esAdmin } = await exigirPermiso('dashboard')
   const supabase = await crearClienteServidor()
 
   const [{ data, error }, { data: convocatorias }, { data: asesores }] = await Promise.all([

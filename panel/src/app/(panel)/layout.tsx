@@ -6,7 +6,7 @@ import { Navegacion } from '@/components/Navegacion'
 import { PaletaComandos } from '@/components/PaletaComandos'
 import { RefrescoEnVivo } from '@/components/RefrescoEnVivo'
 import { SelectorTema } from '@/components/SelectorTema'
-import { obtenerSesion } from '@/lib/sesion'
+import { etiquetaRol, obtenerSesion } from '@/lib/sesion'
 import { contarPendientes } from '@/lib/pendientes'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { COOKIE_TEMA, TEMA_POR_DEFECTO, type Tema } from '@/lib/tema'
@@ -14,7 +14,8 @@ import { cerrarSesion } from '../login/acciones'
 import { FormularioClave } from './cuenta/FormularioClave'
 
 export default async function LayoutPanel({ children }: { children: React.ReactNode }) {
-  const { perfil, esAdmin, debeCambiarClave } = await obtenerSesion()
+  const sesion = await obtenerSesion()
+  const { perfil, permisos, superadmin, debeCambiarClave } = sesion
   const supabase = await crearClienteServidor()
   const [{ count: sinResponder }, pendientes] = await Promise.all([
     supabase.from('leads').select('id', { count: 'exact', head: true }).eq('sin_responder', true),
@@ -26,7 +27,7 @@ export default async function LayoutPanel({ children }: { children: React.ReactN
   return (
     <div className="min-h-screen md:flex">
       {!debeCambiarClave && <RefrescoEnVivo />}
-      {!debeCambiarClave && <PaletaComandos esAdmin={esAdmin} />}
+      {!debeCambiarClave && <PaletaComandos permisos={permisos} superadmin={superadmin} />}
 
       {/* Menú lateral (blanco, estilo TailAdmin) */}
       <aside className="border-b border-lateral-borde bg-lateral p-4 md:fixed md:inset-y-0 md:flex md:w-[270px] md:flex-col md:overflow-y-auto md:border-r md:border-b-0 md:px-5 md:py-6">
@@ -35,10 +36,10 @@ export default async function LayoutPanel({ children }: { children: React.ReactN
           <LogoUpeu className="h-11" />
           <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
             <span className="rounded-full bg-dorado-50 px-2.5 py-0.5 font-semibold text-dorado-700">CRM Admisión</span>
-            <span className="text-lateral-suave">Juliaca · {esAdmin ? 'Administrador' : 'Asesor'}</span>
+            <span className="text-lateral-suave">Juliaca · {etiquetaRol(sesion)}</span>
           </div>
         </div>
-        {!debeCambiarClave && <Navegacion esAdmin={esAdmin} sinResponder={sinResponder ?? 0} pendientes={pendientes} />}
+        {!debeCambiarClave && <Navegacion permisos={permisos} superadmin={superadmin} sinResponder={sinResponder ?? 0} pendientes={pendientes} />}
       </aside>
 
       <div className="min-w-0 flex-1 md:ml-[270px]">

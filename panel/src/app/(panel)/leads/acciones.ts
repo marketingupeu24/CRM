@@ -64,8 +64,8 @@ export async function eliminarNota(leadId: string, notaId: number): Promise<Resu
 
 /** Solo admin (lo impide también el trigger de la base de datos). */
 export async function reasignarAsesor(leadId: string, asesorId: string): Promise<Resultado> {
-  const { esAdmin } = await obtenerSesion()
-  if (!esAdmin) return { error: 'Solo un administrador puede reasignar leads.' }
+  const { puede } = await obtenerSesion()
+  if (!puede('asignar')) return { error: 'No tienes permiso para reasignar leads.' }
 
   const supabase = await crearClienteServidor()
   const { data: lead } = await supabase.from('leads').select('estado').eq('id', leadId).single()
@@ -88,9 +88,9 @@ export async function actualizarDatos(leadId: string, _previo: Resultado, formDa
   if (dni && !/^\d{8,12}$/.test(dni)) return { error: 'El DNI debe tener entre 8 y 12 dígitos.' }
 
   // El celular solo lo cambia el admin: es el número al que escribe el chat del CRM
-  const { esAdmin } = await obtenerSesion()
+  const { puede } = await obtenerSesion()
   let telefono: string | undefined
-  if (esAdmin && formData.has('telefono')) {
+  if (puede('editar_celular') && formData.has('telefono')) {
     const digitos = String(formData.get('telefono') ?? '').replace(/\D/g, '')
     telefono = /^9\d{8}$/.test(digitos) ? `51${digitos}` : digitos
     if (!/^\d{9,15}$/.test(telefono)) return { error: 'Revisa el celular (9 dígitos, o con código de país).' }
@@ -189,8 +189,8 @@ export async function accionMasiva(
     return { ok: true, cambiados: data.length }
   }
 
-  const { esAdmin } = await obtenerSesion()
-  if (!esAdmin) return { error: 'Solo un administrador puede asignar leads.' }
+  const { puede } = await obtenerSesion()
+  if (!puede('asignar')) return { error: 'No tienes permiso para asignar leads.' }
   if (!accion.asesorId) return { error: 'Elige un asesor.' }
   // Los que aún no tenían asesor pasan a "asignado"; el resto conserva su estado
   const [{ data: a, error: e1 }, { data: b, error: e2 }] = await Promise.all([
@@ -206,8 +206,8 @@ export async function accionMasiva(
 
 /** Papelera (solo admin): el lead desaparece del panel y se puede restaurar desde /papelera. */
 export async function enviarAPapelera(ids: string[]): Promise<ResultadoMasivo> {
-  const { esAdmin } = await obtenerSesion()
-  if (!esAdmin) return { error: 'Solo un administrador puede eliminar leads.' }
+  const { puede } = await obtenerSesion()
+  if (!puede('papelera')) return { error: 'No tienes permiso para eliminar leads.' }
   const lista = [...new Set(ids)].filter((id) => /^[0-9a-f-]{36}$/i.test(id)).slice(0, 500)
   if (!lista.length) return { error: 'Selecciona al menos un lead.' }
   const supabase = await crearClienteServidor()

@@ -3,7 +3,7 @@
 // Aplica los mismos filtros que la página /leads.
 import { ESTADOS_LEAD, ETIQUETAS_ESTADO, ETIQUETAS_FUENTE, type Fuente, type LeadEstado } from '@crm/db'
 import { rangoMes } from '@/lib/periodos'
-import { obtenerSesion } from '@/lib/sesion'
+import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 
 const LOTE = 1000          // la API devuelve máximo 1000 filas por consulta
@@ -23,7 +23,7 @@ function celda(valor: unknown): string {
 }
 
 export async function GET(request: Request) {
-  const { esAdmin } = await obtenerSesion()
+  const { esAdmin } = await exigirPermiso('exportar')
   const supabase = await crearClienteServidor()
   const sp = new URL(request.url).searchParams
   const mes = rangoMes(sp.get('mes')?.trim() ?? '')

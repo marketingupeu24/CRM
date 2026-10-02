@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { ESTADOS_LEAD, ETIQUETAS_ESTADO, ETIQUETAS_FUENTE, ORIGENES, type Fuente, type LeadEstado } from '@crm/db'
 import { InsigniaEstado } from '@/components/InsigniaEstado'
 import { fechaHora, haceCuanto } from '@/lib/formato'
-import { obtenerSesion } from '@/lib/sesion'
+import { exigirPermiso } from '@/lib/sesion'
 import { fechaCorta, mesLima, nombreMes, rangoMes } from '@/lib/periodos'
 import { BarraMasiva } from './BarraMasiva'
 import { crearClienteServidor } from '@/lib/supabase/server'
@@ -33,7 +33,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
   }
   const pagina = Math.max(1, Number.parseInt(parametro(sp.pagina) || '1', 10) || 1)
 
-  const { esAdmin } = await obtenerSesion()
+  const { esAdmin, puede } = await exigirPermiso('leads')
   const supabase = await crearClienteServidor()
   const { data: campanas } = await supabase.from('campanas').select('id, nombre, origen, inicio, fin, activa')
     .order('inicio', { ascending: false })
@@ -71,7 +71,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
     consulta.order('ultimo_contacto', { ascending: false }).range(desde, desde + POR_PAGINA - 1),
     supabase.from('vista_leads_por_carrera').select('carrera'),
     supabase.from('leads').select('convocatoria').not('convocatoria', 'is', null).limit(2000),
-    esAdmin
+    esAdmin || puede('asignar')
       ? supabase.from('asesores').select('id, nombre').eq('rol', 'asesor').is('eliminado_at', null).order('nombre')
       : Promise.resolve({ data: [] as { id: string; nombre: string }[] }),
   ])
@@ -111,13 +111,13 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
         </div>
         <div className="flex gap-2">
           {/* Descarga con los mismos filtros de la lista */}
-          <a
+          {puede('exportar') && <a
             href={`/leads/exportar?${new URLSearchParams(Object.entries(filtros).filter(([, v]) => v)).toString()}`}
             className="boton-secundario" download
           >
             ⬇ Exportar Excel
-          </a>
-          <Link href="/leads/nuevo" className="boton">+ Registrar lead</Link>
+          </a>}
+          {puede('registrar') && <Link href="/leads/nuevo" className="boton">+ Registrar lead</Link>}
         </div>
       </div>
 
@@ -195,7 +195,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
 
       {error && <p className="rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-700">Error cargando leads: {error.message}</p>}
 
-      <BarraMasiva asesores={asesores ?? []} esAdmin={esAdmin} />
+      <BarraMasiva asesores={puede('asignar') ? asesores ?? [] : []} puedePapelera={puede('papelera')} />
 
       <div className="tarjeta overflow-x-auto">
         <table className="min-w-full divide-y divide-slate-200 text-sm">

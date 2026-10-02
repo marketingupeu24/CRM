@@ -3,7 +3,7 @@
 // Respuestas rápidas del chat (solo admin; el RLS también lo exige).
 import { revalidatePath } from 'next/cache'
 import { mensajeError } from '@/lib/formato'
-import { exigirAdmin } from '@/lib/sesion'
+import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 
 export interface Resultado {
@@ -19,7 +19,7 @@ function datos(formData: FormData) {
 }
 
 export async function guardarRespuesta(id: number | null, _previo: Resultado, formData: FormData): Promise<Resultado> {
-  await exigirAdmin()
+  await exigirPermiso('respuestas')
   const { titulo, contenido, orden } = datos(formData)
   if (!titulo || !contenido) return { error: 'Título y mensaje son obligatorios.' }
   if (titulo.length > 80) return { error: 'El título admite máximo 80 caracteres.' }
@@ -34,7 +34,7 @@ export async function guardarRespuesta(id: number | null, _previo: Resultado, fo
 }
 
 export async function cambiarActiva(id: number, activa: boolean): Promise<Resultado> {
-  await exigirAdmin()
+  await exigirPermiso('respuestas')
   const supabase = await crearClienteServidor()
   const { error } = await supabase.from('respuestas_rapidas').update({ activa }).eq('id', id)
   if (error) return { error: mensajeError(error) }
@@ -43,7 +43,7 @@ export async function cambiarActiva(id: number, activa: boolean): Promise<Result
 }
 
 export async function eliminarRespuesta(id: number): Promise<Resultado> {
-  await exigirAdmin()
+  await exigirPermiso('respuestas')
   const supabase = await crearClienteServidor()
   const { error } = await supabase.from('respuestas_rapidas').delete().eq('id', id)
   if (error) return { error: mensajeError(error) }

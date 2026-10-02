@@ -3,7 +3,7 @@
 // Campañas (solo admin; el RLS también lo exige).
 import { revalidatePath } from 'next/cache'
 import { mensajeError } from '@/lib/formato'
-import { exigirAdmin } from '@/lib/sesion'
+import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 
 export interface Resultado {
@@ -20,7 +20,7 @@ function refrescar() {
 }
 
 export async function guardarCampana(id: number | null, _previo: Resultado, formData: FormData): Promise<Resultado> {
-  await exigirAdmin()
+  await exigirPermiso('gestionar_campanas')
   const texto = (k: string) => String(formData.get(k) ?? '').trim()
   const nombre = texto('nombre')
   const origen = texto('origen') || null
@@ -42,7 +42,7 @@ export async function guardarCampana(id: number | null, _previo: Resultado, form
 }
 
 export async function cambiarActiva(id: number, activa: boolean): Promise<Resultado> {
-  await exigirAdmin()
+  await exigirPermiso('gestionar_campanas')
   const supabase = await crearClienteServidor()
   const { error } = await supabase.from('campanas').update({ activa }).eq('id', id)
   if (error) return { error: mensajeError(error) }
@@ -52,7 +52,7 @@ export async function cambiarActiva(id: number, activa: boolean): Promise<Result
 
 /** Borra solo la campaña: los leads no se tocan. */
 export async function eliminarCampana(id: number): Promise<Resultado> {
-  await exigirAdmin()
+  await exigirPermiso('gestionar_campanas')
   const supabase = await crearClienteServidor()
   const { error } = await supabase.from('campanas').delete().eq('id', id)
   if (error) return { error: mensajeError(error) }

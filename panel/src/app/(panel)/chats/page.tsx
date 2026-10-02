@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { InsigniaEstado } from '@/components/InsigniaEstado'
 import { fechaHora, haceCuanto } from '@/lib/formato'
-import { obtenerSesion } from '@/lib/sesion'
+import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 
 export const metadata: Metadata = { title: 'Chats' }
@@ -13,7 +13,7 @@ export default async function PaginaChats(props: PageProps<'/chats'>) {
   const sp = await props.searchParams
   const soloSinResponder = sp.filtro === 'sin_responder'
 
-  const { esAdmin } = await obtenerSesion()
+  const { esAdmin } = await exigirPermiso('chats')
   const supabase = await crearClienteServidor()
 
   let consulta = supabase

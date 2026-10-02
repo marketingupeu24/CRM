@@ -4,7 +4,7 @@
 // La búsqueda usa la sesión del usuario: el RLS limita los resultados (el asesor solo ve sus leads).
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ETIQUETAS_ESTADO, type LeadEstado } from '@crm/db'
+import { ETIQUETAS_ESTADO, type LeadEstado, type Modulo } from '@crm/db'
 import { crearClienteNavegador } from '@/lib/supabase/client'
 
 interface Item {
@@ -14,23 +14,26 @@ interface Item {
   icono: string
   ir: string
   grupo: 'Leads' | 'Ir a'
+  modulo?: Modulo
+  soloSuperadmin?: boolean
 }
 
 const PAGINAS: Omit<Item, 'id' | 'grupo'>[] = [
-  { titulo: 'Pendientes', icono: '☑', ir: '/pendientes', detalle: 'Tareas y alertas de seguimiento' },
-  { titulo: 'Chats', icono: '✉', ir: '/chats', detalle: 'Conversaciones de WhatsApp' },
-  { titulo: 'Leads', icono: '☰', ir: '/leads', detalle: 'Lista con filtros' },
-  { titulo: 'Kanban', icono: '▦', ir: '/kanban', detalle: 'Tablero por estado' },
-  { titulo: 'Registrar lead', icono: '+', ir: '/leads/nuevo', detalle: 'Nuevo lead manual' },
-  { titulo: 'Dashboard', icono: '◔', ir: '/dashboard', detalle: 'Indicadores y gráficos' },
-  { titulo: 'Campañas', icono: '📣', ir: '/campanas', detalle: 'Resultados y Excel por campaña' },
-  { titulo: 'Leads sin responder', icono: '●', ir: '/chats?filtro=sin_responder', detalle: 'Escribieron y esperan respuesta' },
+  { titulo: 'Pendientes', icono: '☑', ir: '/pendientes', modulo: 'pendientes', detalle: 'Tareas y alertas de seguimiento' },
+  { titulo: 'Chats', icono: '✉', ir: '/chats', modulo: 'chats', detalle: 'Conversaciones de WhatsApp' },
+  { titulo: 'Leads', icono: '☰', ir: '/leads', modulo: 'leads', detalle: 'Lista con filtros' },
+  { titulo: 'Kanban', icono: '▦', ir: '/kanban', modulo: 'kanban', detalle: 'Tablero por estado' },
+  { titulo: 'Registrar lead', icono: '+', ir: '/leads/nuevo', modulo: 'registrar', detalle: 'Nuevo lead manual' },
+  { titulo: 'Dashboard', icono: '◔', ir: '/dashboard', modulo: 'dashboard', detalle: 'Indicadores y gráficos' },
+  { titulo: 'Campañas', icono: '📣', ir: '/campanas', modulo: 'campanas', detalle: 'Resultados y Excel por campaña' },
+  { titulo: 'Leads sin responder', icono: '●', ir: '/chats?filtro=sin_responder', modulo: 'chats', detalle: 'Escribieron y esperan respuesta' },
   { titulo: 'Mi cuenta', icono: '⚙', ir: '/cuenta', detalle: 'Contraseña' },
 ]
 const PAGINAS_ADMIN: Omit<Item, 'id' | 'grupo'>[] = [
-  { titulo: 'Asesores y usuarios', icono: '◉', ir: '/usuarios' },
-  { titulo: 'Respuestas rápidas', icono: '⚡', ir: '/respuestas' },
-  { titulo: 'Papelera', icono: '🗑', ir: '/papelera', detalle: 'Leads y usuarios eliminados' },
+  { titulo: 'Asesores y usuarios', icono: '◉', ir: '/usuarios', modulo: 'usuarios' },
+  { titulo: 'Módulos y permisos', icono: '🔐', ir: '/permisos', detalle: 'Qué puede ver cada usuario', soloSuperadmin: true },
+  { titulo: 'Respuestas rápidas', icono: '⚡', ir: '/respuestas', modulo: 'respuestas' },
+  { titulo: 'Papelera', icono: '🗑', ir: '/papelera', detalle: 'Leads y usuarios eliminados', modulo: 'papelera' },
 ]
 
 const normalizar = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
@@ -40,7 +43,7 @@ export function abrirBuscador() {
   window.dispatchEvent(new Event('abrir-buscador'))
 }
 
-export function PaletaComandos({ esAdmin }: { esAdmin: boolean }) {
+export function PaletaComandos({ permisos, superadmin = false }: { permisos: Modulo[]; superadmin?: boolean }) {
   const router = useRouter()
   const [abierta, setAbierta] = useState(false)
   const [texto, setTexto] = useState('')
@@ -69,7 +72,8 @@ export function PaletaComandos({ esAdmin }: { esAdmin: boolean }) {
   // Búsqueda de leads (con espera breve para no consultar en cada tecla)
   useEffect(() => {
     const q = texto.replace(/[,()*%\\]/g, ' ').trim()
-    if (!abierta || q.length < 2) { setLeads([]); return }
+    // Buscar leads requiere el módulo Leads
+    if (!abierta || q.length < 2 || !permisos.includes('leads')) { setLeads([]); return }
     setBuscando(true)
     const t = setTimeout(async () => {
       const supabase = crearClienteNavegador()
@@ -86,15 +90,16 @@ export function PaletaComandos({ esAdmin }: { esAdmin: boolean }) {
       setSeleccion(0)
     }, 200)
     return () => clearTimeout(t)
-  }, [texto, abierta])
+  }, [texto, abierta, permisos])
 
   const items = useMemo(() => {
     const q = normalizar(texto.trim())
-    const paginas = [...PAGINAS, ...(esAdmin ? PAGINAS_ADMIN : [])]
+    const paginas = [...PAGINAS, ...PAGINAS_ADMIN]
+      .filter((p) => (p.soloSuperadmin ? superadmin : !p.modulo || permisos.includes(p.modulo)))
       .filter((p) => !q || normalizar(`${p.titulo} ${p.detalle ?? ''}`).includes(q))
       .map((p, i) => ({ ...p, id: `pag-${i}`, grupo: 'Ir a' as const }))
     return [...leads, ...paginas]
-  }, [texto, leads, esAdmin])
+  }, [texto, leads, permisos, superadmin])
 
   const ir = useCallback((item?: Item) => {
     if (!item) return

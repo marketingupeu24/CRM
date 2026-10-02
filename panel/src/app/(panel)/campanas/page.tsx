@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { num, pct } from '@/lib/formato'
 import { fechaCorta, type Campana } from '@/lib/periodos'
-import { obtenerSesion } from '@/lib/sesion'
+import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { AccionesCampana, FormularioCampana } from './Formularios'
 
@@ -16,7 +16,8 @@ interface ResumenCampana extends Campana {
 }
 
 export default async function PaginaCampanas() {
-  const { esAdmin } = await obtenerSesion()
+  const { esAdmin, puede } = await exigirPermiso('campanas')
+  const gestiona = puede('gestionar_campanas')
   const supabase = await crearClienteServidor()
   const { data, error } = await supabase.rpc('resumen_campanas')
   const campanas = (data ?? []) as unknown as ResumenCampana[]
@@ -32,7 +33,7 @@ export default async function PaginaCampanas() {
         </p>
       </div>
 
-      {esAdmin && (
+      {gestiona && (
         <section className="tarjeta p-6">
           <h2 className="mb-4 font-semibold">Nueva campaña</h2>
           <FormularioCampana />
@@ -80,13 +81,13 @@ export default async function PaginaCampanas() {
                 ))}
               </dl>
 
-              {esAdmin && <div className="mt-4 border-t border-slate-100 pt-3"><AccionesCampana campana={c} /></div>}
+              {gestiona && <div className="mt-4 border-t border-slate-100 pt-3"><AccionesCampana campana={c} /></div>}
             </li>
           )
         })}
         {!campanas.length && (
           <li className="tarjeta px-5 py-10 text-center text-sm text-slate-500">
-            {esAdmin ? 'Aún no hay campañas. Crea la primera arriba.' : 'El administrador aún no ha creado campañas.'}
+            {gestiona ? 'Aún no hay campañas. Crea la primera arriba.' : 'El administrador aún no ha creado campañas.'}
           </li>
         )}
       </ul>

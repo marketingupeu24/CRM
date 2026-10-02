@@ -5,7 +5,7 @@
 // verifican es_admin), así el panel nunca necesita la service_role key.
 import { revalidatePath } from 'next/cache'
 import { mensajeError } from '@/lib/formato'
-import { exigirAdmin } from '@/lib/sesion'
+import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 
 export interface Resultado {
@@ -25,7 +25,7 @@ function listaCarreras(valor: string): string[] {
 
 /** Nuevo asesor (y opcionalmente su cuenta del panel). */
 export async function crearAsesor(_previo: Resultado, formData: FormData): Promise<Resultado> {
-  await exigirAdmin()
+  await exigirPermiso('usuarios')
   const texto = (campo: string) => String(formData.get(campo) ?? '').trim()
   const nombre = texto('nombre')
   const rol = texto('rol') === 'admin' ? 'admin' : 'asesor'
@@ -58,7 +58,7 @@ export async function crearAsesor(_previo: Resultado, formData: FormData): Promi
 
 /** Cuenta del panel para un asesor que aún no la tiene. */
 export async function crearCuenta(asesorId: string, _previo: Resultado, formData: FormData): Promise<Resultado> {
-  await exigirAdmin()
+  await exigirPermiso('usuarios')
   const usuario = String(formData.get('usuario') ?? '').trim().toLowerCase()
   const clave = String(formData.get('clave') ?? '')
 
@@ -72,7 +72,7 @@ export async function crearCuenta(asesorId: string, _previo: Resultado, formData
 }
 
 export async function restablecerClave(asesorId: string, _previo: Resultado, formData: FormData): Promise<Resultado> {
-  await exigirAdmin()
+  await exigirPermiso('usuarios')
   const clave = String(formData.get('clave') ?? '')
 
   const supabase = await crearClienteServidor()
@@ -85,7 +85,7 @@ export async function restablecerClave(asesorId: string, _previo: Resultado, for
 
 /** Nombre, celular y carreras exclusivas (vacío = asesor general de la rotación). */
 export async function actualizarAsesor(asesorId: string, _previo: Resultado, formData: FormData): Promise<Resultado> {
-  await exigirAdmin()
+  await exigirPermiso('usuarios')
   const nombre = String(formData.get('nombre') ?? '').trim()
   const telefono = normalizarTelefono(String(formData.get('telefono') ?? ''))
   if (!nombre) return { error: 'El nombre es obligatorio.' }
@@ -105,7 +105,7 @@ export async function actualizarAsesor(asesorId: string, _previo: Resultado, for
 
 /** Papelera: el usuario deja de entrar al panel y de recibir leads (se puede restaurar). */
 export async function eliminarAsesor(asesorId: string): Promise<Resultado> {
-  await exigirAdmin()
+  await exigirPermiso('usuarios')
   const supabase = await crearClienteServidor()
   const { error } = await supabase.rpc('eliminar_asesor', { p_id: asesorId })
   if (error) return { error: mensajeError(error) }
@@ -116,7 +116,7 @@ export async function eliminarAsesor(asesorId: string): Promise<Resultado> {
 
 /** Un asesor inactivo no recibe leads nuevos (sigue viendo los suyos). */
 export async function cambiarActivo(asesorId: string, activo: boolean): Promise<Resultado> {
-  await exigirAdmin()
+  await exigirPermiso('usuarios')
   const supabase = await crearClienteServidor()
   const { error } = await supabase.from('asesores').update({ activo }).eq('id', asesorId)
   if (error) return { error: mensajeError(error) }

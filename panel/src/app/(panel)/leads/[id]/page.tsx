@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import { ETIQUETAS_FUENTE, type Fuente, type InteraccionTipo } from '@crm/db'
 import { InsigniaEstado } from '@/components/InsigniaEstado'
 import { fechaHora, haceCuanto } from '@/lib/formato'
-import { obtenerSesion } from '@/lib/sesion'
+import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { BotonEliminarNota, BotonPapelera, EditarDatos, FormularioNota, ReasignarAsesor, SelectorEstado } from './Acciones'
 import { esDelChat } from '@/lib/chat'
@@ -45,7 +45,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
   const { id } = await props.params
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound()
 
-  const { esAdmin, perfil } = await obtenerSesion()
+  const { esAdmin, perfil, puede } = await exigirPermiso('leads')
   const supabase = await crearClienteServidor()
 
   const [{ data: lead }, { data: historial }, { data: asesores }, { data: tareas }, { data: respuestas }] = await Promise.all([
@@ -53,7 +53,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
     supabase.from('lead_interacciones')
       .select('*, autor:asesores!lead_interacciones_autor_id_fkey(nombre)')
       .eq('lead_id', id).order('created_at', { ascending: false }).limit(300),
-    esAdmin
+    puede('asignar')
       ? supabase.from('asesores').select('id, nombre, activo').eq('rol', 'asesor').is('eliminado_at', null).order('nombre')
       : Promise.resolve({ data: [] as { id: string; nombre: string; activo: boolean }[] }),
     supabase.from('tareas').select('id, titulo, vence_at').eq('lead_id', id).is('completada_at', null).order('vence_at'),
@@ -96,7 +96,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold">{lead.nombre ?? 'Lead sin nombre'}</h1>
         <InsigniaEstado estado={lead.estado} />
-        {esAdmin && <span className="ml-auto"><BotonPapelera leadId={lead.id} nombre={lead.nombre ?? lead.telefono} /></span>}
+        {puede('papelera') && <span className="ml-auto"><BotonPapelera leadId={lead.id} nombre={lead.nombre ?? lead.telefono} /></span>}
       </div>
 
       <AccionesRapidas telefono={lead.telefono} />
@@ -123,7 +123,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
           <section className="tarjeta p-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-semibold">Datos del lead</h2>
-              <EditarDatos lead={lead} esAdmin={esAdmin} />
+              <EditarDatos lead={lead} esAdmin={puede('editar_celular')} />
             </div>
             <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
               {datos.map(([etiqueta, valor]) => (
@@ -178,7 +178,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
                 {lead.notificacion_error ? `: ${lead.notificacion_error}` : ''}
               </p>
             )}
-            {esAdmin && (
+            {puede('asignar') && (
               <div className="mt-4">
                 <ReasignarAsesor key={lead.asesor_id} leadId={lead.id} asesorId={lead.asesor_id} asesores={asesores ?? []} />
               </div>

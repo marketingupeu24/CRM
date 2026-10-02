@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { ETIQUETAS_ESTADO, type LeadEstado } from '@crm/db'
 import { fechaHora, haceCuanto } from '@/lib/formato'
-import { exigirAdmin } from '@/lib/sesion'
+import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { AccionesLeads, AccionesUsuario } from './Controles'
 
@@ -32,7 +32,7 @@ interface UsuarioPapelera {
 }
 
 export default async function PaginaPapelera() {
-  await exigirAdmin()
+  const { puede } = await exigirPermiso('papelera')
   const supabase = await crearClienteServidor()
   const { data, error } = await supabase.rpc('papelera')
   const { leads = [], asesores = [] } = (data ?? {}) as unknown as { leads?: LeadPapelera[]; asesores?: UsuarioPapelera[] }
@@ -94,7 +94,7 @@ export default async function PaginaPapelera() {
         </div>
       </section>
 
-      <section className="tarjeta overflow-hidden">
+      {puede('usuarios') && <section className="tarjeta overflow-hidden">
         <div className="border-b border-slate-100 px-5 py-4">
           <h2 className="font-semibold">Usuarios <span className="text-sm font-normal text-slate-500">({asesores.length})</span></h2>
           <p className="text-xs text-slate-500">
@@ -118,7 +118,7 @@ export default async function PaginaPapelera() {
           ))}
           {!asesores.length && <li className="px-5 py-10 text-center text-sm text-slate-500">No hay usuarios en la papelera.</li>}
         </ul>
-      </section>
+      </section>}
     </div>
   )
 }

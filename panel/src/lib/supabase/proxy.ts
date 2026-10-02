@@ -39,7 +39,7 @@ export async function actualizarSesion(request: NextRequest) {
   }
   if (autenticado && ruta === '/login') {
     const url = request.nextUrl.clone()
-    url.pathname = '/leads'
+    url.pathname = '/'
     return NextResponse.redirect(url)
   }
 

@@ -25,7 +25,7 @@ export async function iniciarSesion(_previo: EstadoLogin, formData: FormData): P
       usuario,
     }
   }
-  redirect('/leads')
+  redirect('/')
 }
 
 export async function cerrarSesion() {

@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { InsigniaEstado } from '@/components/InsigniaEstado'
 import { BotonesTarea } from '@/components/Tareas'
 import { fechaHora, haceCuanto } from '@/lib/formato'
-import { obtenerSesion } from '@/lib/sesion'
+import { exigirPermiso } from '@/lib/sesion'
 import { DIAS_SIN_ACTIVIDAD, finDeHoyLima, HORAS_SIN_CONTACTAR, limitesAlertas } from '@/lib/pendientes'
 import { crearClienteServidor } from '@/lib/supabase/server'
 
@@ -54,7 +54,7 @@ function ListaLeads(
 }
 
 export default async function PaginaPendientes() {
-  const { esAdmin } = await obtenerSesion()
+  const { esAdmin } = await exigirPermiso('pendientes')
   const supabase = await crearClienteServidor()
   const ahora = Date.now()
   const { contacto: limiteContacto, actividad: limiteActividad } = limitesAlertas(ahora)

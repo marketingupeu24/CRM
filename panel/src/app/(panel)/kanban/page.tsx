@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ESTADOS_LEAD, type LeadEstado } from '@crm/db'
-import { obtenerSesion } from '@/lib/sesion'
+import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { TableroKanban, type TarjetaLead } from './TableroKanban'
 
@@ -17,7 +17,7 @@ export default async function PaginaKanban(props: PageProps<'/kanban'>) {
   const asesor = typeof sp.asesor === 'string' ? sp.asesor : ''
   const convocatoria = typeof sp.convocatoria === 'string' ? sp.convocatoria : ''
 
-  const { esAdmin } = await obtenerSesion()
+  const { esAdmin } = await exigirPermiso('kanban')
   const supabase = await crearClienteServidor()
   const estados = verTodos ? ESTADOS_LEAD : ESTADOS_LEAD.filter((e) => !ESTADOS_BOT.includes(e))
 

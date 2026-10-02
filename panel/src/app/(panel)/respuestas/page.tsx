@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
-import { exigirAdmin } from '@/lib/sesion'
+import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { FilaRespuesta, FormularioRespuesta } from './Formularios'
 
 export const metadata: Metadata = { title: 'Respuestas rápidas' }
 
 export default async function PaginaRespuestas() {
-  await exigirAdmin()
+  await exigirPermiso('respuestas')
   const supabase = await crearClienteServidor()
   const { data: respuestas, error } = await supabase.from('respuestas_rapidas').select('*').order('orden').order('titulo')
 

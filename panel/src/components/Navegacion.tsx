@@ -3,11 +3,15 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { Route } from 'next'
+import type { Modulo } from '@crm/db'
 
 interface Enlace {
   href: Route
   texto: string
   icono: string
+  /** Módulo que habilita el enlace; sin módulo = siempre visible. */
+  modulo?: Modulo
+  soloSuperadmin?: boolean
   contador?: { valor: number; estilo: string }
 }
 
@@ -17,39 +21,45 @@ interface Grupo {
 }
 
 export function Navegacion(
-  { esAdmin, sinResponder = 0, pendientes = 0 }: { esAdmin: boolean; sinResponder?: number; pendientes?: number },
+  { permisos, superadmin = false, sinResponder = 0, pendientes = 0 }:
+  { permisos: Modulo[]; superadmin?: boolean; sinResponder?: number; pendientes?: number },
 ) {
   const ruta = usePathname()
-  const grupos: Grupo[] = [
+  const todos: Grupo[] = [
     {
       titulo: 'Trabajo diario',
       enlaces: [
-        { href: '/pendientes', texto: 'Pendientes', icono: '☑', contador: { valor: pendientes, estilo: 'bg-amber-500 text-white' } },
-        { href: '/chats', texto: 'Chats', icono: '✉', contador: { valor: sinResponder, estilo: 'bg-rose-500 text-white' } },
-        { href: '/leads', texto: 'Leads', icono: '☰' },
-        { href: '/kanban', texto: 'Kanban', icono: '▦' },
-        { href: '/leads/nuevo', texto: 'Registrar lead', icono: '+' },
+        { href: '/pendientes', texto: 'Pendientes', icono: '☑', modulo: 'pendientes', contador: { valor: pendientes, estilo: 'bg-amber-500 text-white' } },
+        { href: '/chats', texto: 'Chats', icono: '✉', modulo: 'chats', contador: { valor: sinResponder, estilo: 'bg-rose-500 text-white' } },
+        { href: '/leads', texto: 'Leads', icono: '☰', modulo: 'leads' },
+        { href: '/kanban', texto: 'Kanban', icono: '▦', modulo: 'kanban' },
+        { href: '/leads/nuevo', texto: 'Registrar lead', icono: '+', modulo: 'registrar' },
       ],
     },
     {
       titulo: 'Análisis',
       enlaces: [
-        { href: '/dashboard', texto: 'Dashboard', icono: '◔' },
-        { href: '/campanas', texto: 'Campañas', icono: '📣' },
+        { href: '/dashboard', texto: 'Dashboard', icono: '◔', modulo: 'dashboard' },
+        { href: '/campanas', texto: 'Campañas', icono: '📣', modulo: 'campanas' },
       ],
     },
-    ...(esAdmin
-      ? [{
-          titulo: 'Administración',
-          enlaces: [
-            { href: '/usuarios' as Route, texto: 'Asesores y usuarios', icono: '◉' },
-            { href: '/respuestas' as Route, texto: 'Respuestas rápidas', icono: '⚡' },
-            { href: '/papelera' as Route, texto: 'Papelera', icono: '🗑' },
-          ],
-        }]
-      : []),
+    {
+      titulo: 'Administración',
+      enlaces: [
+        { href: '/usuarios', texto: 'Asesores y usuarios', icono: '◉', modulo: 'usuarios' },
+        { href: '/permisos' as Route, texto: 'Módulos y permisos', icono: '🔐', soloSuperadmin: true },
+        { href: '/respuestas', texto: 'Respuestas rápidas', icono: '⚡', modulo: 'respuestas' },
+        { href: '/papelera', texto: 'Papelera', icono: '🗑', modulo: 'papelera' },
+      ],
+    },
     { titulo: 'Cuenta', enlaces: [{ href: '/cuenta', texto: 'Mi cuenta', icono: '⚙' }] },
   ]
+  const grupos = todos
+    .map((g) => ({
+      ...g,
+      enlaces: g.enlaces.filter((e) => (e.soloSuperadmin ? superadmin : !e.modulo || permisos.includes(e.modulo))),
+    }))
+    .filter((g) => g.enlaces.length)
 
   // El enlace activo es el de ruta más larga que coincide (/leads/nuevo gana a /leads)
   const activo = grupos.flatMap((g) => g.enlaces)

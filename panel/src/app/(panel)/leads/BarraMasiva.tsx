@@ -12,7 +12,7 @@ function casillas() {
   return [...document.querySelectorAll<HTMLInputElement>(SELECTOR)]
 }
 
-export function BarraMasiva({ asesores, esAdmin = false }: { asesores: { id: string; nombre: string }[]; esAdmin?: boolean }) {
+export function BarraMasiva({ asesores, puedePapelera = false }: { asesores: { id: string; nombre: string }[]; puedePapelera?: boolean }) {
   const [ids, setIds] = useState<string[]>([])
   const [estado, setEstado] = useState<LeadEstado | ''>('')
   const [motivo, setMotivo] = useState('')
@@ -95,7 +95,7 @@ export function BarraMasiva({ asesores, esAdmin = false }: { asesores: { id: str
           </button>
         </>
       )}
-      {esAdmin && (
+      {puedePapelera && (
         <>
           <span className="mx-1 hidden h-6 border-l border-marca-200 sm:block" />
           <button

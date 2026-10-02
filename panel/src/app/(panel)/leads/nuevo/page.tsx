@@ -1,13 +1,14 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { obtenerSesion } from '@/lib/sesion'
+import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { FormularioNuevoLead } from './FormularioNuevoLead'
 
 export const metadata: Metadata = { title: 'Registrar lead' }
 
 export default async function PaginaNuevoLead() {
-  const { esAdmin } = await obtenerSesion()
+  const { puede } = await exigirPermiso('registrar')
+  const esAdmin = puede('asignar')
   const supabase = await crearClienteServidor()
 
   const [{ data: asesores }, { data: convocatorias }] = await Promise.all([

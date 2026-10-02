@@ -65,6 +65,34 @@ export function emailDeUsuario(usuario: string): string {
 export type Tarea = Tables<'tareas'>
 export type RespuestaRapida = Tables<'respuestas_rapidas'>
 
+/**
+ * Módulos del panel que el super admin habilita por usuario (asesores.permisos).
+ * Deben coincidir con la restricción asesores_permisos_validos de la base.
+ */
+export const MODULOS = [
+  { clave: 'pendientes', grupo: 'Trabajo diario', titulo: 'Pendientes', descripcion: 'Tareas agendadas y alertas de seguimiento', ruta: '/pendientes' },
+  { clave: 'chats', grupo: 'Trabajo diario', titulo: 'Chats', descripcion: 'Conversaciones de WhatsApp y responder desde el CRM', ruta: '/chats' },
+  { clave: 'leads', grupo: 'Trabajo diario', titulo: 'Leads', descripcion: 'Lista de leads y ficha de cada lead', ruta: '/leads' },
+  { clave: 'kanban', grupo: 'Trabajo diario', titulo: 'Kanban', descripcion: 'Tablero por estado', ruta: '/kanban' },
+  { clave: 'registrar', grupo: 'Trabajo diario', titulo: 'Registrar lead', descripcion: 'Registrar leads a mano', ruta: '/leads/nuevo' },
+  { clave: 'dashboard', grupo: 'Análisis', titulo: 'Dashboard', descripcion: 'Indicadores y gráficos', ruta: '/dashboard' },
+  { clave: 'campanas', grupo: 'Análisis', titulo: 'Campañas', descripcion: 'Ver campañas y sus resultados', ruta: '/campanas' },
+  { clave: 'exportar', grupo: 'Análisis', titulo: 'Exportar Excel', descripcion: 'Descargar la lista de leads', ruta: null },
+  { clave: 'ver_todos', grupo: 'Gestión de leads', titulo: 'Ver leads de todo el equipo', descripcion: 'Sin esto, solo ve sus propios leads', ruta: null },
+  { clave: 'asignar', grupo: 'Gestión de leads', titulo: 'Asignar y reasignar', descripcion: 'Cambiar el asesor de un lead (también en bloque)', ruta: null },
+  { clave: 'editar_celular', grupo: 'Gestión de leads', titulo: 'Editar celular del lead', descripcion: 'Cambiar el número al que escribe el chat', ruta: null },
+  { clave: 'papelera', grupo: 'Gestión de leads', titulo: 'Papelera', descripcion: 'Eliminar, restaurar y borrar leads', ruta: '/papelera' },
+  { clave: 'usuarios', grupo: 'Administración', titulo: 'Asesores y usuarios', descripcion: 'Crear y editar asesores, contraseñas y papelera de usuarios', ruta: '/usuarios' },
+  { clave: 'respuestas', grupo: 'Administración', titulo: 'Respuestas rápidas', descripcion: 'Administrar las plantillas del chat', ruta: '/respuestas' },
+  { clave: 'gestionar_campanas', grupo: 'Administración', titulo: 'Crear campañas', descripcion: 'Crear, editar y archivar campañas', ruta: null },
+] as const
+
+export type Modulo = (typeof MODULOS)[number]['clave']
+export const CLAVES_MODULOS: readonly Modulo[] = MODULOS.map((m) => m.clave)
+
+/** Lo que recibe un asesor nuevo (igual al valor por defecto de asesores.permisos). */
+export const PERMISOS_ASESOR: readonly Modulo[] = ['pendientes', 'chats', 'leads', 'kanban', 'registrar', 'dashboard', 'campanas', 'exportar']
+
 /** Cómo nos conoció el lead (leads.origen_campana). Igual que ORIGENES en _shared/dominio.ts. */
 export const ORIGENES = [
   'Facebook',

@@ -118,17 +118,24 @@ Configuración del proyecto en Vercel: *Root Directory* = `panel`, framework Nex
   requiere el secreto `VERCEL_TOKEN` en *GitHub > Settings > Secrets and variables > Actions*.
 - Despliegue manual desde la raíz del repo: `npx vercel deploy --prod`.
 
-### Qué ve cada rol
+### Super admin y módulos (qué ve cada usuario)
 
-| | Asesor | Administrador |
-|---|---|---|
-| Leads, ficha, notas, Kanban | Solo los suyos | Todos |
-| Cambiar estado / registrar lead | Sí (sus leads) | Sí |
-| Reasignar asesor | No | Sí |
-| Dashboard | Sus números | Todo, filtrable por asesor |
-| Asesores y usuarios | No | Sí |
+El **super admin** (usuario ) tiene acceso a todo y es el único que entra a **Módulos y permisos**.
+Ahí elige, usuario por usuario, qué módulos puede ver y usar (con plantillas *Asesor*, *Supervisor*,
+*Coordinador* y *Ninguno*), y puede nombrar a otros super admin. Siempre queda al menos uno.
 
-Los permisos los aplica la base de datos (RLS), no solo la pantalla.
+| Grupo | Módulos |
+|---|---|
+| Trabajo diario | Pendientes, Chats, Leads, Kanban, Registrar lead |
+| Análisis | Dashboard, Campañas, Exportar Excel |
+| Gestión de leads | Ver leads de todo el equipo, Asignar y reasignar, Editar celular del lead, Papelera |
+| Administración | Asesores y usuarios, Respuestas rápidas, Crear campañas |
+
+- Un asesor nuevo recibe: Pendientes, Chats, Leads, Kanban, Registrar lead, Dashboard, Campañas y Exportar.
+- Sin *Ver leads de todo el equipo* el usuario solo ve los leads asignados a él.
+- El menú, las páginas y la base de datos (RLS y funciones, con ) respetan los permisos.
+  Un usuario con *Asesores y usuarios* no puede modificar a un super admin ni darse permisos.
+- El *rol* (Asesor / Administrador) solo decide si la persona recibe leads en la rotación.
 
 ### Chat de WhatsApp
 
