@@ -17,6 +17,7 @@ export interface Actividad {
   bienvenida: boolean
   responsable_id: string | null
   responsable: string | null
+  responsableRecibe: boolean
   registrados: number
   contactados: number
   matriculados: number
@@ -64,7 +65,7 @@ export function FormularioActividad({ actividad, asesores, alGuardar }: {
       {asesores.length > 0 ? (
         <label className="text-sm text-slate-600">Responsable
           <select name="responsable_id" defaultValue={actividad?.responsable_id ?? ''} className="campo mt-1">
-            <option value="">Yo</option>
+            <option value="">Yo (si no recibo leads, va por rotación)</option>
             {asesores.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
           </select>
         </label>
@@ -144,6 +145,11 @@ export function TarjetaActividad({ actividad, base, asesores }: { actividad: Act
               {TIPOS[actividad.tipo] ?? actividad.tipo}{actividad.lugar ? ` · ${actividad.lugar}` : ''}{actividad.fecha ? ` · ${actividad.fecha.split('-').reverse().join('/')}` : ''}
               {' · '}{actividad.asignacion === 'rotacion' ? 'asignación por rotación' : `responsable: ${actividad.responsable ?? '—'}`}
             </p>
+            {actividad.asignacion === 'responsable' && !actividad.responsableRecibe && (
+              <p className="mt-1 rounded-lg bg-amber-50 px-2 py-1 text-xs text-amber-800">
+                {actividad.responsable ?? 'El responsable'} no recibe leads (es administrador o está inactivo): los registros se reparten por rotación entre los asesores. Edítala y elige a un asesor si quieres que vayan a una persona.
+              </p>
+            )}
           </div>
           <div className="flex flex-wrap gap-2 text-sm">
             <span className="rounded-full bg-marca-50 px-3 py-1 font-semibold text-marca-700">{actividad.registrados} registrados</span>

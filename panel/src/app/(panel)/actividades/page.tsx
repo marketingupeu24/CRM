@@ -11,7 +11,7 @@ export default async function PaginaActividades() {
   const supabase = await crearClienteServidor()
   const [{ data, error }, { data: resumen }, { data: asesores }, base] = await Promise.all([
     supabase.from('actividades')
-      .select('id, codigo, nombre, tipo, lugar, fecha, activa, asignacion, bienvenida, responsable_id, responsable:asesores!actividades_responsable_id_fkey(nombre)')
+      .select('id, codigo, nombre, tipo, lugar, fecha, activa, asignacion, bienvenida, responsable_id, responsable:asesores!actividades_responsable_id_fkey(nombre, rol, activo)')
       .order('activa', { ascending: false }).order('fecha', { ascending: false, nullsFirst: true }).order('id', { ascending: false }),
     supabase.rpc('resumen_actividades'),
     puede('asignar')
@@ -23,6 +23,8 @@ export default async function PaginaActividades() {
   const actividades: Actividad[] = (data ?? []).map((a) => ({
     ...a,
     responsable: a.responsable?.nombre ?? null,
+    // Solo un asesor activo recibe leads; si no, la base reparte por rotación
+    responsableRecibe: !!a.responsable && a.responsable.rol === 'asesor' && a.responsable.activo,
     registrados: porActividad.get(a.id)?.registrados ?? 0,
     contactados: porActividad.get(a.id)?.contactados ?? 0,
     matriculados: porActividad.get(a.id)?.matriculados ?? 0,
