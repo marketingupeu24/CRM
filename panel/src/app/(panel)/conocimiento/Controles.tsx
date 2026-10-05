@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState, useTransition } from 'react'
+import { useActionState, useRef, useState, useTransition } from 'react'
 import { CATEGORIAS_CONOCIMIENTO } from '@crm/db'
 import { eliminarEntrada, guardarEntrada, type Resultado } from './acciones'
 
@@ -94,21 +94,33 @@ export function TarjetaEntrada({ entrada, editable }: { entrada: Entrada; editab
 }
 
 export function CopiarTexto({ texto }: { texto: string }) {
-  const [copiado, setCopiado] = useState(false)
+  const [estado, setEstado] = useState<'' | 'copiado' | 'manual'>('')
+  const area = useRef<HTMLTextAreaElement>(null)
+  const copiar = async () => {
+    let ok = false
+    try {
+      await navigator.clipboard.writeText(texto)
+      ok = true
+    } catch {
+      // Respaldo: seleccionar el texto y copiar a la antigua (navegadores sin permiso de portapapeles)
+      area.current?.select()
+      try { ok = document.execCommand('copy') } catch { ok = false }
+    }
+    setEstado(ok ? 'copiado' : 'manual')
+    if (ok) setTimeout(() => setEstado(''), 2500)
+  }
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
-        <button
-          className="boton"
-          onClick={async () => {
-            try { await navigator.clipboard.writeText(texto); setCopiado(true); setTimeout(() => setCopiado(false), 2500) } catch { /* sin portapapeles */ }
-          }}
-        >
-          {copiado ? '✓ Copiado' : '📋 Copiar texto para Genesys'}
+        <button className="boton" onClick={copiar}>
+          {estado === 'copiado' ? '✓ Copiado' : '📋 Copiar texto para Genesys'}
         </button>
         <span className="text-xs text-slate-500">{texto.length.toLocaleString('es-PE')} caracteres</span>
       </div>
-      <textarea readOnly value={texto} rows={14} aria-label="Texto para Genesys" className="campo font-mono text-[12px] leading-relaxed" />
+      {estado === 'manual' && (
+        <p role="status" className="text-xs text-amber-700">Tu navegador no permitió copiar: el texto quedó seleccionado, presiona Ctrl+C.</p>
+      )}
+      <textarea ref={area} readOnly value={texto} rows={14} aria-label="Texto para Genesys" className="campo font-mono text-[12px] leading-relaxed" />
     </div>
   )
 }
