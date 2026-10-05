@@ -15,7 +15,7 @@ export default async function PaginaActividades() {
       .order('activa', { ascending: false }).order('fecha', { ascending: false, nullsFirst: true }).order('id', { ascending: false }),
     supabase.rpc('resumen_actividades'),
     puede('asignar')
-      ? supabase.from('asesores').select('id, nombre').eq('rol', 'asesor').eq('activo', true).is('eliminado_at', null).order('nombre')
+      ? supabase.from('asesores').select('id, nombre').eq('activo', true).is('eliminado_at', null).order('nombre')
       : Promise.resolve({ data: [] as { id: string; nombre: string }[] }),
     urlBase(),
     supabase.from('ajustes').select('valor').eq('clave', 'whatsapp_genesys').maybeSingle(),
@@ -25,7 +25,7 @@ export default async function PaginaActividades() {
     ...a,
     responsable: a.responsable?.nombre ?? null,
     // Solo un asesor activo recibe leads; si no, la base reparte por rotación
-    responsableRecibe: !!a.responsable && a.responsable.rol === 'asesor' && a.responsable.activo,
+    responsableRecibe: !!a.responsable?.activo,
     registrados: porActividad.get(a.id)?.registrados ?? 0,
     contactados: porActividad.get(a.id)?.contactados ?? 0,
     matriculados: porActividad.get(a.id)?.matriculados ?? 0,

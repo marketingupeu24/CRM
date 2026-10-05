@@ -13,7 +13,7 @@ export default async function PaginaImportar() {
   const [{ data: actividades }, { data: asesores }] = await Promise.all([
     supabase.from('actividades').select('id, nombre').order('activa', { ascending: false }).order('id', { ascending: false }).limit(50),
     puede('asignar')
-      ? supabase.from('asesores').select('id, nombre').eq('rol', 'asesor').eq('activo', true).is('eliminado_at', null).order('nombre')
+      ? supabase.from('asesores').select('id, nombre').eq('activo', true).is('eliminado_at', null).order('nombre')
       : Promise.resolve({ data: [] as { id: string; nombre: string }[] }),
   ])
   const listaCarreras = [...new Set(carreras('PRES', 'JUL').map((c) => c[0]))]
@@ -26,7 +26,7 @@ export default async function PaginaImportar() {
       </div>
       <PestanasRegistro actual="varios" />
       <Importador carreras={listaCarreras} actividades={actividades ?? []} asignacion={{
-          recibeLeads: perfil.rol === 'asesor' && perfil.activo,
+          recibeLeads: perfil.activo,
           puedeRepartir: puede('repartir') || puede('asignar'),
           asesores: asesores ?? [],
         }} />

@@ -148,7 +148,7 @@ export function TarjetaActividad({ actividad, base, asesores }: { actividad: Act
             </p>
             {actividad.asignacion === 'responsable' && !actividad.responsableRecibe && (
               <p className="mt-1 rounded-lg bg-amber-50 px-2 py-1 text-xs text-amber-800">
-                {actividad.responsable ?? 'El responsable'} no recibe leads (es administrador o está inactivo): los registros se reparten por rotación entre los asesores. Edítala y elige a un asesor si quieres que vayan a una persona.
+                {actividad.responsable ?? 'El responsable'} no tiene activado «Recibe leads» (en Usuarios): los registros se reparten por rotación entre los asesores. Edítala y elige a un asesor si quieres que vayan a una persona.
               </p>
             )}
           </div>

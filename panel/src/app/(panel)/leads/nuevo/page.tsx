@@ -14,7 +14,7 @@ export default async function PaginaNuevoLead() {
 
   const [{ data: asesores }, { data: convocatorias }, { data: actividades }] = await Promise.all([
     puede('asignar')
-      ? supabase.from('asesores').select('id, nombre').eq('rol', 'asesor').eq('activo', true).is('eliminado_at', null).order('nombre')
+      ? supabase.from('asesores').select('id, nombre').eq('activo', true).is('eliminado_at', null).order('nombre')
       : Promise.resolve({ data: [] as { id: string; nombre: string }[] }),
     supabase.from('leads').select('convocatoria').not('convocatoria', 'is', null).limit(2000),
     supabase.from('actividades').select('id, nombre, lugar, tipo').order('activa', { ascending: false }).order('id', { ascending: false }).limit(50),
@@ -34,7 +34,7 @@ export default async function PaginaNuevoLead() {
         carreras={[...new Set(carreras('PRES', 'JUL').map((c) => c[0]))]}
         actividades={actividades ?? []}
         asignacion={{
-          recibeLeads: perfil.rol === 'asesor' && perfil.activo,
+          recibeLeads: perfil.activo,
           puedeRepartir: puede('repartir') || puede('asignar'),
           asesores: asesores ?? [],
         }}

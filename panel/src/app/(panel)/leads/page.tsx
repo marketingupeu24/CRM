@@ -77,7 +77,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
     supabase.from('vista_leads_por_carrera').select('carrera'),
     supabase.from('leads').select('convocatoria').not('convocatoria', 'is', null).limit(2000),
     esAdmin || puede('asignar')
-      ? supabase.from('asesores').select('id, nombre').eq('rol', 'asesor').is('eliminado_at', null).order('nombre')
+      ? supabase.from('asesores').select('id, nombre').or('rol.eq.asesor,activo.eq.true').is('eliminado_at', null).order('nombre')
       : Promise.resolve({ data: [] as { id: string; nombre: string }[] }),
   ])
 

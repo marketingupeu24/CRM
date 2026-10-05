@@ -206,10 +206,10 @@ async function avisarMensajeNuevo(lead: Lead, mensaje: string) {
  * Todo el que escribe es un lead. Se guarda cada mensaje en su conversación.
  * bot_atiende=false: Genesys no debe responder (espera a su asesor o el asesor está conversando).
  */
-/** Celulares de los asesores (rol asesor): reciben los avisos del CRM, no son leads. */
+/** Celulares de quienes reciben leads (o son asesores): reciben los avisos del CRM, no son leads. */
 async function telefonosAsesores(): Promise<Set<string>> {
   const { data } = await supabase.from('asesores').select('telefono')
-    .eq('rol', 'asesor').is('eliminado_at', null).not('telefono', 'is', null)
+    .or('rol.eq.asesor,activo.eq.true').is('eliminado_at', null).not('telefono', 'is', null)
   return new Set((data ?? []).map((a) => a.telefono!))
 }
 
@@ -533,9 +533,9 @@ async function sincronizarBot(cuerpo: Cuerpo): Promise<Respuesta> {
   // (los avisos del CRM les siguen llegando: la API envía igual a números en blacklist)
   if (!leadId) {
     const { data: asesores } = await supabase.from('asesores')
-      .select('id, telefono, rol, eliminado_at, en_blacklist').not('telefono', 'is', null)
+      .select('id, telefono, rol, activo, eliminado_at, en_blacklist').not('telefono', 'is', null)
     for (const a of asesores ?? []) {
-      const debe = a.rol === 'asesor' && !a.eliminado_at
+      const debe = (a.rol === 'asesor' || a.activo) && !a.eliminado_at
       if (debe === a.en_blacklist) continue
       const r = await cambiarBlacklist(a.telefono!, debe)
       if (!r.ok) { errores++; console.error('[genesys] Blacklist asesor', a.telefono, r.error); continue }

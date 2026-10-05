@@ -55,7 +55,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
       .select('*, autor:asesores!lead_interacciones_autor_id_fkey(nombre)')
       .eq('lead_id', id).order('created_at', { ascending: false }).limit(300),
     puede('asignar')
-      ? supabase.from('asesores').select('id, nombre, activo').eq('rol', 'asesor').is('eliminado_at', null).order('nombre')
+      ? supabase.from('asesores').select('id, nombre, activo').or('rol.eq.asesor,activo.eq.true').is('eliminado_at', null).order('nombre')
       : Promise.resolve({ data: [] as { id: string; nombre: string; activo: boolean }[] }),
     supabase.from('tareas').select('id, titulo, vence_at').eq('lead_id', id).is('completada_at', null).order('vence_at'),
     supabase.from('respuestas_rapidas').select('id, titulo, contenido').eq('activa', true).order('orden').order('titulo'),

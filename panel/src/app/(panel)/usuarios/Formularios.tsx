@@ -19,6 +19,30 @@ function Mensaje({ r }: { r: Resultado }) {
   return null
 }
 
+/** Interruptor "Recibe leads": reparto por turnos, actividades y avisos por WhatsApp (cualquier rol). */
+export function InterruptorRecibe({ asesor, editable }: { asesor: Asesor; editable: boolean }) {
+  const [r, setR] = useState<Resultado>({})
+  const [pendiente, iniciar] = useTransition()
+  return (
+    <div className="space-y-1">
+      <button
+        type="button" role="switch" aria-checked={asesor.activo} aria-label={`${asesor.nombre} recibe leads`}
+        disabled={!editable || pendiente}
+        onClick={() => iniciar(async () => setR(await cambiarActivo(asesor.id, !asesor.activo)))}
+        className="inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        <span className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors ${asesor.activo ? 'bg-emerald-500' : 'bg-slate-300'}`}>
+          <span className={`absolute top-0.5 size-4 rounded-full bg-white shadow transition-all ${asesor.activo ? 'left-4.5' : 'left-0.5'}`} />
+        </span>
+        <span className={`text-xs font-medium ${asesor.activo ? 'text-emerald-700' : 'text-slate-500'}`}>
+          {pendiente ? 'Guardando…' : asesor.activo ? 'Recibe leads' : 'No recibe'}
+        </span>
+      </button>
+      <Mensaje r={r} />
+    </div>
+  )
+}
+
 function CasillaCambioObligatorio() {
   return (
     <label className="flex items-center gap-2 text-sm text-slate-600">
@@ -90,14 +114,6 @@ export function AccionesAsesor({ asesor, esYo = false }: { asesor: Asesor; esYo?
           ? <button onClick={() => alternar('clave')} className="text-marca-700 hover:underline">Restablecer contraseña</button>
           : <button onClick={() => alternar('cuenta')} className="text-marca-700 hover:underline">Crear usuario</button>}
         <button onClick={() => alternar('editar')} className="text-marca-700 hover:underline">Editar</button>
-        {asesor.rol === 'asesor' && (
-          <button
-            disabled={pendiente} className="text-slate-500 hover:underline"
-            onClick={() => iniciar(async () => setRActivo(await cambiarActivo(asesor.id, !asesor.activo)))}
-          >
-            {asesor.activo ? 'Desactivar' : 'Activar'}
-          </button>
-        )}
         {!esYo && (
           <button
             disabled={pendiente} className="text-rose-600 hover:underline"

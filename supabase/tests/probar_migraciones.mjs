@@ -44,7 +44,7 @@ await db.exec(`delete from asesores`)
 // Asesores de prueba: 3 generales, 1 CePre, 1 especialista, 1 inactivo y el admin
 await db.exec(`
   insert into asesores (nombre, telefono, email, rol, carreras, activo) values
-    ('Admin',     '51900000000', 'admin@test.pe', 'admin',  '{}',                  true),
+    ('Admin',     '51900000000', 'admin@test.pe', 'admin',  '{}',                  false),
     ('General A', '51900000001', 'a@test.pe',     'asesor', '{}',                  true),
     ('General B', '51900000002', 'b@test.pe',     'asesor', '{}',                  true),
     ('General C', '51900000003', 'c@test.pe',     'asesor', '{}',                  true),
@@ -693,6 +693,17 @@ seccion('repartir leads y eliminar actividades')
   await uno(`select eliminar_actividad(${vacia}) r`)
   ok((await q(`select 1 from actividades where id = $1`, [vacia])).length === 0, 'el super admin elimina una actividad sin registrados')
   await reset()
+}
+
+seccion('quién recibe leads (interruptor, no el rol)')
+{
+  await reset()
+  await q(`update asesores set activo = (nombre in ('Admin', 'General A'))`)
+  const ids = []
+  for (let i = 0; i < 4; i++) ids.push((await uno(`select (procesar_lead(p_telefono => $1, p_nombre => 'Reparto ' || $2)) r`, [`5194443300${i}`, String(i)])).r)
+  const reparto = await q(`select a.nombre, count(*)::int n from leads l join asesores a on a.id = l.asesor_id where l.telefono like '5194443300%' group by a.nombre order by a.nombre`)
+  ok(reparto.length === 2 && reparto.every((x) => x.n === 2) && reparto[0].nombre === 'Admin', 'un administrador activado entra al reparto y un asesor desactivado no: ' + JSON.stringify(reparto))
+  await q(`update asesores set activo = (nombre <> 'Inactivo' and rol = 'asesor')`)
 }
 
 seccion('anon')

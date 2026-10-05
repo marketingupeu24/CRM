@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { fechaHora } from '@/lib/formato'
-import { AccionesAsesor, FormularioNuevoAsesor } from './Formularios'
+import { AccionesAsesor, FormularioNuevoAsesor, InterruptorRecibe } from './Formularios'
 
 export const metadata: Metadata = { title: 'Asesores y usuarios' }
 
@@ -16,7 +16,8 @@ export default async function PaginaUsuarios() {
       <div>
         <h1 className="text-2xl font-semibold">Asesores y usuarios</h1>
         <p className="text-sm text-slate-500">
-          Los asesores sin carreras exclusivas entran en la rotación general de leads. Los que tienen <b>CEPRE</b> reciben los leads de CePre.
+          Con <b>Recibe leads</b> activado (asesor, administrador o super admin) entra al reparto por turnos, puede ser responsable de una actividad y le llegan los avisos por WhatsApp.
+          Sin carreras exclusivas entra en la rotación general; con <b>CEPRE</b> recibe los leads de CePre.
           {superadmin ? <> Lo que cada uno puede ver se define en <a href="/permisos" className="font-medium text-marca-700 hover:underline">Módulos y permisos</a>.</> : null}
         </p>
       </div>
@@ -34,21 +35,20 @@ export default async function PaginaUsuarios() {
             <tr>
               <th className="px-4 py-3">Asesor</th>
               <th className="px-4 py-3">Usuario</th>
-              <th className="px-4 py-3">Reparto</th>
+              <th className="px-4 py-3">Recibe leads</th>
               <th className="px-4 py-3">Último lead</th>
               <th className="px-4 py-3">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 align-top">
             {(asesores ?? []).map((a) => (
-              <tr key={a.id} className={a.activo ? '' : 'bg-slate-50 text-slate-400'}>
+              <tr key={a.id}>
                 <td className="px-4 py-3">
                   <p className="font-medium">
                     {a.nombre}
                     {a.superadmin
                       ? <span className="ml-2 rounded-full bg-dorado-50 px-2 py-0.5 text-xs font-semibold text-dorado-700">Super admin</span>
                       : a.rol === 'admin' && <span className="ml-2 rounded bg-marca-100 px-1.5 py-0.5 text-xs text-marca-700">Admin</span>}
-                    {!a.activo && <span className="ml-2 rounded bg-slate-200 px-1.5 py-0.5 text-xs text-slate-600">Inactivo</span>}
                   </p>
                   <p className="text-xs text-slate-500">{a.telefono ?? 'Sin celular'}</p>
                 </td>
@@ -56,7 +56,8 @@ export default async function PaginaUsuarios() {
                   {a.usuario ?? <span className="font-sans text-amber-700">Sin usuario</span>}
                 </td>
                 <td className="px-4 py-3 text-xs">
-                  {a.rol === 'admin' ? '—' : a.carreras.length ? a.carreras.join(', ') : 'Rotación general'}
+                  <InterruptorRecibe asesor={a} editable={!a.superadmin || superadmin} />
+                  {a.activo && <p className="mt-1 text-slate-500">{a.carreras.length ? a.carreras.join(', ') : 'Rotación general'}</p>}
                 </td>
                 <td className="px-4 py-3 text-xs whitespace-nowrap">{fechaHora(a.ultimo_lead_asignado)}</td>
                 <td className="w-72 px-4 py-3">

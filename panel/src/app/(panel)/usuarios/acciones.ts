@@ -39,7 +39,8 @@ export async function crearAsesor(_previo: Resultado, formData: FormData): Promi
 
   const supabase = await crearClienteServidor()
   const { data: asesor, error } = await supabase.from('asesores')
-    .insert({ nombre, telefono, rol, carreras: listaCarreras(texto('carreras')) })
+    // Los administradores empiezan sin recibir leads; se activan con "Recibe leads"
+    .insert({ nombre, telefono, rol, activo: rol === 'asesor', carreras: listaCarreras(texto('carreras')) })
     .select('id').single()
   if (error) return { error: mensajeError(error) }
 
@@ -114,12 +115,19 @@ export async function eliminarAsesor(asesorId: string): Promise<Resultado> {
   return { ok: 'Enviado a la papelera.' }
 }
 
-/** Un asesor inactivo no recibe leads nuevos (sigue viendo los suyos). */
+/**
+ * "Recibe leads" (columna activo), para cualquier rol: entra al reparto por turnos, puede ser
+ * responsable de una actividad y le llegan los avisos por WhatsApp. Sin él sigue viendo sus leads.
+ */
 export async function cambiarActivo(asesorId: string, activo: boolean): Promise<Resultado> {
   await exigirPermiso('usuarios')
   const supabase = await crearClienteServidor()
+  if (activo) {
+    const { data } = await supabase.from('asesores').select('telefono').eq('id', asesorId).single()
+    if (!data?.telefono) return { error: 'Primero agrégale un celular (Editar): ahí le llegan los avisos de sus leads.' }
+  }
   const { error } = await supabase.from('asesores').update({ activo }).eq('id', asesorId)
   if (error) return { error: mensajeError(error) }
   revalidatePath('/usuarios')
-  return { ok: activo ? 'Asesor activado.' : 'Asesor desactivado.' }
+  return { ok: activo ? 'Ahora recibe leads y avisos.' : 'Ya no recibe leads nuevos (sigue viendo los suyos).' }
 }

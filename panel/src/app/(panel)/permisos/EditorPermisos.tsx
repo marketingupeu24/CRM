@@ -45,17 +45,16 @@ export function EditorPermisos({ usuario, esYo }: { usuario: UsuarioPermisos; es
     || seleccion.size !== usuario.permisos.length || usuario.permisos.some((p) => !seleccion.has(p))
 
   return (
-    <li className={`tarjeta p-5 ${usuario.activo ? '' : 'opacity-75'}`}>
+    <li className="tarjeta p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="font-semibold">
             {usuario.nombre}
             {superadmin && <span className="ml-2 rounded-full bg-dorado-50 px-2 py-0.5 text-xs font-semibold text-dorado-700">Super admin</span>}
-            {!usuario.activo && <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">Inactivo</span>}
             {esYo && <span className="ml-2 text-xs font-normal text-slate-500">(tú)</span>}
           </p>
           <p className="text-xs text-slate-500">
-            {usuario.usuario ?? 'Sin usuario'} · {usuario.rol === 'admin' ? 'Administrador (no recibe leads)' : 'Asesor (recibe leads)'} ·{' '}
+            {usuario.usuario ?? 'Sin usuario'} · {usuario.rol === 'admin' ? 'Administrador' : 'Asesor'}{usuario.activo ? ' (recibe leads)' : ' (no recibe leads)'} ·{' '}
             {superadmin ? 'acceso total' : `${total} de ${MODULOS.length} módulos`}
           </p>
         </div>

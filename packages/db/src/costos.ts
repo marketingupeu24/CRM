@@ -191,14 +191,14 @@ export function normalizarOpciones(o: OpcionesProforma): OpcionesProforma {
   if (r.modalidad !== 'PRES') { r.campus = 'LIM'; r.beneficio = 'NONE' }
   if (r.beneficio === 'EXPLORE' && !r.exploreVerificado) r.beneficio = 'PROMO'
   const lista = carreras(r.modalidad, r.campus)
-  if (!lista.some((c) => c[0] === r.carrera)) r.carrera = (lista.find((c) => c[0] === 'Educación Inicial y Puericultura') ?? lista[0])[0]
+  if (!lista.some((c) => c[0] === r.carrera)) r.carrera = (lista.find((c) => c[0] === 'Educación Inicial y Puericultura') ?? lista[0]!)[0]
   return r
 }
 
 export function calcularProforma(entrada: OpcionesProforma) {
   const o = normalizarOpciones(entrada)
   const L0 = carreras(o.modalidad, o.campus)
-  const c = L0.find((x) => x[0] === o.carrera) ?? L0[0]
+  const c = L0.find((x) => x[0] === o.carrera) ?? L0[0]!
   const cp = o.modalidad === 'PRES'
     ? CAMPUS[o.campus]
     : { nombre: 'Sede Lima', corto: 'Lima', mat: MODALIDADES[o.modalidad].mat!, cuotas: MODALIDADES[o.modalidad].cuotas! }
