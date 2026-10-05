@@ -23,11 +23,9 @@ interface Props {
   lead: LeadProforma | null
   asesor: string
   carreraSugerida: string | null
-}
-
-const hoyMas = (dias: number) => {
-  const d = new Date(Date.now() + dias * 86_400_000)
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(d)
+  /** Fecha de emisión y vencimiento por defecto, calculadas en el servidor (evita diferencias al hidratar). */
+  emitidaIso: string
+  venceInicial: string
 }
 
 function Segmentos<T extends string>({ valor, opciones, alCambiar, deshabilitadas = [] }: {
@@ -49,7 +47,7 @@ function Segmentos<T extends string>({ valor, opciones, alCambiar, deshabilitada
 
 type Adjunto = 'imagen' | 'pdf' | 'texto'
 
-export function GeneradorProforma({ lead, asesor, carreraSugerida }: Props) {
+export function GeneradorProforma({ lead, asesor, carreraSugerida, emitidaIso, venceInicial }: Props) {
   const [modalidad, setModalidad] = useState<Modalidad>('PRES')
   const [campus, setCampus] = useState<CampusId>('JUL')
   const [carrera, setCarrera] = useState(carreraSugerida ?? 'Educación Inicial y Puericultura')
@@ -60,7 +58,7 @@ export function GeneradorProforma({ lead, asesor, carreraSugerida }: Props) {
   const [pago, setPago] = useState<FormaPago>('cuotas')
   const [nombre, setNombre] = useState(lead?.nombre ?? '')
   const [dni, setDni] = useState(lead?.dni ?? '')
-  const [vence, setVence] = useState(hoyMas(15))
+  const [vence, setVence] = useState(venceInicial)
   const [celular, setCelular] = useState(lead?.telefono ?? '')
   const [explore, setExplore] = useState<'' | 'si' | 'no'>('')
   const [adjunto, setAdjunto] = useState<Adjunto>('imagen')
@@ -70,7 +68,7 @@ export function GeneradorProforma({ lead, asesor, carreraSugerida }: Props) {
   const caja = useRef<HTMLDivElement>(null)
   const [escala, setEscala] = useState(1)
   const [alto, setAlto] = useState(1123)
-  const [emitida] = useState(() => new Date())
+  const [emitida] = useState(() => new Date(emitidaIso))
 
   // EXPLORE: el DNI se verifica en el servidor (la lista no viaja al navegador)
   useEffect(() => {

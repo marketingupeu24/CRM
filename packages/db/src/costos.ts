@@ -282,9 +282,11 @@ export function condiciones(k: Proforma): string[] {
 
 /** Número de proforma: PF-JUL-270105-0930 */
 export function numeroProforma(k: Proforma, d: Date = new Date()): string {
-  const lima = new Date(d.toLocaleString('en-US', { timeZone: 'America/Lima' }))
-  const p = (x: number) => String(x).padStart(2, '0')
-  return `PF-${k.opciones.modalidad === 'PRES' ? k.opciones.campus : k.opciones.modalidad}-${String(lima.getFullYear()).slice(2)}${p(lima.getMonth() + 1)}${p(lima.getDate())}-${p(lima.getHours())}${p(lima.getMinutes())}`
+  // Partes de la fecha en hora de Lima (igual en el servidor y en el navegador)
+  const partes = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'America/Lima', year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(d).map((x) => [x.type, x.value]))
+  return `PF-${k.opciones.modalidad === 'PRES' ? k.opciones.campus : k.opciones.modalidad}-${partes.year}${partes.month}${partes.day}-${partes.hour}${partes.minute}`
 }
 
 /** Mensaje de WhatsApp con el detalle (tablas en bloque monoespaciado). */

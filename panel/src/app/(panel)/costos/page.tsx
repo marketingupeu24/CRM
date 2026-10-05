@@ -49,6 +49,8 @@ export default async function PaginaCostos(props: PageProps<'/costos'>) {
         lead={lead}
         asesor={perfil.nombre}
         carreraSugerida={carreraParecida(lead?.carrera, 'PRES', 'JUL')}
+        emitidaIso={new Date().toISOString()}
+        venceInicial={new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date(Date.now() + 15 * 86_400_000))}
       />
 
       {!!recientes?.length && (
