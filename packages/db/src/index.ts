@@ -85,6 +85,7 @@ export const MODULOS = [
   { clave: 'usuarios', grupo: 'Administración', titulo: 'Asesores y usuarios', descripcion: 'Crear y editar asesores, contraseñas y papelera de usuarios', ruta: '/usuarios' },
   { clave: 'respuestas', grupo: 'Administración', titulo: 'Respuestas rápidas', descripcion: 'Administrar las plantillas del chat', ruta: '/respuestas' },
   { clave: 'gestionar_campanas', grupo: 'Administración', titulo: 'Crear campañas', descripcion: 'Crear, editar y archivar campañas', ruta: null },
+  { clave: 'conocimiento', grupo: 'Genesys (bot)', titulo: 'Base de conocimiento y revisión', descripcion: 'Editar lo que sabe Genesys y revisar lo que no supo responder', ruta: '/revision-bot' },
 ] as const
 
 export type Modulo = (typeof MODULOS)[number]['clave']
@@ -92,6 +93,21 @@ export const CLAVES_MODULOS: readonly Modulo[] = MODULOS.map((m) => m.clave)
 
 /** Lo que recibe un asesor nuevo (igual al valor por defecto de asesores.permisos). */
 export const PERMISOS_ASESOR: readonly Modulo[] = ['pendientes', 'chats', 'leads', 'kanban', 'registrar', 'dashboard', 'campanas', 'exportar']
+
+/** Secciones de la base de conocimiento de Genesys (conocimiento.categoria), en orden. */
+export const CATEGORIAS_CONOCIMIENTO = {
+  reglas: 'Reglas para Genesys',
+  carreras: 'Carreras',
+  costos: 'Costos y pensiones',
+  becas: 'Becas, descuentos y convenios',
+  admision: 'Examen y fechas de admisión',
+  requisitos: 'Requisitos',
+  cepre: 'CEPRE',
+  campus: 'Ubicación y horarios',
+  otros: 'Otros',
+} as const
+export type CategoriaConocimiento = keyof typeof CATEGORIAS_CONOCIMIENTO
+export type Conocimiento = Tables<'conocimiento'>
 
 /** Cómo nos conoció el lead (leads.origen_campana). Igual que ORIGENES en _shared/dominio.ts. */
 export const ORIGENES = [
@@ -101,6 +117,7 @@ export const ORIGENES = [
   'Google',
   'Página web',
   'Recomendación',
+  'Colegio adventista',
   'Feria / colegio',
   'Volante / afiche',
   'Radio / TV',

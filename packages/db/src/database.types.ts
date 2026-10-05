@@ -7,13 +7,13 @@ export type Database = {
           Tables: {
             "asesores": {
                   Row: {
-                    "activo": boolean,"carreras": (string)[],"created_at": string,"eliminado_at": string | null,"email": string | null,"id": string,"nombre": string,"permisos": (string)[],"rol": Database["public"]['Enums']["asesor_rol"],"superadmin": boolean,"telefono": string | null,"ultimo_lead_asignado": string | null,"user_id": string | null,"usuario": string | null
+                    "activo": boolean,"carreras": (string)[],"created_at": string,"eliminado_at": string | null,"email": string | null,"en_blacklist": boolean,"id": string,"nombre": string,"permisos": (string)[],"rol": Database["public"]['Enums']["asesor_rol"],"superadmin": boolean,"telefono": string | null,"ultimo_lead_asignado": string | null,"user_id": string | null,"usuario": string | null
                   }
                   Insert: {
-                    "activo"?: boolean,"carreras"?: (string)[],"created_at"?: string,"eliminado_at"?: string | null,"email"?: string | null,"id"?: string,"nombre": string,"permisos"?: (string)[],"rol"?: Database["public"]['Enums']["asesor_rol"],"superadmin"?: boolean,"telefono"?: string | null,"ultimo_lead_asignado"?: string | null,"user_id"?: string | null,"usuario"?: string | null
+                    "activo"?: boolean,"carreras"?: (string)[],"created_at"?: string,"eliminado_at"?: string | null,"email"?: string | null,"en_blacklist"?: boolean,"id"?: string,"nombre": string,"permisos"?: (string)[],"rol"?: Database["public"]['Enums']["asesor_rol"],"superadmin"?: boolean,"telefono"?: string | null,"ultimo_lead_asignado"?: string | null,"user_id"?: string | null,"usuario"?: string | null
                   }
                   Update: {
-                    "activo"?: boolean,"carreras"?: (string)[],"created_at"?: string,"eliminado_at"?: string | null,"email"?: string | null,"id"?: string,"nombre"?: string,"permisos"?: (string)[],"rol"?: Database["public"]['Enums']["asesor_rol"],"superadmin"?: boolean,"telefono"?: string | null,"ultimo_lead_asignado"?: string | null,"user_id"?: string | null,"usuario"?: string | null
+                    "activo"?: boolean,"carreras"?: (string)[],"created_at"?: string,"eliminado_at"?: string | null,"email"?: string | null,"en_blacklist"?: boolean,"id"?: string,"nombre"?: string,"permisos"?: (string)[],"rol"?: Database["public"]['Enums']["asesor_rol"],"superadmin"?: boolean,"telefono"?: string | null,"ultimo_lead_asignado"?: string | null,"user_id"?: string | null,"usuario"?: string | null
                   }
                   Relationships: [
                     
@@ -30,6 +30,31 @@ export type Database = {
                   }
                   Relationships: [
                     
+                  ]
+                },"conocimiento": {
+                  Row: {
+                    "activo": boolean,"categoria": string,"contenido": string,"id": number,"orden": number,"titulo": string,"updated_at": string,"updated_por": string | null
+                  }
+                  Insert: {
+                    "activo"?: boolean,"categoria": string,"contenido": string,"id"?: never,"orden"?: number,"titulo": string,"updated_at"?: string,"updated_por"?: string | null
+                  }
+                  Update: {
+                    "activo"?: boolean,"categoria"?: string,"contenido"?: string,"id"?: never,"orden"?: number,"titulo"?: string,"updated_at"?: string,"updated_por"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "conocimiento_updated_por_fkey"
+      columns: ["updated_por"]
+isOneToOne: false
+      referencedRelation: "asesores"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "conocimiento_updated_por_fkey"
+      columns: ["updated_por"]
+isOneToOne: false
+      referencedRelation: "vista_leads_por_asesor"
+      referencedColumns: ["asesor_id"]
+    }
                   ]
                 },"lead_interacciones": {
                   Row: {
@@ -111,6 +136,37 @@ isOneToOne: false
                   }
                   Relationships: [
                     
+                  ]
+                },"revision_bot": {
+                  Row: {
+                    "interaccion_id": number,"revisada_at": string,"revisada_por": string | null
+                  }
+                  Insert: {
+                    "interaccion_id": number,"revisada_at"?: string,"revisada_por"?: string | null
+                  }
+                  Update: {
+                    "interaccion_id"?: number,"revisada_at"?: string,"revisada_por"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "revision_bot_interaccion_id_fkey"
+      columns: ["interaccion_id"]
+isOneToOne: true
+      referencedRelation: "lead_interacciones"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "revision_bot_revisada_por_fkey"
+      columns: ["revisada_por"]
+isOneToOne: false
+      referencedRelation: "asesores"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "revision_bot_revisada_por_fkey"
+      columns: ["revisada_por"]
+isOneToOne: false
+      referencedRelation: "vista_leads_por_asesor"
+      referencedColumns: ["asesor_id"]
+    }
                   ]
                 },"tareas": {
                   Row: {
@@ -216,6 +272,7 @@ isOneToOne: false
 "created_at": string,
 "eliminado_at": string | null,
 "email": string | null,
+"en_blacklist": boolean,
 "id": string,
 "nombre": string,
 "permisos": (string)[],
@@ -270,6 +327,11 @@ isOneToOne: false
                            },
 "papelera":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"preguntas_sin_respuesta":
+{ Args: { "p_dias"?: number }; Returns: {
+              "interaccion_id": number,"lead_id": string,"lead_nombre": string,"lead_telefono": string,"pregunta": string,"respondida_at": string,"respuesta": string,"revisada": boolean
+            }[]
                            },
 "procesar_lead":
 { Args: { "p_asesor_id"?: string,"p_asignar"?: boolean,"p_carrera"?: string,"p_consulta"?: string,"p_convocatoria"?: string,"p_dni"?: string,"p_modalidad"?: string,"p_nombre"?: string,"p_notificar"?: boolean,"p_origen"?: string,"p_programa"?: string,"p_telefono"?: string }; Returns: Json

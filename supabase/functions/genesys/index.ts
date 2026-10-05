@@ -205,9 +205,20 @@ async function avisarMensajeNuevo(lead: Lead, mensaje: string) {
  * Todo el que escribe es un lead. Se guarda cada mensaje en su conversación.
  * bot_atiende=false: Genesys no debe responder (espera a su asesor o el asesor está conversando).
  */
+/** Celulares de los asesores (rol asesor): reciben los avisos del CRM, no son leads. */
+async function telefonosAsesores(): Promise<Set<string>> {
+  const { data } = await supabase.from('asesores').select('telefono')
+    .eq('rol', 'asesor').is('eliminado_at', null).not('telefono', 'is', null)
+  return new Set((data ?? []).map((a) => a.telefono!))
+}
+
 async function registrar(cuerpo: Cuerpo): Promise<Respuesta> {
   const telefono = telefonoDe(cuerpo)
   const mensaje = valorResuelto(cuerpo.mensaje)
+  // La respuesta automática del WhatsApp de un asesor a un aviso del CRM no es un lead
+  if (telefono && (await telefonosAsesores()).has(telefono)) {
+    return { ok: true, ignorado: 'mensaje de un asesor', bot_atiende: false }
+  }
   const { data, error } = await supabase.rpc('registrar_lead', {
     p_telefono: telefono,
     p_mensaje: mensaje ?? undefined,
@@ -491,7 +502,10 @@ async function sincronizarBot(cuerpo: Cuerpo): Promise<Respuesta> {
   if (error) throw error
 
   let agregados = 0, quitados = 0, errores = 0
+  const deAsesores = await telefonosAsesores()
   for (const lead of leads ?? []) {
+    // El número de un asesor se maneja abajo (siempre en blacklist)
+    if (deAsesores.has(lead.telefono)) continue
     // Con la blacklist apagada se quita a todos: así BuilderBot sigue enviando sus mensajes al CRM
     // y la pausa la aplica la regla del flujo (bot_atiende=false -> flujo "Silencio").
     // Solo se silencia durante la pausa (el asesor escribió desde el CRM en las últimas 5 h)
@@ -507,6 +521,21 @@ async function sincronizarBot(cuerpo: Cuerpo): Promise<Respuesta> {
     await supabase.from('leads').update({ en_blacklist: debeSilenciar }).eq('id', lead.id)
     if (debeSilenciar) agregados++
     else quitados++
+  }
+  // Asesores siempre en blacklist: Genesys no responde a sus respuestas automáticas
+  // (los avisos del CRM les siguen llegando: la API envía igual a números en blacklist)
+  if (!leadId) {
+    const { data: asesores } = await supabase.from('asesores')
+      .select('id, telefono, rol, eliminado_at, en_blacklist').not('telefono', 'is', null)
+    for (const a of asesores ?? []) {
+      const debe = a.rol === 'asesor' && !a.eliminado_at
+      if (debe === a.en_blacklist) continue
+      const r = await cambiarBlacklist(a.telefono!, debe)
+      if (!r.ok) { errores++; console.error('[genesys] Blacklist asesor', a.telefono, r.error); continue }
+      await supabase.from('asesores').update({ en_blacklist: debe }).eq('id', a.id)
+      if (debe) agregados++
+      else quitados++
+    }
   }
   return { ok: true, revisados: leads?.length ?? 0, agregados, quitados, errores }
 }
@@ -531,6 +560,15 @@ function buscarCampo(obj: unknown, claves: string[], profundidad = 0): string | 
  * Se guarda una copia cruda en webhook_eventos y, si es un mensaje del lead, se registra
  * en su conversación (mismo efecto que /registrar: chat, "sin responder" y aviso al asesor).
  */
+/**
+ * Avisos que el CRM envía a los asesores (lead nuevo, reasignado, recordatorio, mensaje nuevo).
+ * También llegan por el webhook como salientes: no son respuestas del bot y no van al chat del lead
+ * (pasa cuando el número de un asesor también está registrado como lead).
+ */
+function esAvisoParaAsesor(texto: string): boolean {
+  return texto.includes(PANEL_URL) || texto.includes('*Celular:*') || texto.startsWith('*RECORDATORIO')
+}
+
 async function evento(cuerpo: Cuerpo, registroId: number | null): Promise<Respuesta> {
   const marcar = (procesado: string) =>
     registroId ? supabase.from('webhook_eventos').update({ procesado }).eq('id', registroId) : Promise.resolve()
@@ -543,7 +581,7 @@ async function evento(cuerpo: Cuerpo, registroId: number | null): Promise<Respue
   if (!telefono) { await marcar('sin teléfono'); return { ok: true, procesado: 'sin teléfono' } }
   if (saliente) {
     // Respuesta del bot: se guarda en la conversación (los mensajes del CRM ya están guardados)
-    if (texto && !/^\*[^*\n]{1,40}:\* /.test(texto)) {
+    if (texto && !/^\*[^*\n]{1,40}:\* /.test(texto) && !esAvisoParaAsesor(texto)) {
       const { data: lead } = await supabase.from('leads').select('id').eq('telefono', telefono).maybeSingle()
       if (lead) {
         await supabase.from('lead_interacciones').insert({ lead_id: lead.id, tipo: 'respuesta_bot', contenido: texto.slice(0, 4000) })

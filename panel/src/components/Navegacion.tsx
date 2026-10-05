@@ -21,8 +21,8 @@ interface Grupo {
 }
 
 export function Navegacion(
-  { permisos, superadmin = false, sinResponder = 0, pendientes = 0 }:
-  { permisos: Modulo[]; superadmin?: boolean; sinResponder?: number; pendientes?: number },
+  { permisos, superadmin = false, sinResponder = 0, pendientes = 0, revisionBot = 0 }:
+  { permisos: Modulo[]; superadmin?: boolean; sinResponder?: number; pendientes?: number; revisionBot?: number },
 ) {
   const ruta = usePathname()
   const todos: Grupo[] = [
@@ -41,6 +41,13 @@ export function Navegacion(
       enlaces: [
         { href: '/dashboard', texto: 'Dashboard', icono: '◔', modulo: 'dashboard' },
         { href: '/campanas', texto: 'Campañas', icono: '📣', modulo: 'campanas' },
+      ],
+    },
+    {
+      titulo: 'Genesys (bot)',
+      enlaces: [
+        { href: '/conocimiento' as Route, texto: 'Base de conocimiento', icono: '📚' },
+        { href: '/revision-bot' as Route, texto: 'Revisión del bot', icono: '🤖', modulo: 'conocimiento', contador: { valor: revisionBot, estilo: 'bg-violet-500 text-white' } },
       ],
     },
     {

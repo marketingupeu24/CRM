@@ -176,6 +176,8 @@ Se actualiza en vivo (Supabase Realtime).
   se sigue guardando (la papelera lo marca "Volvió a escribir") y sale de ella si se registra a mano otra
   vez. Un usuario en la papelera no puede entrar al panel; para enviarlo no debe tener leads abiertos, y al
   restaurarlo vuelve inactivo.
+- **Genesys (bot)**: *Base de conocimiento* (todos la leen; la edita quien tenga el módulo "Base de conocimiento y revisión") con las reglas de respuesta y los datos oficiales (carreras, costos, becas, fechas, CEPRE, horarios). El botón *Copiar texto para Genesys* arma el prompt para pegar en el asistente de BuilderBot; las secciones "Por completar" no se incluyen. *Revisión del bot* lista las respuestas en las que Genesys no supo contestar ("no tengo información", "malentendido"…) con la pregunta del lead, para agregar el dato y marcarlas como revisadas.
+- **Celulares de asesores**: siempre en la blacklist de BuilderBot y nunca se registran como leads (sus respuestas automáticas de WhatsApp a los avisos del CRM creaban leads falsos).
 - **Editar asesores y leads**: el admin cambia nombre y celular de los asesores (*Editar* en Asesores y
   usuarios) y el celular de un lead (*Editar datos* en la ficha; el chat del CRM escribe a ese número).
 - **Aviso al asignar desde el panel**: si un usuario asigna o reasigna un lead a *otro* asesor (ficha,

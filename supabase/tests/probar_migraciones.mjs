@@ -502,6 +502,28 @@ await reset()
 
 }
 
+seccion('base de conocimiento y revisión del bot')
+{
+  ok((await uno(`select count(*)::int c from conocimiento where categoria = 'reglas' and activo`)).c >= 4, 'trae las reglas recomendadas para Genesys')
+  ok((await uno(`select count(*)::int c from conocimiento where not activo`)).c >= 4, 'las secciones por completar no entran al texto del bot')
+  await q(`select registrar_lead('51988800001', 'cuánto cuesta la pensión de enfermería')`)
+  const lid = (await uno(`select id from leads where telefono = '51988800001'`)).id
+  await q(`insert into lead_interacciones (lead_id, tipo, contenido) values ($1, 'respuesta_bot', 'Lamentablemente, no tengo información sobre la pensión'), ($1, 'respuesta_bot', 'La carrera de Enfermería dura 5 años')`, [lid])
+  await comoUsuario('a@test.pe')
+  await falla(`select * from preguntas_sin_respuesta()`, 'sin el módulo "conocimiento" no ve la revisión del bot')
+  ok((await q(`select 1 from conocimiento`)).length > 0, 'todos los usuarios del panel leen la base de conocimiento')
+  await falla(`insert into conocimiento (categoria, titulo, contenido) values ('otros', 'x', 'y')`, 'sin el módulo no la edita')
+  await comoUsuario('admin@test.pe')
+  const ps = await q(`select * from preguntas_sin_respuesta()`)
+  const p1 = ps.find((p) => p.lead_id === lid)
+  ok(!!p1 && p1.pregunta.includes('pensión') && ps.filter((p) => p.lead_id === lid).length === 1, 'detecta "no tengo información" con la pregunta del lead (y no las respuestas normales)')
+  await q(`insert into revision_bot (interaccion_id) values ($1)`, [p1.interaccion_id])
+  ok((await q(`select revisada from preguntas_sin_respuesta() where interaccion_id = $1`, [p1.interaccion_id]))[0].revisada, 'se puede marcar como revisada')
+  await q(`insert into conocimiento (categoria, titulo, contenido) values ('costos', 'Pensión Enfermería', 'S/ 000 (prueba)')`)
+  ok((await uno(`select updated_por is not null p from conocimiento where titulo = 'Pensión Enfermería'`)).p, 'guarda quién actualizó cada dato')
+  await reset()
+}
+
 seccion('anon')
 await db.exec(`reset role; set request.jwt.claim.sub = ''; set role anon`)
 await falla(`select * from tareas`, 'anon no puede ver tareas')
