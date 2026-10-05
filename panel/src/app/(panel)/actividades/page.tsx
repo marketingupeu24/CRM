@@ -29,7 +29,8 @@ export default async function PaginaActividades() {
     registrados: porActividad.get(a.id)?.registrados ?? 0,
     contactados: porActividad.get(a.id)?.contactados ?? 0,
     matriculados: porActividad.get(a.id)?.matriculados ?? 0,
-    editable: a.responsable_id === perfil.id || puede('ver_todos'),
+    editable: a.responsable_id === perfil.id || puede('ver_todos') || superadmin,
+    eliminable: superadmin && (porActividad.get(a.id)?.registrados ?? 0) === 0,
   }))
 
   return (

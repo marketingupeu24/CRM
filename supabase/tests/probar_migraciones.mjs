@@ -623,6 +623,57 @@ seccion('importar varios alumnos')
   ok((await uno(`select asesor_id from leads where telefono = '51958711111'`)).asesor_id === usrB.id, 'lo importado por un asesor queda a su nombre')
 }
 
+seccion('registro rápido de fichas')
+{
+  await comoUsuario('admin@test.pe')
+  const antes = (await uno(`select count(*)::int c from llamadas_genesys`)).c
+  for (let i = 1; i <= 4; i++) {
+    const r = await uno(`select * from importar_leads($1::jsonb, null, null, null, true)`, [JSON.stringify([{ nombre: `Ficha Papel ${i}`, celular: `95990000${i}` }])])
+    if (i === 1) ok(r.estado === 'nuevo', 'registra una ficha sin DNI (no es obligatorio)')
+  }
+  ok((await uno(`select count(*)::int c from llamadas_genesys`)).c === antes, 'con aviso diferido no se avisa ficha por ficha')
+  const ex = (await uno(`select lead_existente('959900001', null) r`)).r
+  ok(ex && ex.por === 'celular' && ex.nombre === 'Ficha Papel 1', 'avisa al instante si el celular ya existe')
+  ok((await uno(`select lead_existente('959999999', null) r`)).r === null, 'un celular nuevo no aparece como existente')
+  await reset()
+  ok((await uno(`select count(*)::int c from avisos_pendientes`)).c === 4, 'los avisos quedan juntados')
+  await q(`update avisos_pendientes set created_at = now() - interval '5 minutes'`)
+  ok((await uno(`select enviar_avisos_pendientes() n`)).n === 4, 'el resumen sale después de unos minutos')
+  const env = await q(`select cuerpo from llamadas_genesys offset $1`, [antes])
+  ok(env.length === 1 && env[0].cuerpo.lead_ids.length === 4, 'un solo aviso con las 4 fichas')
+  ok((await uno(`select count(*)::int c from avisos_pendientes`)).c === 0, 'la cola queda vacía')
+}
+
+seccion('repartir leads y eliminar actividades')
+{
+  const usrB = await asesor('General B')
+  await comoUsuario('b@test.pe')
+  const sinModulo = (await uno(`select * from importar_leads($1::jsonb, null, null, null, false, true)`, [JSON.stringify([{ nombre: 'Reparto Sin Modulo', celular: '957100001' }])]))
+  await reset()
+  ok((await uno(`select asesor_id from leads where telefono = '51957100001'`)).asesor_id === usrB.id && sinModulo.estado === 'nuevo', 'sin el módulo "repartir", el asesor registra a su nombre aunque pida repartir')
+  await q(`update asesores set permisos = array_append(permisos, 'repartir') where id = $1`, [usrB.id])
+  await comoUsuario('b@test.pe')
+  await q(`select * from importar_leads($1::jsonb, null, null, null, false, true)`, [JSON.stringify([1, 2, 3, 4].map((n) => ({ nombre: `Reparto Con Modulo ${n}`, celular: `95710010${n}` })))])
+  await reset()
+  const asesoresReparto = await q(`select distinct asesor_id from leads where telefono like '5195710010%'`)
+  ok(asesoresReparto.length >= 2, 'con el módulo "repartir", se reparten entre varios asesores')
+  await comoUsuario('b@test.pe')
+  await q(`select * from importar_leads($1::jsonb)`, [JSON.stringify([{ nombre: 'Por Defecto Mio', celular: '957100099' }])])
+  await reset()
+  ok((await uno(`select asesor_id from leads where telefono = '51957100099'`)).asesor_id === usrB.id, 'por defecto, a nombre de quien registra')
+
+  await comoUsuario('admin@test.pe')
+  const vacia = (await uno(`insert into actividades (nombre) values ('Actividad vacía') returning id`)).id
+  const conAlumnos = (await uno(`select id from actividades where nombre = 'Feria Juliaca 2026'`)).id
+  await comoUsuario('a@test.pe')
+  await falla(`select eliminar_actividad(${vacia})`, 'solo el super admin elimina actividades')
+  await comoUsuario('admin@test.pe')
+  await falla(`select eliminar_actividad(${conAlumnos})`, 'no se elimina una actividad con alumnos registrados')
+  await uno(`select eliminar_actividad(${vacia}) r`)
+  ok((await q(`select 1 from actividades where id = $1`, [vacia])).length === 0, 'el super admin elimina una actividad sin registrados')
+  await reset()
+}
+
 seccion('anon')
 await db.exec(`reset role; set request.jwt.claim.sub = ''; set role anon`)
 await falla(`select * from tareas`, 'anon no puede ver tareas')

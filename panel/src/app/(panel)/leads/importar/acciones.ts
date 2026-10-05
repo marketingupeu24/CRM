@@ -26,7 +26,8 @@ export async function importarLeads(
   const { data, error } = await supabase.rpc('importar_leads', {
     p_filas: utiles.map((f) => ({ ...f })),
     p_actividad_id: opciones.actividadId ?? undefined,
-    p_asesor_id: opciones.asesorId ?? undefined,
+    p_asesor_id: opciones.asesorId && /^[0-9a-f-]{36}$/i.test(opciones.asesorId) ? opciones.asesorId : undefined,
+    p_repartir: opciones.asesorId === 'repartir',
     p_origen: opciones.origen ?? undefined,
   })
   if (error) return { error: mensajeError(error) }

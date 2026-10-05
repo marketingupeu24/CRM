@@ -83,6 +83,7 @@ export const MODULOS = [
   { clave: 'exportar', grupo: 'Análisis', titulo: 'Exportar Excel', descripcion: 'Descargar la lista de leads', ruta: null },
   { clave: 'ver_todos', grupo: 'Gestión de leads', titulo: 'Ver leads de todo el equipo', descripcion: 'Sin esto, solo ve sus propios leads', ruta: null },
   { clave: 'asignar', grupo: 'Gestión de leads', titulo: 'Asignar y reasignar', descripcion: 'Cambiar el asesor de un lead (también en bloque)', ruta: null },
+  { clave: 'repartir', grupo: 'Gestión de leads', titulo: 'Repartir leads entre asesores', descripcion: 'Al registrar, repartir por igual en vez de dejarlos a su nombre', ruta: null },
   { clave: 'editar_celular', grupo: 'Gestión de leads', titulo: 'Editar celular del lead', descripcion: 'Cambiar el número al que escribe el chat', ruta: null },
   { clave: 'papelera', grupo: 'Gestión de leads', titulo: 'Papelera', descripcion: 'Eliminar, restaurar y borrar leads', ruta: '/papelera' },
   { clave: 'usuarios', grupo: 'Administración', titulo: 'Asesores y usuarios', descripcion: 'Crear y editar asesores, contraseñas y papelera de usuarios', ruta: '/usuarios' },

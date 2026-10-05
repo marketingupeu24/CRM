@@ -63,3 +63,13 @@ export async function guardarWhatsappGenesys(_previo: Resultado, formData: FormD
   revalidatePath('/actividades')
   return { ok: numero ? `Guardado: +${numero}` : 'Número borrado.' }
 }
+
+/** Solo el super admin, y solo si nadie se registró con la actividad (lo verifica eliminar_actividad). */
+export async function eliminarActividad(id: number): Promise<Resultado> {
+  await exigirSuperadmin()
+  const supabase = await crearClienteServidor()
+  const { error } = await supabase.rpc('eliminar_actividad', { p_id: id })
+  if (error) return { error: mensajeError(error) }
+  revalidatePath('/actividades')
+  return { ok: 'Actividad eliminada.' }
+}

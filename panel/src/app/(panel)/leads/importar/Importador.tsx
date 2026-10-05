@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { ORIGENES } from '@crm/db'
+import { SelectorAsignacion, type PermisosAsignacion } from '@/components/SelectorAsignacion'
 import { COLUMNAS, filaVacia, leerTabla, PLANTILLA_CSV, problemaFila, type FilaImportar } from '@/lib/importar'
 import { importarLeads, type ResultadoFila } from './acciones'
 
@@ -17,11 +18,10 @@ const ESTILO_ESTADO: Record<ResultadoFila['estado'], string> = {
   error: 'bg-rose-50 text-rose-700',
 }
 
-export function Importador({ carreras, actividades, asesores }: {
+export function Importador({ carreras, actividades, asignacion }: {
   carreras: string[]
   actividades: { id: number; nombre: string }[]
-  /** Vacío si el usuario no puede asignar (lo importado queda a su nombre) */
-  asesores: { id: string; nombre: string }[]
+  asignacion: PermisosAsignacion
 }) {
   const [filas, setFilas] = useState<FilaImportar[]>(() => Array.from({ length: 5 }, filaVacia))
   const [pegado, setPegado] = useState('')
@@ -104,14 +104,7 @@ export function Importador({ carreras, actividades, asesores }: {
           <span className="text-xs text-slate-500">Para fichas en papel de una feria o colegio: se cuentan en esa actividad.</span>
         </label>
         <label className="text-sm text-slate-600">Asignar a
-          {asesores.length ? (
-            <select value={asesorId} onChange={(e) => setAsesorId(e.target.value)} className="campo mt-1">
-              <option value="">Repartir por igual entre los asesores</option>
-              {asesores.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
-            </select>
-          ) : (
-            <p className="campo mt-1 bg-slate-50 text-slate-500">A tu nombre</p>
-          )}
+          <SelectorAsignacion valor={asesorId} alCambiar={setAsesorId} permisos={asignacion} />
         </label>
         <label className="text-sm text-slate-600">¿Cómo nos conocieron? (opcional)
           <select value={origen} onChange={(e) => setOrigen(e.target.value)} className="campo mt-1">

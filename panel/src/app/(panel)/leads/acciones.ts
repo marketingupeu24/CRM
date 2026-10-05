@@ -3,7 +3,6 @@
 // Acciones sobre leads. Todas usan la sesión del asesor: el RLS decide qué puede hacer
 // (el asesor solo toca sus leads; el admin, todos).
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 import { ESTADOS_LEAD, type LeadEstado } from '@crm/db'
 import { mensajeError } from '@/lib/formato'
 import { crearClienteServidor } from '@/lib/supabase/server'
@@ -114,49 +113,6 @@ export async function actualizarDatos(leadId: string, _previo: Resultado, formDa
 
   refrescar(leadId)
   return { ok: true }
-}
-
-export interface ResultadoRegistro extends Resultado {
-  leadId?: string
-  duplicado?: boolean
-}
-
-/** Registro manual (reemplaza la hoja REGISTRO del Sheet). */
-export async function registrarLeadManual(_previo: ResultadoRegistro, formData: FormData): Promise<ResultadoRegistro> {
-  const texto = (campo: string) => String(formData.get(campo) ?? '').trim()
-  const nombre = texto('nombre')
-  const telefono = texto('telefono')
-  if (!nombre || !telefono) return { error: 'Nombre y celular son obligatorios.' }
-
-  const supabase = await crearClienteServidor()
-  const { data, error } = await supabase.rpc('registrar_lead_manual', {
-    p_nombre: nombre,
-    p_telefono: telefono,
-    p_dni: texto('dni') || undefined,
-    p_carrera: texto('carrera') || undefined,
-    p_modalidad: texto('modalidad') || undefined,
-    p_programa: texto('programa') === 'cepre' ? 'cepre' : 'pregrado',
-    p_convocatoria: texto('convocatoria') || undefined,
-    p_observacion: texto('observacion') || undefined,
-    p_asesor_id: texto('asesor_id') || undefined,
-  })
-  if (error) return { error: mensajeError(error) }
-
-  const r = data as { status: string; lead_id?: string; mensaje?: string; asesor_nombre?: string }
-  const origen = texto('origen_campana')
-  if (origen && r.lead_id && r.status !== 'duplicate') {
-    await supabase.from('leads').update({ origen_campana: origen }).eq('id', r.lead_id)
-  }
-  if (r.status === 'duplicate') {
-    return {
-      duplicado: true,
-      leadId: r.lead_id,
-      error: r.mensaje ?? `Este lead ya estaba registrado${r.asesor_nombre ? ` con ${r.asesor_nombre}` : ''}. No se creó otro.`,
-    }
-  }
-
-  refrescar()
-  redirect(`/leads/${r.lead_id}`)
 }
 
 export interface ResultadoMasivo extends Resultado {

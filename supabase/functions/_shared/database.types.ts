@@ -56,6 +56,37 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"avisos_pendientes": {
+                  Row: {
+                    "actividad": string | null,"creado_por": string | null,"created_at": string,"lead_id": string
+                  }
+                  Insert: {
+                    "actividad"?: string | null,"creado_por"?: string | null,"created_at"?: string,"lead_id": string
+                  }
+                  Update: {
+                    "actividad"?: string | null,"creado_por"?: string | null,"created_at"?: string,"lead_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "avisos_pendientes_creado_por_fkey"
+      columns: ["creado_por"]
+isOneToOne: false
+      referencedRelation: "asesores"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "avisos_pendientes_creado_por_fkey"
+      columns: ["creado_por"]
+isOneToOne: false
+      referencedRelation: "vista_leads_por_asesor"
+      referencedColumns: ["asesor_id"]
+    },{
+      foreignKeyName: "avisos_pendientes_lead_id_fkey"
+      columns: ["lead_id"]
+isOneToOne: true
+      referencedRelation: "leads"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"campanas": {
                   Row: {
                     "activa": boolean,"created_at": string,"fin": string,"id": number,"inicio": string,"nombre": string,"origen": string | null
@@ -376,6 +407,9 @@ isOneToOne: false
 "crear_usuario_panel":
 { Args: { "p_asesor_id": string,"p_clave": string,"p_debe_cambiar"?: boolean,"p_usuario": string }; Returns: string
                            },
+"eliminar_actividad":
+{ Args: { "p_id": number }; Returns: undefined
+                           },
 "eliminar_asesor":
 { Args: { "p_id": string }; Returns: undefined
                            },
@@ -384,6 +418,9 @@ isOneToOne: false
                            },
 "email_de_usuario":
 { Args: { "p_usuario": string }; Returns: string
+                           },
+"enviar_avisos_pendientes":
+{ Args: Record<PropertyKey, never>; Returns: number
                            },
 "es_admin":
 { Args: Record<PropertyKey, never>; Returns: boolean
@@ -395,9 +432,12 @@ isOneToOne: false
 { Args: { "p_asesor_id": string,"p_permisos": (string)[],"p_superadmin"?: boolean }; Returns: undefined
                            },
 "importar_leads":
-{ Args: { "p_actividad_id"?: number,"p_asesor_id"?: string,"p_filas": Json,"p_origen"?: string }; Returns: {
+{ Args: { "p_actividad_id"?: number,"p_asesor_id"?: string,"p_aviso_diferido"?: boolean,"p_filas": Json,"p_origen"?: string,"p_repartir"?: boolean }; Returns: {
               "estado": string,"fila": number,"lead_id": string,"mensaje": string
             }[]
+                           },
+"lead_existente":
+{ Args: { "p_dni"?: string,"p_telefono"?: string }; Returns: Json
                            },
 "llamar_genesys":
 { Args: { "p_accion": string,"p_cuerpo"?: Json }; Returns: undefined

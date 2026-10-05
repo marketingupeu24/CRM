@@ -184,6 +184,16 @@ Se actualiza en vivo (Supabase Realtime).
   adjunto (bucket público `proformas` de Supabase Storage) y el mensaje de costos; queda en el historial y
   en la tabla `proformas`. El DNI de EXPLORE se verifica en el servidor (`panel/src/lib/explore.ts`). Para
   cambiar precios, edita `packages/db/src/costos.ts` y corre `deno test -A supabase/functions/tests/`.
+- **Registro rápido de fichas** (Registrar lead → *Un alumno*): se queda en la pantalla, guarda con Enter
+  (~1 s por ficha), limpia y vuelve al nombre. "Datos de la tanda" (actividad, colegio, grado, origen,
+  asignación, convocatoria) se conservan entre fichas. Avisa al instante si el celular o DNI ya existe
+  (`lead_existente`), pasa nombres en mayúsculas a formato normal y muestra la lista de la tanda. DNI
+  opcional. Los asesores reciben un resumen cada 3 minutos (`avisos_pendientes` + cron
+  `crm-avisos-fichas`) en vez de un WhatsApp por ficha.
+- **Asignación al registrar**: por defecto, a nombre de quien registra. "Repartir por igual entre los
+  asesores" solo con el módulo **Repartir leads entre asesores** (lo da el super admin); elegir un asesor
+  en particular, con **Asignar**.
+- **Eliminar actividades**: solo el super admin y solo si nadie se registró (`eliminar_actividad`).
 - **Registrar varios alumnos** (Registrar lead → pestaña *Varios alumnos*): planilla para escribir fila por
   fila, pegar celdas desde Excel/Google Sheets o subir un CSV (con plantilla). Opcionalmente se asocian a
   una actividad (fichas en papel de una feria). Por defecto se **reparten por igual** entre los asesores

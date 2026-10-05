@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useActionState, useEffect, useState, useTransition } from 'react'
 import QRCode from 'qrcode'
-import { cambiarActiva, guardarActividad, guardarWhatsappGenesys, type Resultado } from './acciones'
+import { cambiarActiva, eliminarActividad, guardarActividad, guardarWhatsappGenesys, type Resultado } from './acciones'
 
 export interface Actividad {
   id: number
@@ -22,6 +22,8 @@ export interface Actividad {
   contactados: number
   matriculados: number
   editable: boolean
+  /** Super admin y sin registrados */
+  eliminable: boolean
 }
 
 export const TIPOS: Record<string, string> = { feria: 'Feria', colegio: 'Visita a colegio', charla: 'Charla', otro: 'Otro' }
@@ -173,6 +175,14 @@ export function TarjetaActividad({ actividad, base, asesores }: { actividad: Act
               <button disabled={pendiente} onClick={() => iniciar(async () => setR(await cambiarActiva(actividad.id, !actividad.activa)))} className="text-slate-500 hover:underline">
                 {actividad.activa ? 'Cerrar formulario' : 'Volver a abrir'}
               </button>
+              {actividad.eliminable && (
+                <button
+                  disabled={pendiente} className="text-rose-600 hover:underline"
+                  onClick={() => { if (confirm(`¿Eliminar la actividad "${actividad.nombre}"? Su QR dejará de funcionar.`)) iniciar(async () => setR(await eliminarActividad(actividad.id))) }}
+                >
+                  Eliminar
+                </button>
+              )}
             </div>
           )}
           <Mensaje r={r} />
