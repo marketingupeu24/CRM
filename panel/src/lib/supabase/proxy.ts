@@ -3,7 +3,8 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import type { Database } from '@crm/db'
 
-const RUTAS_PUBLICAS = ['/login']
+// /r/<codigo>: formulario del QR de ferias y colegios (lo llenan los alumnos, sin sesión)
+const RUTAS_PUBLICAS = ['/login', '/r/']
 
 export async function actualizarSesion(request: NextRequest) {
   let respuesta = NextResponse.next({ request })

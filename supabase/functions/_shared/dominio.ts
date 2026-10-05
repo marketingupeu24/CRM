@@ -26,7 +26,7 @@ export function botAtiendeLead(estado: string, botPausadoHasta?: string | null, 
 /** Estados en los que se avisa al asesor cuando el lead le escribe. */
 export const ESTADOS_AVISO_MENSAJE = ['lead_asignado', 'lead_contactado', 'lead_inscrito'] as const
 
-export const FUENTES = ['whatsapp_genesys', 'manual', 'google_form', 'web'] as const
+export const FUENTES = ['whatsapp_genesys', 'manual', 'google_form', 'web', 'actividad'] as const
 export type Fuente = (typeof FUENTES)[number]
 
 /**

@@ -28,6 +28,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
     asesor: parametro(sp.asesor),
     origen: parametro(sp.origen),
     campana: parametro(sp.campana),
+    actividad: /^\d+$/.test(parametro(sp.actividad)) ? parametro(sp.actividad) : '',
     desde: mes?.desde ?? parametro(sp.desde),
     hasta: mes?.hasta ?? parametro(sp.hasta),
   }
@@ -38,6 +39,9 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
   const { data: campanas } = await supabase.from('campanas').select('id, nombre, origen, inicio, fin, activa')
     .order('inicio', { ascending: false })
   const campana = (campanas ?? []).find((c) => String(c.id) === filtros.campana)
+  const { data: actividad } = filtros.actividad
+    ? await supabase.from('actividades').select('id, nombre, lugar').eq('id', Number(filtros.actividad)).maybeSingle()
+    : { data: null }
 
   let consulta = supabase
     .from('leads')
@@ -56,6 +60,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
   else if (esAdmin && filtros.asesor) consulta = consulta.eq('asesor_id', filtros.asesor)
   if (filtros.origen === 'Sin dato') consulta = consulta.is('origen_campana', null)
   else if (filtros.origen) consulta = consulta.eq('origen_campana', filtros.origen)
+  if (filtros.actividad) consulta = consulta.eq('actividad_id', Number(filtros.actividad))
   // Campaña: sus fechas y, si tiene, su origen
   if (campana) {
     consulta = consulta.gte('created_at', `${campana.inicio}T00:00:00-05:00`).lte('created_at', `${campana.fin}T23:59:59.999-05:00`)
@@ -154,6 +159,13 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
           <p className="rounded-lg bg-marca-50 px-3 py-2 text-sm text-marca-700 sm:col-span-2 lg:col-span-4">
             Campaña <strong>{campana.nombre}</strong>: leads registrados del {fechaCorta(campana.inicio)} al {fechaCorta(campana.fin)}
             {campana.origen ? <> que nos conocieron por <strong>{campana.origen}</strong></> : null}.
+          </p>
+        )}
+        {actividad && (
+          <p className="flex flex-wrap items-center gap-2 rounded-lg bg-dorado-50 px-3 py-2 text-sm text-dorado-700 sm:col-span-2 lg:col-span-4">
+            <input type="hidden" name="actividad" value={actividad.id} />
+            Registrados con el QR de <strong>{actividad.nombre}</strong>{actividad.lugar ? ` (${actividad.lugar})` : ''}.
+            <Link href="/leads" className="font-medium underline">Quitar</Link>
           </p>
         )}
         <input name="q" defaultValue={filtros.q} placeholder="Buscar nombre, celular o DNI" className="campo sm:col-span-2" />

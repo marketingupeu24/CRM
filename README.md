@@ -184,6 +184,16 @@ Se actualiza en vivo (Supabase Realtime).
   adjunto (bucket público `proformas` de Supabase Storage) y el mensaje de costos; queda en el historial y
   en la tabla `proformas`. El DNI de EXPLORE se verifica en el servidor (`panel/src/lib/explore.ts`). Para
   cambiar precios, edita `packages/db/src/costos.ts` y corre `deno test -A supabase/functions/tests/`.
+- **Proforma directa desde el chat**: botón **💰 Proforma** junto al cuadro de mensaje de cada lead. Se elige
+  carrera, beneficio y forma de pago, y se envía al instante con la imagen (o PDF) sin salir de la
+  conversación. Para descuentos institucionales, EXPLORE u otro campus está "Más opciones" (página Proformas).
+- **Actividades y QR** (ferias, visitas a colegios, charlas): se crea la actividad con su nombre, lugar,
+  fecha y a quién se asignan los registros (responsable o rotación). Cada una tiene **QR descargable**
+  (imagen con logo y nombre) y **cartel A4** para imprimir. El alumno escanea y llena el formulario público
+  `/r/<código>` desde su celular (nombre, celular, DNI, colegio, grado, carrera y consentimiento), sin
+  iniciar sesión. El registro pasa por `registrar_lead_actividad()`: sin duplicados, asignación, aviso al
+  asesor y, si se marcó, saludo de bienvenida de Genesys por WhatsApp. En Leads se filtra por actividad
+  y el Excel incluye actividad, colegio y grado.
 - **Genesys (bot)**: *Base de conocimiento* (todos la leen; la edita quien tenga el módulo "Base de conocimiento y revisión") con las reglas de respuesta y los datos oficiales (carreras, costos, becas, fechas, CEPRE, horarios). El botón *Copiar texto para Genesys* arma el prompt para pegar en el asistente de BuilderBot; las secciones "Por completar" no se incluyen. *Revisión del bot* lista las respuestas en las que Genesys no supo contestar ("no tengo información", "malentendido"…) con la pregunta del lead, para agregar el dato y marcarlas como revisadas.
 - **Celulares de asesores**: siempre en la blacklist de BuilderBot y nunca se registran como leads (sus respuestas automáticas de WhatsApp a los avisos del CRM creaban leads falsos).
 - **Editar asesores y leads**: el admin cambia nombre y celular de los asesores (*Editar* en Asesores y

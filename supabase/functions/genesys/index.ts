@@ -117,6 +117,7 @@ const ENCABEZADO_POR_FUENTE: Record<Fuente, string> = {
   google_form: '*NUEVO FORMULARIO*',
   web: '*REGISTRO WEB*',
   manual: '*REGISTRO MANUAL*',
+  actividad: '*REGISTRO POR QR (FERIA / COLEGIO)*',
 }
 
 type TipoAviso = 'nuevo' | 'reenvio' | 'reconsulta' | 'reasignado' | 'asignado'
@@ -619,6 +620,18 @@ async function reasignar(): Promise<Respuesta> {
   return { ok: true, reasignados: cambios.length }
 }
 
+/** Saludo de Genesys al alumno que se registró con el QR de una feria o visita a colegio. */
+function mensajeBienvenida(lead: Lead, actividad: string | null, asesor: string | null): string {
+  const primerNombre = (lead.nombre ?? '').trim().split(/\s+/)[0]
+  const asesorNombre = asesor?.trim().split(/\s+/).slice(0, 2).join(' ')
+  return [
+    `¡Hola${primerNombre ? ' ' + primerNombre : ''}! 👋 Gracias por registrarte${actividad ? ` en *${actividad}*` : ''}.`,
+    'Soy Genesys, la asesora virtual de Admisión de la *Universidad Peruana Unión – campus Juliaca*.',
+    asesorNombre ? `Tu asesor(a) *${asesorNombre}* te escribirá pronto con toda la información.` : 'Un asesor te escribirá pronto con toda la información.',
+    'Si tienes alguna pregunta, escríbeme por aquí 😊',
+  ].join('\n')
+}
+
 /** Más leads que esto para un mismo asesor: un solo mensaje de resumen en vez de uno por lead. */
 const MAXIMO_AVISOS_DETALLADOS = 3
 
@@ -635,8 +648,9 @@ async function notificarAsignacion(cuerpo: Cuerpo): Promise<Respuesta> {
   const { data: leads, error } = await supabase.from('leads').select('*').in('id', ids)
   if (error) throw error
   const asesorIds = [...new Set((leads ?? []).map((l) => l.asesor_id).filter((id): id is string => !!id))]
-  const { data: asesores } = await supabase.from('asesores').select('id, telefono').in('id', asesorIds)
+  const { data: asesores } = await supabase.from('asesores').select('id, telefono, nombre').in('id', asesorIds)
   const telefonos = new Map((asesores ?? []).map((a) => [a.id, a.telefono]))
+  const nombres = new Map((asesores ?? []).map((a) => [a.id, a.nombre]))
 
   const porAsesor = new Map<string, Lead[]>()
   for (const l of leads ?? []) {
@@ -670,7 +684,19 @@ async function notificarAsignacion(cuerpo: Cuerpo): Promise<Respuesta> {
     if (envio.ok) avisados += suyos.length
     else console.error('[genesys] Error avisando asignación masiva:', envio.error)
   }
-  return { ok: true, avisados }
+  // Registro por QR en una actividad: Genesys saluda al alumno y deja abierta la conversación
+  let bienvenidas = 0
+  if (cuerpo.bienvenida === true) {
+    const actividad = typeof cuerpo.actividad === 'string' ? cuerpo.actividad : null
+    const deAsesores = await telefonosAsesores()
+    for (const lead of leads ?? []) {
+      if (!/^\d{10,15}$/.test(lead.telefono) || deAsesores.has(lead.telefono) || lead.eliminado_at) continue
+      const envio = await enviarWhatsApp(lead.telefono, mensajeBienvenida(lead, actividad, lead.asesor_id ? nombres.get(lead.asesor_id) ?? null : null))
+      if (envio.ok) bienvenidas++
+      else console.error('[genesys] No se pudo enviar la bienvenida:', envio.error)
+    }
+  }
+  return { ok: true, avisados, bienvenidas }
 }
 
 const ACCIONES: Record<string, (cuerpo: Cuerpo) => Promise<Respuesta> | Respuesta> = {

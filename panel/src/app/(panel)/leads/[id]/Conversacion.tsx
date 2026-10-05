@@ -26,10 +26,12 @@ interface Props {
   variables?: { nombre: string; carrera: string; asesor: string }
   /** Barra con el estado del bot y los botones Atendido / Matriculado */
   encabezado?: React.ReactNode
+  /** Acciones extra junto al cuadro de texto (p. ej. enviar la proforma) */
+  acciones?: React.ReactNode
 }
 
 export function Conversacion(
-  { leadId, telefono, inicial, miNombre, nombresAutores, encabezado, respuestas = [], variables }: Props,
+  { leadId, telefono, inicial, miNombre, nombresAutores, encabezado, acciones, respuestas = [], variables }: Props,
 ) {
   const [mensajes, setMensajes] = useState<MensajeChat[]>(inicial)
   const [texto, setTexto] = useState('')
@@ -256,6 +258,7 @@ export function Conversacion(
         >
           ⚡
         </button>
+        {acciones}
         <textarea
           value={texto}
           onChange={(e) => setTexto(e.target.value)}

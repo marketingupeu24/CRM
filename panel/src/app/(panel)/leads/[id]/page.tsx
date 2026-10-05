@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ETIQUETAS_FUENTE, type Fuente, type InteraccionTipo } from '@crm/db'
+import { carreraParecida, ETIQUETAS_FUENTE, type Fuente, type InteraccionTipo } from '@crm/db'
 import { InsigniaEstado } from '@/components/InsigniaEstado'
 import { fechaHora, haceCuanto } from '@/lib/formato'
 import { exigirPermiso } from '@/lib/sesion'
@@ -11,6 +11,7 @@ import { esDelChat } from '@/lib/chat'
 import { Conversacion, type MensajeChat } from './Conversacion'
 import { ControlesChat } from './ControlesChat'
 import { AccionesRapidas } from './AccionesRapidas'
+import { ProformaRapida } from './ProformaRapida'
 import { BotonesTarea, FormularioTarea } from '@/components/Tareas'
 
 export const metadata: Metadata = { title: 'Ficha del lead' }
@@ -49,7 +50,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
   const supabase = await crearClienteServidor()
 
   const [{ data: lead }, { data: historial }, { data: asesores }, { data: tareas }, { data: respuestas }] = await Promise.all([
-    supabase.from('leads').select('*, asesor:asesores!leads_asesor_id_fkey(id, nombre, telefono)').eq('id', id).maybeSingle(),
+    supabase.from('leads').select('*, asesor:asesores!leads_asesor_id_fkey(id, nombre, telefono), actividad:actividades(id, nombre)').eq('id', id).maybeSingle(),
     supabase.from('lead_interacciones')
       .select('*, autor:asesores!lead_interacciones_autor_id_fkey(nombre)')
       .eq('lead_id', id).order('created_at', { ascending: false }).limit(300),
@@ -79,6 +80,10 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
     ['Sede', lead.sede],
     ['Fuente', ETIQUETAS_FUENTE[lead.origen as Fuente] ?? lead.origen],
     ['Nos conoció por', lead.origen_campana],
+    ['Actividad (QR)', lead.actividad
+      ? <Link key="act" href={`/leads?actividad=${lead.actividad.id}`} className="text-marca-700 hover:underline">{lead.actividad.nombre}</Link>
+      : null],
+    ['Colegio', [lead.colegio, lead.grado].filter(Boolean).join(' · ') || null],
     ['Consulta', lead.resumen],
     ['Mensajes al bot', lead.total_mensajes],
     ['Primer contacto', fechaHora(lead.primer_contacto)],
@@ -107,6 +112,12 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
             leadId={lead.id} telefono={lead.telefono} inicial={chat}
             miNombre={perfil.nombre} nombresAutores={nombresAutores}
             respuestas={respuestas ?? []}
+            acciones={puede('costos') ? (
+              <ProformaRapida datos={{
+                leadId: lead.id, nombre: lead.nombre, dni: lead.dni, asesor: perfil.nombre,
+                carreraSugerida: carreraParecida(lead.carrera_interes ?? lead.modalidad, 'PRES', 'JUL'),
+              }} />
+            ) : undefined}
             variables={{
               nombre: (lead.nombre ?? '').split(' ')[0] ?? '',
               carrera: lead.carrera_interes ?? lead.modalidad ?? 'la carrera de tu interés',

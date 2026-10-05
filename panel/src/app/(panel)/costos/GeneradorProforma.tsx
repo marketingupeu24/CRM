@@ -7,8 +7,8 @@ import {
   textoWhatsApp, type BeneficioId, type CampusId, type ExtraId, type FormaPago, type InstId, type Modalidad,
 } from '@crm/db'
 import { HojaProforma } from '@/components/proforma/HojaProforma'
-import { crearClienteNavegador } from '@/lib/supabase/client'
-import { marcarEnviada, registrarProforma, verificarExplore } from './acciones'
+import { enviarProformaPorChat, generarArchivoProforma, type TipoAdjunto } from '@/lib/proforma-cliente'
+import { registrarProforma, verificarExplore } from './acciones'
 
 export interface LeadProforma {
   id: string
@@ -45,7 +45,7 @@ function Segmentos<T extends string>({ valor, opciones, alCambiar, deshabilitada
   )
 }
 
-type Adjunto = 'imagen' | 'pdf' | 'texto'
+type Adjunto = TipoAdjunto
 
 export function GeneradorProforma({ lead, asesor, carreraSugerida, emitidaIso, venceInicial }: Props) {
   const [modalidad, setModalidad] = useState<Modalidad>('PRES')
@@ -109,20 +109,7 @@ export function GeneradorProforma({ lead, asesor, carreraSugerida, emitidaIso, v
   const nombreArchivo = () => `Proforma_2027-1_${k.cp.corto}_${k.name}${k.contado ? '_contado' : ''}_${nombre || 'postulante'}`
     .normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9 _.-]+/g, '').replace(/\s+/g, '_').slice(0, 150)
 
-  async function generar(tipo: 'png' | 'pdf'): Promise<Blob> {
-    const { toCanvas } = await import('html-to-image')
-    const nodo = hoja.current!
-    await document.fonts?.ready
-    const lienzo = await toCanvas(nodo, { pixelRatio: 2.5, backgroundColor: '#ffffff', style: { transform: 'none', boxShadow: 'none' }, cacheBust: true })
-    if (tipo === 'png') return await new Promise<Blob>((r) => lienzo.toBlob((b) => r(b!), 'image/png'))
-    const { jsPDF } = await import('jspdf')
-    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true })
-    const W = 210, H = 297
-    let w = W, h = lienzo.height * W / lienzo.width
-    if (h > H) { w = W * H / h; h = H }
-    pdf.addImage(lienzo.toDataURL('image/jpeg', 0.93), 'JPEG', (W - w) / 2, 0, w, h)
-    return pdf.output('blob')
-  }
+  const generar = (tipo: 'png' | 'pdf') => generarArchivoProforma(hoja.current!, tipo)
 
   const datos = () => ({ opciones, nombre, dni, leadId: lead?.id ?? null, vence })
 
@@ -150,36 +137,9 @@ export function GeneradorProforma({ lead, asesor, carreraSugerida, emitidaIso, v
   /** Envía la proforma por el chat del CRM (WhatsApp de Genesys) con la imagen o el PDF adjunto. */
   function enviarPorChat() {
     if (!lead) return
-    setEstado({ texto: 'Preparando la proforma…' })
     iniciar(async () => {
-      const registro = await registrarProforma(datos())
-      if (registro.error || !registro.id) { setEstado({ texto: registro.error ?? 'No se pudo guardar la proforma.', tipo: 'error' }); return }
-      const supabase = crearClienteNavegador()
-      let url: string | null = null
-      if (adjunto !== 'texto') {
-        try {
-          setEstado({ texto: 'Subiendo el archivo…' })
-          const tipo = adjunto === 'pdf' ? 'pdf' : 'png'
-          const blob = await generar(tipo)
-          const ruta = `${lead.id}/${crypto.randomUUID()}.${tipo}`
-          const { error } = await supabase.storage.from('proformas').upload(ruta, blob, { contentType: tipo === 'pdf' ? 'application/pdf' : 'image/png' })
-          if (error) throw error
-          url = supabase.storage.from('proformas').getPublicUrl(ruta).data.publicUrl
-        } catch {
-          setEstado({ texto: 'No se pudo subir el archivo. Puedes enviar solo el texto.', tipo: 'error' }); return
-        }
-      }
-      setEstado({ texto: 'Enviando por WhatsApp…' })
-      const { data, error } = await supabase.functions.invoke('chat', { body: { lead_id: lead.id, texto: registro.texto, adjunto_url: url } })
-      if (error || !data?.ok) {
-        let detalle = data?.error as string | undefined
-        if (!detalle && error && 'context' in error) {
-          try { detalle = (await (error.context as Response).json()).error } catch { /* sin detalle */ }
-        }
-        setEstado({ texto: detalle ?? 'No se pudo enviar. Intenta de nuevo.', tipo: 'error' }); return
-      }
-      await marcarEnviada(registro.id, url, lead.id)
-      setEstado({ texto: `Proforma ${registro.numero} enviada por el chat.`, tipo: 'ok' })
+      const r = await enviarProformaPorChat({ leadId: lead.id, datos: datos(), nodo: hoja.current, adjunto, alEstado: (texto) => setEstado({ texto }) })
+      setEstado(r.ok ? { texto: `Proforma ${r.numero} enviada por el chat.`, tipo: 'ok' } : { texto: r.error, tipo: 'error' })
     })
   }
 

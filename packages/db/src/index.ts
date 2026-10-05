@@ -39,7 +39,7 @@ export function botAtiendeLead(estado: LeadEstado, botPausadoHasta?: string | nu
   return !botPausadoHasta || Date.parse(botPausadoHasta) <= ahora
 }
 
-export const FUENTES = ['whatsapp_genesys', 'manual', 'google_form', 'web'] as const
+export const FUENTES = ['whatsapp_genesys', 'manual', 'google_form', 'web', 'actividad'] as const
 export type Fuente = (typeof FUENTES)[number]
 
 export const ETIQUETAS_FUENTE: Record<Fuente, string> = {
@@ -47,6 +47,7 @@ export const ETIQUETAS_FUENTE: Record<Fuente, string> = {
   manual: 'Registro manual',
   google_form: 'Google Form',
   web: 'Formulario web',
+  actividad: 'QR de feria / colegio',
 }
 
 export const PROGRAMAS = { pregrado: 'Pregrado', cepre: 'CePre' } as const
@@ -75,6 +76,7 @@ export const MODULOS = [
   { clave: 'leads', grupo: 'Trabajo diario', titulo: 'Leads', descripcion: 'Lista de leads y ficha de cada lead', ruta: '/leads' },
   { clave: 'kanban', grupo: 'Trabajo diario', titulo: 'Kanban', descripcion: 'Tablero por estado', ruta: '/kanban' },
   { clave: 'registrar', grupo: 'Trabajo diario', titulo: 'Registrar lead', descripcion: 'Registrar leads a mano', ruta: '/leads/nuevo' },
+  { clave: 'actividades', grupo: 'Trabajo diario', titulo: 'Actividades y QR', descripcion: 'Crear ferias y visitas a colegios con QR de registro', ruta: '/actividades' },
   { clave: 'costos', grupo: 'Trabajo diario', titulo: 'Proformas de costos', descripcion: 'Calcular costos, descargar la proforma y enviarla por el chat', ruta: '/costos' },
   { clave: 'dashboard', grupo: 'Análisis', titulo: 'Dashboard', descripcion: 'Indicadores y gráficos', ruta: '/dashboard' },
   { clave: 'campanas', grupo: 'Análisis', titulo: 'Campañas', descripcion: 'Ver campañas y sus resultados', ruta: '/campanas' },
@@ -93,7 +95,7 @@ export type Modulo = (typeof MODULOS)[number]['clave']
 export const CLAVES_MODULOS: readonly Modulo[] = MODULOS.map((m) => m.clave)
 
 /** Lo que recibe un asesor nuevo (igual al valor por defecto de asesores.permisos). */
-export const PERMISOS_ASESOR: readonly Modulo[] = ['pendientes', 'chats', 'leads', 'kanban', 'registrar', 'costos', 'dashboard', 'campanas', 'exportar']
+export const PERMISOS_ASESOR: readonly Modulo[] = ['pendientes', 'chats', 'leads', 'kanban', 'registrar', 'costos', 'actividades', 'dashboard', 'campanas', 'exportar']
 
 /** Secciones de la base de conocimiento de Genesys (conocimiento.categoria), en orden. */
 export const CATEGORIAS_CONOCIMIENTO = {

@@ -35,6 +35,7 @@ export function Navegacion(
         { href: '/kanban', texto: 'Kanban', icono: '▦', modulo: 'kanban' },
         { href: '/leads/nuevo', texto: 'Registrar lead', icono: '+', modulo: 'registrar' },
         { href: '/costos' as Route, texto: 'Proformas', icono: '💰', modulo: 'costos' },
+        { href: '/actividades' as Route, texto: 'Actividades y QR', icono: '🎪', modulo: 'actividades' },
       ],
     },
     {
