@@ -394,6 +394,11 @@ isOneToOne: false
 "guardar_permisos":
 { Args: { "p_asesor_id": string,"p_permisos": (string)[],"p_superadmin"?: boolean }; Returns: undefined
                            },
+"importar_leads":
+{ Args: { "p_actividad_id"?: number,"p_asesor_id"?: string,"p_filas": Json,"p_origen"?: string }; Returns: {
+              "estado": string,"fila": number,"lead_id": string,"mensaje": string
+            }[]
+                           },
 "llamar_genesys":
 { Args: { "p_accion": string,"p_cuerpo"?: Json }; Returns: undefined
                            },

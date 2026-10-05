@@ -592,6 +592,37 @@ seccion('actividades con QR')
   await reset()
 }
 
+seccion('importar varios alumnos')
+{
+  await comoUsuario('admin@test.pe')
+  const llamadasAntes = (await uno(`select count(*)::int c from llamadas_genesys`)).c
+  const filas = Array.from({ length: 9 }, (_, i) => ({ nombre: `Importado Número ${i + 1}`, celular: `95870000${i + 1}`, colegio: 'IE Importación' }))
+  filas.push({ nombre: 'Sin Celular', celular: '12' }, { nombre: '', celular: '958700099' }, { nombre: 'Con Dni Malo', celular: '958700098', dni: '12' })
+  const res = await q(`select * from importar_leads($1::jsonb)`, [JSON.stringify(filas)])
+  ok(res.filter((r) => r.estado === 'nuevo').length === 9, 'importa 9 alumnos nuevos')
+  ok(res.filter((r) => r.estado === 'error').length === 3, 'marca como error las filas sin nombre, con celular o DNI no válidos (y sigue con el resto)')
+  await reset()
+  const reparto = await q(`select asesor_id, count(*)::int n from leads where telefono like '5195870000%' group by asesor_id`)
+  const ns = reparto.map((r) => r.n)
+  ok(reparto.length >= 3 && Math.max(...ns) - Math.min(...ns) <= 1, `se reparten por igual entre los asesores (${ns.join(' / ')})`)
+  ok((await uno(`select count(*)::int c from leads where telefono like '5195870000%' and colegio = 'IE Importación'`)).c === 9, 'guarda el colegio de cada alumno')
+  const nuevasLlamadas = await q(`select cuerpo from llamadas_genesys offset $1`, [llamadasAntes])
+  ok(nuevasLlamadas.length === 1 && nuevasLlamadas[0].cuerpo.lead_ids.length === 9, 'un solo aviso al final con todos los leads (no uno por fila)')
+  await comoUsuario('admin@test.pe')
+  const otraVez = await q(`select * from importar_leads($1::jsonb)`, [JSON.stringify(filas.slice(0, 3))])
+  ok(otraVez.every((r) => r.estado === 'actualizado'), 'si se importan de nuevo, se actualizan (sin duplicar)')
+  await reset()
+  ok((await uno(`select count(*)::int c from leads where telefono like '5195870000%'`)).c === 9, 'siguen siendo 9 leads')
+  const usrB = await asesor('General B')
+  const ajeno = (await uno(`select telefono from leads where telefono like '5195870000%' and asesor_id <> $1 limit 1`, [usrB.id])).telefono
+  await q(`update asesores set permisos = array_append(permisos, 'registrar') where id = $1 and not ('registrar' = any(permisos))`, [usrB.id])
+  await comoUsuario('b@test.pe')
+  const deB = await q(`select * from importar_leads($1::jsonb)`, [JSON.stringify([{ nombre: 'Alumno De Bruno', celular: '958711111' }, { nombre: 'Ya Es De Otro', celular: ajeno.slice(2) }])])
+  ok(deB[0].estado === 'nuevo' && deB[1].estado === 'omitido', 'un asesor importa para sí mismo y no toma leads de otros asesores')
+  await reset()
+  ok((await uno(`select asesor_id from leads where telefono = '51958711111'`)).asesor_id === usrB.id, 'lo importado por un asesor queda a su nombre')
+}
+
 seccion('anon')
 await db.exec(`reset role; set request.jwt.claim.sub = ''; set role anon`)
 await falla(`select * from tareas`, 'anon no puede ver tareas')

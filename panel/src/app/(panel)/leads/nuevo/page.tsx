@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { FormularioNuevoLead } from './FormularioNuevoLead'
+import { PestanasRegistro } from './PestanasRegistro'
 
 export const metadata: Metadata = { title: 'Registrar lead' }
 
@@ -27,6 +28,7 @@ export default async function PaginaNuevoLead() {
           Para prospectos que llegan por oficina, llamada o redes. Si el celular o DNI ya existe, no se duplica.
         </p>
       </div>
+      <PestanasRegistro actual="uno" />
       <FormularioNuevoLead
         esAdmin={esAdmin}
         asesores={asesores ?? []}

@@ -184,6 +184,12 @@ Se actualiza en vivo (Supabase Realtime).
   adjunto (bucket público `proformas` de Supabase Storage) y el mensaje de costos; queda en el historial y
   en la tabla `proformas`. El DNI de EXPLORE se verifica en el servidor (`panel/src/lib/explore.ts`). Para
   cambiar precios, edita `packages/db/src/costos.ts` y corre `deno test -A supabase/functions/tests/`.
+- **Registrar varios alumnos** (Registrar lead → pestaña *Varios alumnos*): planilla para escribir fila por
+  fila, pegar celdas desde Excel/Google Sheets o subir un CSV (con plantilla). Opcionalmente se asocian a
+  una actividad (fichas en papel de una feria). Por defecto se **reparten por igual** entre los asesores
+  (la rotación usa `clock_timestamp()` para que también sea pareja dentro de una importación). Cada fila
+  pasa por `importar_leads()`: sin duplicados (DNI o celular), resultado por alumno (nuevo, actualizado,
+  omitido, error), un solo aviso por asesor al final y ningún mensaje a los alumnos.
 - **Proforma directa desde el chat**: botón **💰 Proforma** junto al cuadro de mensaje de cada lead. Se elige
   carrera, beneficio y forma de pago, y se envía al instante con la imagen (o PDF) sin salir de la
   conversación. Para descuentos institucionales, EXPLORE u otro campus está "Más opciones" (página Proformas).
