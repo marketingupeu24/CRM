@@ -35,7 +35,7 @@ import {
   normalizarTelefono,
   valorResuelto,
 } from '../_shared/dominio.ts'
-import { cambiarBlacklist, enviarWhatsApp, problemasBuilderBot } from '../_shared/builderbot.ts'
+import { cambiarBlacklist, descargarArchivo, enviarWhatsApp, problemasBuilderBot } from '../_shared/builderbot.ts'
 
 // Runtime de Supabase Edge Functions: mantiene viva una tarea después de responder
 declare const EdgeRuntime: { waitUntil(promesa: Promise<unknown>): void }
@@ -576,6 +576,83 @@ function esAvisoParaAsesor(texto: string): boolean {
   return texto.includes(PANEL_URL) || texto.includes('*Celular:*') || texto.startsWith('*RECORDATORIO')
 }
 
+/** Archivo que el lead envió por WhatsApp (BuilderBot pone "_event_document__<id>" en el texto). */
+interface ArchivoEntrante {
+  texto: string
+  url: string | null
+  nombre: string
+  tipo: string
+}
+
+const EXTENSIONES: Record<string, string> = {
+  'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
+  'audio/ogg': 'ogg', 'audio/mpeg': 'mp3', 'audio/mp4': 'm4a', 'video/mp4': 'mp4',
+  'application/msword': 'doc', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.ms-excel': 'xls', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+}
+
+/** Traduce el código de BuilderBot a un texto legible para el chat (y para la vista previa y los avisos). */
+function archivoEntrante(cuerpo: Cuerpo, texto: string | null): ArchivoEntrante | null {
+  const evento = texto?.match(/^_event_([a-z_]+?)__/)?.[1]
+  if (!evento) return null
+  const data = ((cuerpo as { data?: Record<string, unknown> }).data ?? cuerpo) as Record<string, unknown>
+  const msg = (data.message ?? {}) as Record<string, Record<string, unknown> | undefined>
+  const url = typeof data.urlTempFile === 'string' ? data.urlTempFile : null
+  const cadena = (v: unknown) => (typeof v === 'string' ? v.trim() : '')
+  const doc = msg.documentMessage ?? msg.documentWithCaptionMessage
+  const imagen = msg.imageMessage
+  const video = msg.videoMessage
+  const audio = msg.audioMessage
+  const ubicacion = msg.locationMessage ?? msg.liveLocationMessage
+
+  if (evento === 'location' || ubicacion) {
+    const lat = Number(ubicacion?.degreesLatitude), lng = Number(ubicacion?.degreesLongitude)
+    const mapa = Number.isFinite(lat) && Number.isFinite(lng) ? `\nhttps://maps.google.com/?q=${lat},${lng}` : ''
+    return { texto: `📍 Ubicación${mapa}`, url: null, nombre: '', tipo: '' }
+  }
+  const conLeyenda = (titulo: string, leyenda: string) => (leyenda ? `${titulo}\n${leyenda}` : titulo)
+  if (evento === 'voice_note' || audio) {
+    return { texto: '🎤 Nota de voz', url, nombre: 'nota-de-voz', tipo: cadena(audio?.mimetype) || 'audio/ogg' }
+  }
+  if (doc) {
+    const nombre = cadena(doc.fileName) || cadena(doc.title) || 'documento'
+    return { texto: conLeyenda(`📎 Documento: ${nombre}`, cadena(doc.caption)), url, nombre, tipo: cadena(doc.mimetype) }
+  }
+  if (video) {
+    return { texto: conLeyenda('🎬 Video', cadena(video.caption)), url, nombre: 'video', tipo: cadena(video.mimetype) || 'video/mp4' }
+  }
+  if (evento === 'media' || imagen) {
+    return { texto: conLeyenda('🖼️ Imagen', cadena(imagen?.caption)), url, nombre: 'imagen', tipo: cadena(imagen?.mimetype) || 'image/jpeg' }
+  }
+  return { texto: '📎 Archivo', url, nombre: 'archivo', tipo: '' }
+}
+
+/** Copia el archivo al bucket privado "adjuntos" (BuilderBot lo borra en unos días) y lo une al mensaje. */
+async function guardarArchivo(leadId: string, archivo: ArchivoEntrante): Promise<void> {
+  if (!archivo.url) return
+  const descarga = await descargarArchivo(archivo.url, 16 * 1024 * 1024)
+  if (!descarga) {
+    console.warn('[genesys] No se pudo descargar el archivo del lead', leadId)
+    return
+  }
+  const tipo = archivo.tipo || descarga.tipo || 'application/octet-stream'
+  const base = archivo.nombre.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\.[a-z0-9]{1,5}$/i, '')
+    .replace(/[^a-zA-Z0-9-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'archivo'
+  const extension = archivo.nombre.match(/\.([a-z0-9]{1,5})$/i)?.[1]?.toLowerCase()
+    ?? EXTENSIONES[tipo.split(';')[0]] ?? archivo.url.match(/\.([a-z0-9]{1,5})(\?|$)/i)?.[1]?.toLowerCase() ?? 'bin'
+  const ruta = `${leadId}/${Date.now()}-${base}.${extension}`
+  const subida = await supabase.storage.from('adjuntos').upload(ruta, descarga.datos, { contentType: tipo.split(';')[0], upsert: false })
+  if (subida.error) {
+    console.error('[genesys] No se pudo guardar el archivo:', subida.error.message)
+    return
+  }
+  // El mensaje que acaba de guardar registrar_lead (último de este lead con ese texto)
+  const { data: mensaje } = await supabase.from('lead_interacciones').select('id')
+    .eq('lead_id', leadId).eq('tipo', 'mensaje_lead').eq('contenido', archivo.texto).is('adjunto_url', null)
+    .order('created_at', { ascending: false }).limit(1).maybeSingle()
+  if (mensaje) await supabase.from('lead_interacciones').update({ adjunto_url: `adjuntos/${ruta}` }).eq('id', mensaje.id)
+}
+
 async function evento(cuerpo: Cuerpo, registroId: number | null): Promise<Respuesta> {
   const marcar = (procesado: string) =>
     registroId ? supabase.from('webhook_eventos').update({ procesado }).eq('id', registroId) : Promise.resolve()
@@ -586,7 +663,7 @@ async function evento(cuerpo: Cuerpo, registroId: number | null): Promise<Respue
   const texto = valorResuelto(buscarCampo(cuerpo, ['body', 'message', 'text', 'content', 'mensaje', 'answer']))
   // Contacto con privacidad de WhatsApp: llega un identificador (@lid) en vez del número
   const jid = buscarCampo(cuerpo, ['remoteJid']) ?? ''
-  const esLid = jid.endsWith('@lid') && !!telefono && jid.replace(/D/g, '') === telefono
+  const esLid = jid.endsWith('@lid') && !!telefono && jid.replace(/\D/g, '') === telefono
 
   if (!telefono) { await marcar('sin teléfono'); return { ok: true, procesado: 'sin teléfono' } }
   if (saliente) {
@@ -603,8 +680,11 @@ async function evento(cuerpo: Cuerpo, registroId: number | null): Promise<Respue
     await marcar('saliente ignorado')
     return { ok: true, procesado: 'saliente ignorado' }
   }
-  const r = await registrar({ telefono, mensaje: texto ?? undefined, es_lid: esLid })
-  await marcar(texto ? 'mensaje del lead guardado' : 'contacto registrado (sin texto)')
+  // Documento, nota de voz, imagen o ubicación: texto legible y copia del archivo
+  const archivo = archivoEntrante(cuerpo, texto)
+  const r = await registrar({ telefono, mensaje: archivo?.texto ?? texto ?? undefined, es_lid: esLid })
+  if (archivo?.url && typeof r.lead_id === 'string') EdgeRuntime.waitUntil(guardarArchivo(r.lead_id, archivo))
+  await marcar(archivo ? `archivo del lead guardado (${archivo.texto.split('\n')[0]})` : texto ? 'mensaje del lead guardado' : 'contacto registrado (sin texto)')
   return { ok: true, procesado: 'mensaje_lead', bot_atiende: r.bot_atiende }
 }
 

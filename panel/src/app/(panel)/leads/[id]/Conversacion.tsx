@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { LeadInteraccion } from '@crm/db'
 import { esDelChat } from '@/lib/chat'
 import { crearClienteNavegador, prepararTiempoReal } from '@/lib/supabase/client'
+import { Adjunto } from './Adjunto'
 
 export type MensajeChat = LeadInteraccion & { autor_nombre?: string | null }
 
@@ -98,6 +99,15 @@ export function Conversacion(
           (payload) => {
             const m = payload.new as MensajeChat
             if (esDelChat(m)) agregar(m)
+          },
+        )
+        // El archivo que envió el lead se une al mensaje unos segundos después (lo copia Genesys)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'lead_interacciones', filter: `lead_id=eq.${leadId}` },
+          (payload) => {
+            const m = payload.new as MensajeChat
+            setMensajes((previos) => previos.map((p) => (p.id === m.id ? { ...p, adjunto_url: m.adjunto_url } : p)))
           },
         )
         .subscribe((estado, err) => {
@@ -203,16 +213,7 @@ export function Conversacion(
                 <p className="mb-0.5 text-[11px] font-semibold text-slate-500">
                   {propio ? nombreAutor(m) : bot ? 'Genesys (bot)' : 'Lead'}
                 </p>
-                {m.adjunto_url && (
-                  /\.pdf($|\?)/i.test(m.adjunto_url)
-                    ? <a href={m.adjunto_url} target="_blank" rel="noreferrer" className="mb-1.5 flex items-center gap-2 rounded-md bg-white/70 px-2 py-1.5 text-xs font-medium text-marca-700 hover:underline">📄 Proforma (PDF)</a>
-                    : (
-                      <a href={m.adjunto_url} target="_blank" rel="noreferrer" className="mb-1.5 block">
-                        {/* eslint-disable-next-line @next/next/no-img-element -- imagen del bucket público de proformas */}
-                        <img src={m.adjunto_url} alt="Proforma enviada" className="max-h-64 rounded-md border border-slate-200" loading="lazy" />
-                      </a>
-                    )
-                )}
+                {m.adjunto_url && <Adjunto ruta={m.adjunto_url} propio={propio} />}
                 <p className="break-words whitespace-pre-wrap text-slate-800">{m.contenido}</p>
                 <p className="mt-1 text-right text-[10px] text-slate-500">
                   {hora(m.created_at)}

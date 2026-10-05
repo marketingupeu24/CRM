@@ -66,3 +66,24 @@ export async function cambiarBlacklist(numero: string, agregar: boolean): Promis
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
   }
 }
+
+/**
+ * Descarga un archivo que un contacto envió por WhatsApp (urlTempFile del webhook).
+ * BuilderBot lo guarda solo unos días. Devuelve null si no existe o pasa del límite.
+ */
+export async function descargarArchivo(url: string, maximoBytes: number): Promise<{ datos: Uint8Array; tipo: string } | null> {
+  try {
+    const res = await fetch(url, {
+      headers: BUILDERBOT_API_KEY ? { 'x-api-builderbot': BUILDERBOT_API_KEY } : {},
+      signal: AbortSignal.timeout(30_000),
+    })
+    const tipo = (res.headers.get('content-type') ?? '').split(';')[0].trim()
+    // Si el archivo ya no existe, la API responde un JSON {"message":"File not found"}
+    if (!res.ok || tipo === 'application/json') return null
+    const datos = new Uint8Array(await res.arrayBuffer())
+    if (!datos.length || datos.length > maximoBytes) return null
+    return { datos, tipo }
+  } catch {
+    return null
+  }
+}
