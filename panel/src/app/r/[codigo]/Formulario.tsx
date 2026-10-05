@@ -10,11 +10,23 @@ export function FormularioRegistro({ codigo, carreras, colegio }: { codigo: stri
 
   if (r.ok) {
     return (
-      <div className="space-y-3 py-6 text-center">
+      <div className="space-y-4 py-4 text-center">
         <p className="text-5xl" aria-hidden>🎉</p>
         <h2 className="text-xl font-semibold text-slate-900">¡Listo{r.nombre ? `, ${r.nombre}` : ''}!</h2>
-        <p className="text-sm text-slate-600">Recibimos tus datos. En breve te escribiremos por WhatsApp desde el número de Admisión UPeU con la información que necesitas.</p>
-        <p className="text-xs text-slate-500">Ya puedes cerrar esta página.</p>
+        {r.enlaceWhatsApp ? (
+          <>
+            <p className="text-sm text-slate-600">
+              Último paso: toca el botón y <b>envía el mensaje</b>. Genesys, nuestra asesora virtual, te responde al instante con la información de <b>{r.tema}</b>.
+            </p>
+            <a href={r.enlaceWhatsApp} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-4 text-base font-bold text-white shadow-sm transition hover:brightness-105">
+              <svg viewBox="0 0 24 24" aria-hidden className="h-6 w-6 fill-current"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.4.6-.4.4c-.1.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.7-.1 1.3Z"/></svg>
+              Escríbenos por WhatsApp
+            </a>
+            <p className="text-xs text-slate-500">Se abrirá WhatsApp con tu mensaje ya escrito. Tu asesor(a) también te contactará.</p>
+          </>
+        ) : (
+          <p className="text-sm text-slate-600">Recibimos tus datos. Tu asesor(a) de admisión te contactará pronto con la información que necesitas.</p>
+        )}
       </div>
     )
   }
@@ -37,7 +49,7 @@ export function FormularioRegistro({ codigo, carreras, colegio }: { codigo: stri
       </label>
       <div className="grid grid-cols-2 gap-3">
         <label className="block text-sm font-medium text-slate-700">DNI
-          <input name="dni" inputMode="numeric" maxLength={12} placeholder="Opcional" className={campo} />
+          <input name="dni" inputMode="numeric" pattern="[0-9]{8}" maxLength={8} title="8 dígitos" placeholder="Opcional" className={campo} />
         </label>
         <label className="block text-sm font-medium text-slate-700">Grado
           <select name="grado" defaultValue="" className={campo}>

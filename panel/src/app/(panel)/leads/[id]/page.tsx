@@ -108,6 +108,12 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
+          {lead.origen === 'actividad' && !lead.ultimo_mensaje_lead_at && (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              Este alumno se registró con un QR y <b>aún no escribe al WhatsApp</b>. Para cuidar el número de Genesys, espera su mensaje
+              (el formulario le pidió escribirnos) o llámalo; si le escribes primero desde aquí, el bot inicia la conversación.
+            </p>
+          )}
           <Conversacion
             leadId={lead.id} telefono={lead.telefono} inicial={chat}
             miNombre={perfil.nombre} nombresAutores={nombresAutores}

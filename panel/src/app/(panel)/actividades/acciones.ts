@@ -3,7 +3,7 @@
 // Actividades con QR (ferias, visitas a colegios). El RLS limita quién crea y edita.
 import { revalidatePath } from 'next/cache'
 import { mensajeError } from '@/lib/formato'
-import { exigirPermiso } from '@/lib/sesion'
+import { exigirPermiso, exigirSuperadmin } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 
 export interface Resultado {
@@ -30,7 +30,6 @@ export async function guardarActividad(id: number | null, _previo: Resultado, fo
     lugar: texto('lugar').slice(0, 120) || null,
     fecha,
     asignacion: texto('asignacion') === 'rotacion' ? 'rotacion' : 'responsable',
-    bienvenida: formData.get('bienvenida') === 'on',
     responsable_id: responsable,
   }
   const supabase = await crearClienteServidor()
@@ -50,4 +49,17 @@ export async function cambiarActiva(id: number, activa: boolean): Promise<Result
   if (!data.length) return { error: 'Solo el responsable puede cambiar esta actividad.' }
   revalidatePath('/actividades')
   return { ok: activa ? 'Formulario abierto.' : 'Formulario cerrado: el QR ya no recibe registros.' }
+}
+
+/** Número de WhatsApp de Genesys: el botón del formulario del QR abre el chat con este número. */
+export async function guardarWhatsappGenesys(_previo: Resultado, formData: FormData): Promise<Resultado> {
+  await exigirSuperadmin()
+  let numero = String(formData.get('numero') ?? '').replace(/\D/g, '')
+  if (/^9\d{8}$/.test(numero)) numero = '51' + numero
+  if (numero && !/^\d{10,15}$/.test(numero)) return { error: 'Revisa el número (9 dígitos, o con código de país).' }
+  const supabase = await crearClienteServidor()
+  const { error } = await supabase.from('ajustes').update({ valor: numero || null, updated_at: new Date().toISOString() }).eq('clave', 'whatsapp_genesys')
+  if (error) return { error: mensajeError(error) }
+  revalidatePath('/actividades')
+  return { ok: numero ? `Guardado: +${numero}` : 'Número borrado.' }
 }

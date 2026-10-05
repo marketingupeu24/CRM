@@ -2,14 +2,14 @@ import type { Metadata } from 'next'
 import { exigirPermiso } from '@/lib/sesion'
 import { urlBase } from '@/lib/sitio'
 import { crearClienteServidor } from '@/lib/supabase/server'
-import { FormularioActividad, TarjetaActividad, type Actividad } from './Controles'
+import { AjusteWhatsapp, FormularioActividad, TarjetaActividad, type Actividad } from './Controles'
 
 export const metadata: Metadata = { title: 'Actividades y QR' }
 
 export default async function PaginaActividades() {
-  const { perfil, puede } = await exigirPermiso('actividades')
+  const { perfil, puede, superadmin } = await exigirPermiso('actividades')
   const supabase = await crearClienteServidor()
-  const [{ data, error }, { data: resumen }, { data: asesores }, base] = await Promise.all([
+  const [{ data, error }, { data: resumen }, { data: asesores }, base, { data: ajuste }] = await Promise.all([
     supabase.from('actividades')
       .select('id, codigo, nombre, tipo, lugar, fecha, activa, asignacion, bienvenida, responsable_id, responsable:asesores!actividades_responsable_id_fkey(nombre, rol, activo)')
       .order('activa', { ascending: false }).order('fecha', { ascending: false, nullsFirst: true }).order('id', { ascending: false }),
@@ -18,6 +18,7 @@ export default async function PaginaActividades() {
       ? supabase.from('asesores').select('id, nombre').eq('rol', 'asesor').eq('activo', true).is('eliminado_at', null).order('nombre')
       : Promise.resolve({ data: [] as { id: string; nombre: string }[] }),
     urlBase(),
+    supabase.from('ajustes').select('valor').eq('clave', 'whatsapp_genesys').maybeSingle(),
   ])
   const porActividad = new Map((resumen ?? []).map((r) => [r.actividad_id, r]))
   const actividades: Actividad[] = (data ?? []).map((a) => ({
@@ -40,6 +41,8 @@ export default async function PaginaActividades() {
           Cada registro entra como lead (sin duplicados), se asigna y el asesor recibe el aviso por WhatsApp.
         </p>
       </div>
+
+      <AjusteWhatsapp numero={ajuste?.valor ?? null} editable={superadmin} />
 
       <details className="tarjeta p-5" open={!actividades.length}>
         <summary className="cursor-pointer font-semibold">+ Nueva actividad</summary>

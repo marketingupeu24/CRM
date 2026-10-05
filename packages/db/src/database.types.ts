@@ -30,6 +30,19 @@ isOneToOne: false
       referencedColumns: ["asesor_id"]
     }
                   ]
+                },"ajustes": {
+                  Row: {
+                    "clave": string,"updated_at": string,"valor": string | null
+                  }
+                  Insert: {
+                    "clave": string,"updated_at"?: string,"valor"?: string | null
+                  }
+                  Update: {
+                    "clave"?: string,"updated_at"?: string,"valor"?: string | null
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"asesores": {
                   Row: {
                     "activo": boolean,"carreras": (string)[],"created_at": string,"eliminado_at": string | null,"email": string | null,"en_blacklist": boolean,"id": string,"nombre": string,"permisos": (string)[],"rol": Database["public"]['Enums']["asesor_rol"],"superadmin": boolean,"telefono": string | null,"ultimo_lead_asignado": string | null,"user_id": string | null,"usuario": string | null

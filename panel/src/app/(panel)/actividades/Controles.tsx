@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useActionState, useEffect, useState, useTransition } from 'react'
 import QRCode from 'qrcode'
-import { cambiarActiva, guardarActividad, type Resultado } from './acciones'
+import { cambiarActiva, guardarActividad, guardarWhatsappGenesys, type Resultado } from './acciones'
 
 export interface Actividad {
   id: number
@@ -70,10 +70,9 @@ export function FormularioActividad({ actividad, asesores, alGuardar }: {
           </select>
         </label>
       ) : <span />}
-      <label className="flex items-center gap-2 text-sm text-slate-600 sm:col-span-2 lg:col-span-4">
-        <input type="checkbox" name="bienvenida" defaultChecked={actividad?.bienvenida ?? true} className="h-4 w-4 accent-marca-600" />
-        Genesys envía un saludo por WhatsApp a cada alumno que se registra (deja abierta la conversación)
-      </label>
+      <p className="text-xs text-slate-500 sm:col-span-2 lg:col-span-4">
+        Al terminar el formulario, el alumno toca <b>“Escríbenos por WhatsApp”</b> y envía un mensaje ya escrito con su carrera: así él inicia la conversación y Genesys solo responde (sin riesgo de bloqueo del número).
+      </p>
       <div className="flex flex-wrap items-center gap-3 sm:col-span-2 lg:col-span-4">
         <button className="boton" disabled={guardando}>{guardando ? 'Guardando…' : actividad ? 'Guardar cambios' : 'Crear actividad y QR'}</button>
         <Mensaje r={r} />
@@ -181,5 +180,27 @@ export function TarjetaActividad({ actividad, base, asesores }: { actividad: Act
       </div>
       {editando && <div className="mt-4 border-t border-slate-100 pt-4"><FormularioActividad actividad={actividad} asesores={asesores} alGuardar={() => setEditando(false)} /></div>}
     </li>
+  )
+}
+
+/** Número de WhatsApp de Genesys (solo super admin lo cambia). */
+export function AjusteWhatsapp({ numero, editable }: { numero: string | null; editable: boolean }) {
+  const [r, accion, guardando] = useActionState<Resultado, FormData>(guardarWhatsappGenesys, {})
+  return (
+    <section className={`tarjeta p-5 ${numero ? '' : 'border-amber-300 bg-amber-50/60'}`}>
+      <h2 className="font-semibold">Número de WhatsApp de Genesys</h2>
+      <p className="mt-1 mb-3 text-sm text-slate-500">
+        {numero
+          ? <>El botón “Escríbenos por WhatsApp” del formulario abre el chat con <b>+{numero}</b>.</>
+          : <>Falta configurarlo: sin este número, el formulario no muestra el botón para que el alumno escriba primero.</>}
+      </p>
+      {editable && (
+        <form action={accion} className="flex flex-wrap items-center gap-2">
+          <input name="numero" defaultValue={numero ?? ''} inputMode="tel" placeholder="Número del WhatsApp de Genesys (ej. 951 234 567)" className="campo w-auto min-w-64" />
+          <button className="boton" disabled={guardando}>{guardando ? 'Guardando…' : 'Guardar'}</button>
+          <Mensaje r={r} />
+        </form>
+      )}
+    </section>
   )
 }
