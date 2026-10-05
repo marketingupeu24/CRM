@@ -176,6 +176,14 @@ Se actualiza en vivo (Supabase Realtime).
   se sigue guardando (la papelera lo marca "Volvió a escribir") y sale de ella si se registra a mano otra
   vez. Un usuario en la papelera no puede entrar al panel; para enviarlo no debe tener leads abiertos, y al
   restaurarlo vuelve inactivo.
+- **Proformas de costos 2027-1** (menú *Proformas*, módulo "Proformas de costos"): misma lógica que
+  `costos/Proformas_Admision_2027-1.html` (tarifario por campus y modalidad, promoción 25 % / 15 %, becas,
+  descuentos institucionales en cascada, EXPLORE 2026, 5 % al contado), ahora en `packages/db/src/costos.ts`
+  y verificada contra el HTML original en 1.406 combinaciones. Vista previa en vivo, descarga en PDF o
+  imagen y, desde la ficha del lead (botón **💰 Proforma**), **envío por el chat** con la imagen o el PDF
+  adjunto (bucket público `proformas` de Supabase Storage) y el mensaje de costos; queda en el historial y
+  en la tabla `proformas`. El DNI de EXPLORE se verifica en el servidor (`panel/src/lib/explore.ts`). Para
+  cambiar precios, edita `packages/db/src/costos.ts` y corre `deno test -A supabase/functions/tests/`.
 - **Genesys (bot)**: *Base de conocimiento* (todos la leen; la edita quien tenga el módulo "Base de conocimiento y revisión") con las reglas de respuesta y los datos oficiales (carreras, costos, becas, fechas, CEPRE, horarios). El botón *Copiar texto para Genesys* arma el prompt para pegar en el asistente de BuilderBot; las secciones "Por completar" no se incluyen. *Revisión del bot* lista las respuestas en las que Genesys no supo contestar ("no tengo información", "malentendido"…) con la pregunta del lead, para agregar el dato y marcarlas como revisadas.
 - **Celulares de asesores**: siempre en la blacklist de BuilderBot y nunca se registran como leads (sus respuestas automáticas de WhatsApp a los avisos del CRM creaban leads falsos).
 - **Editar asesores y leads**: el admin cambia nombre y celular de los asesores (*Editar* en Asesores y

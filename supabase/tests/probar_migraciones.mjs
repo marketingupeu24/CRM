@@ -524,6 +524,24 @@ seccion('base de conocimiento y revisión del bot')
   await reset()
 }
 
+seccion('proformas')
+{
+  const gaP = await asesor('General A')
+  ok((await uno(`select 'costos' = any (permisos) c from asesores where id = $1`, [gaP.id])).c, 'los asesores reciben el módulo Proformas')
+  const lid = null
+  const idB = (await asesor('General B')).id
+  await comoUsuario('a@test.pe')
+  const pf = await uno(`insert into proformas (numero, lead_id, carrera, campus, modalidad, beneficio, pago, total, inicial, cuota, cuotas)
+    values ('PF-JUL-1', $1, 'Enfermería', 'JUL', 'PRES', 'PROMO', 'cuotas', 4590, 1597.5, 997.5, 4) returning id, asesor_id`, [lid])
+  ok(pf.asesor_id === gaP.id, 'la proforma queda a nombre de quien la genera')
+  ok((await q(`select 1 from proformas where id = $1`, [pf.id])).length === 1, 'el asesor ve sus proformas')
+  await falla(`insert into proformas (numero, carrera, campus, modalidad, beneficio, pago, total, inicial, cuota, cuotas, asesor_id)
+    values ('x', 'x', 'JUL', 'PRES', 'PROMO', 'cuotas', 1, 1, 1, 1, '${idB}')`, 'no puede generar proformas a nombre de otro')
+  await comoUsuario('b@test.pe')
+  ok((await q(`select 1 from proformas where id = $1`, [pf.id])).length === 0, 'otro asesor no ve proformas ajenas')
+  await reset()
+}
+
 seccion('anon')
 await db.exec(`reset role; set request.jwt.claim.sub = ''; set role anon`)
 await falla(`select * from tareas`, 'anon no puede ver tareas')

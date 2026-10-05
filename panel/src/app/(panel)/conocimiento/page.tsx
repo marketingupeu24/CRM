@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { CATEGORIAS_CONOCIMIENTO, type CategoriaConocimiento } from '@crm/db'
+import { CATEGORIAS_CONOCIMIENTO, tarifarioTexto, type CategoriaConocimiento } from '@crm/db'
 import { fechaHora } from '@/lib/formato'
 import { textoParaGenesys } from '@/lib/genesys'
 import { obtenerSesion } from '@/lib/sesion'
@@ -66,6 +66,13 @@ export default async function PaginaConocimiento(props: PageProps<'/conocimiento
               </section>
             )
           })}
+          <section className="tarjeta p-5">
+            <h2 className="font-semibold">Tarifario 2027-1 · campus Juliaca</h2>
+            <p className="mt-1 mb-3 text-xs text-slate-500">
+              Se genera solo desde <Link href="/costos" className="font-medium text-marca-700 hover:underline">Proformas</Link> (el mismo cálculo) y siempre va en el texto para Genesys.
+            </p>
+            <pre className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs whitespace-pre-wrap text-slate-700">{tarifarioTexto('JUL')}</pre>
+          </section>
         </div>
 
         {editable && (

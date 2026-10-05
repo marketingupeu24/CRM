@@ -1,6 +1,7 @@
 'use client'
 
 // Barra de acciones rápidas de la ficha: contactar al lead y saltar a cada sección sin hacer scroll.
+import Link from 'next/link'
 import { useState } from 'react'
 
 function irA(id: string, enfocar?: string) {
@@ -9,7 +10,7 @@ function irA(id: string, enfocar?: string) {
   if (enfocar) setTimeout(() => seccion?.querySelector<HTMLElement>(enfocar)?.focus(), 350)
 }
 
-export function AccionesRapidas({ telefono }: { telefono: string }) {
+export function AccionesRapidas({ telefono, proformaHref }: { telefono: string; proformaHref?: string }) {
   const [copiado, setCopiado] = useState(false)
   const boton = 'inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-superficie px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-marca-600 hover:text-marca-700'
 
@@ -31,6 +32,7 @@ export function AccionesRapidas({ telefono }: { telefono: string }) {
       <button className={boton} onClick={() => irA('chat', 'textarea')}>✉ Responder</button>
       <button className={boton} onClick={() => irA('proxima-accion', 'input')}>📅 Agendar</button>
       <button className={boton} onClick={() => irA('nueva-nota', 'textarea')}>📝 Nota</button>
+      {proformaHref && <Link href={proformaHref as `/costos?${string}`} className={boton} title="Calcular costos y enviar la proforma por el chat">💰 Proforma</Link>}
     </div>
   )
 }

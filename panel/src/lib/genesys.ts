@@ -1,6 +1,6 @@
 // Arma el texto que se pega en el asistente de BuilderBot (prompt + base de conocimiento)
 // a partir de las secciones activas de la base de conocimiento del CRM.
-import { CATEGORIAS_CONOCIMIENTO, type CategoriaConocimiento } from '@crm/db'
+import { CATEGORIAS_CONOCIMIENTO, tarifarioTexto, type CategoriaConocimiento } from '@crm/db'
 
 export interface EntradaConocimiento {
   categoria: string
@@ -25,5 +25,7 @@ export function textoParaGenesys(entradas: EntradaConocimiento[], fecha: Date = 
       partes.push('', `### ${e.titulo}`, e.contenido.trim())
     }
   }
+  // Montos oficiales del primer ciclo, del mismo tarifario que usan las proformas
+  partes.push('', '## Tarifario 2027-1 (primer ciclo, referencial y sujeto a variación)', tarifarioTexto('JUL'))
   return partes.join('\n')
 }

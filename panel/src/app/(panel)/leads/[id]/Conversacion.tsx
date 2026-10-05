@@ -201,6 +201,16 @@ export function Conversacion(
                 <p className="mb-0.5 text-[11px] font-semibold text-slate-500">
                   {propio ? nombreAutor(m) : bot ? 'Genesys (bot)' : 'Lead'}
                 </p>
+                {m.adjunto_url && (
+                  /\.pdf($|\?)/i.test(m.adjunto_url)
+                    ? <a href={m.adjunto_url} target="_blank" rel="noreferrer" className="mb-1.5 flex items-center gap-2 rounded-md bg-white/70 px-2 py-1.5 text-xs font-medium text-marca-700 hover:underline">📄 Proforma (PDF)</a>
+                    : (
+                      <a href={m.adjunto_url} target="_blank" rel="noreferrer" className="mb-1.5 block">
+                        {/* eslint-disable-next-line @next/next/no-img-element -- imagen del bucket público de proformas */}
+                        <img src={m.adjunto_url} alt="Proforma enviada" className="max-h-64 rounded-md border border-slate-200" loading="lazy" />
+                      </a>
+                    )
+                )}
                 <p className="break-words whitespace-pre-wrap text-slate-800">{m.contenido}</p>
                 <p className="mt-1 text-right text-[10px] text-slate-500">
                   {hora(m.created_at)}

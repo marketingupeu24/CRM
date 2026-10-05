@@ -58,13 +58,13 @@ isOneToOne: false
                   ]
                 },"lead_interacciones": {
                   Row: {
-                    "autor_id": string | null,"contenido": string | null,"created_at": string,"error_envio": string | null,"estado_envio": string | null,"id": number,"lead_id": string,"tipo": Database["public"]['Enums']["interaccion_tipo"]
+                    "adjunto_url": string | null,"autor_id": string | null,"contenido": string | null,"created_at": string,"error_envio": string | null,"estado_envio": string | null,"id": number,"lead_id": string,"tipo": Database["public"]['Enums']["interaccion_tipo"]
                   }
                   Insert: {
-                    "autor_id"?: string | null,"contenido"?: string | null,"created_at"?: string,"error_envio"?: string | null,"estado_envio"?: string | null,"id"?: never,"lead_id": string,"tipo": Database["public"]['Enums']["interaccion_tipo"]
+                    "adjunto_url"?: string | null,"autor_id"?: string | null,"contenido"?: string | null,"created_at"?: string,"error_envio"?: string | null,"estado_envio"?: string | null,"id"?: never,"lead_id": string,"tipo": Database["public"]['Enums']["interaccion_tipo"]
                   }
                   Update: {
-                    "autor_id"?: string | null,"contenido"?: string | null,"created_at"?: string,"error_envio"?: string | null,"estado_envio"?: string | null,"id"?: never,"lead_id"?: string,"tipo"?: Database["public"]['Enums']["interaccion_tipo"]
+                    "adjunto_url"?: string | null,"autor_id"?: string | null,"contenido"?: string | null,"created_at"?: string,"error_envio"?: string | null,"estado_envio"?: string | null,"id"?: never,"lead_id"?: string,"tipo"?: Database["public"]['Enums']["interaccion_tipo"]
                   }
                   Relationships: [
                     {
@@ -122,6 +122,37 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "vista_leads_por_asesor"
       referencedColumns: ["asesor_id"]
+    }
+                  ]
+                },"proformas": {
+                  Row: {
+                    "ahorro": number,"archivo_url": string | null,"asesor_id": string | null,"beneficio": string,"campus": string,"carrera": string,"created_at": string,"cuota": number,"cuotas": number,"datos": NonNullable<Json>,"enviada_at": string | null,"id": number,"inicial": number,"lead_id": string | null,"modalidad": string,"numero": string,"pago": string,"total": number
+                  }
+                  Insert: {
+                    "ahorro"?: number,"archivo_url"?: string | null,"asesor_id"?: string | null,"beneficio": string,"campus": string,"carrera": string,"created_at"?: string,"cuota": number,"cuotas": number,"datos"?: NonNullable<Json>,"enviada_at"?: string | null,"id"?: never,"inicial": number,"lead_id"?: string | null,"modalidad": string,"numero": string,"pago": string,"total": number
+                  }
+                  Update: {
+                    "ahorro"?: number,"archivo_url"?: string | null,"asesor_id"?: string | null,"beneficio"?: string,"campus"?: string,"carrera"?: string,"created_at"?: string,"cuota"?: number,"cuotas"?: number,"datos"?: NonNullable<Json>,"enviada_at"?: string | null,"id"?: never,"inicial"?: number,"lead_id"?: string | null,"modalidad"?: string,"numero"?: string,"pago"?: string,"total"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "proformas_asesor_id_fkey"
+      columns: ["asesor_id"]
+isOneToOne: false
+      referencedRelation: "asesores"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "proformas_asesor_id_fkey"
+      columns: ["asesor_id"]
+isOneToOne: false
+      referencedRelation: "vista_leads_por_asesor"
+      referencedColumns: ["asesor_id"]
+    },{
+      foreignKeyName: "proformas_lead_id_fkey"
+      columns: ["lead_id"]
+isOneToOne: false
+      referencedRelation: "leads"
+      referencedColumns: ["id"]
     }
                   ]
                 },"respuestas_rapidas": {

@@ -22,8 +22,11 @@ export function problemasBuilderBot(): string[] {
   return problemas
 }
 
-/** Envía un WhatsApp (igual que enviarWhatsApp del Apps Script). La API a veces tarda: 45 s de espera. */
-export async function enviarWhatsApp(numero: string, texto: string): Promise<{ ok: boolean; error?: string }> {
+/**
+ * Envía un WhatsApp (igual que enviarWhatsApp del Apps Script). La API a veces tarda: 45 s de espera.
+ * mediaUrl: imagen o PDF público que se adjunta (BuilderBot lo descarga desde la URL).
+ */
+export async function enviarWhatsApp(numero: string, texto: string, mediaUrl?: string): Promise<{ ok: boolean; error?: string }> {
   if (!BUILDERBOT_URL || !BUILDERBOT_API_KEY) {
     return { ok: false, error: 'Faltan los secretos BUILDERBOT_URL o BUILDERBOT_API_KEY' }
   }
@@ -31,7 +34,7 @@ export async function enviarWhatsApp(numero: string, texto: string): Promise<{ o
     const res = await fetch(BUILDERBOT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-builderbot': BUILDERBOT_API_KEY },
-      body: JSON.stringify({ messages: { content: texto }, number: numero, checkIfExists: false }),
+      body: JSON.stringify({ messages: { content: texto, ...(mediaUrl ? { mediaUrl } : {}) }, number: numero, checkIfExists: false }),
       signal: AbortSignal.timeout(45_000),
     })
     if (res.ok) return { ok: true }

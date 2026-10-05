@@ -99,7 +99,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
         {puede('papelera') && <span className="ml-auto"><BotonPapelera leadId={lead.id} nombre={lead.nombre ?? lead.telefono} /></span>}
       </div>
 
-      <AccionesRapidas telefono={lead.telefono} />
+      <AccionesRapidas telefono={lead.telefono} proformaHref={puede('costos') ? `/costos?lead=${lead.id}` : undefined} />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">

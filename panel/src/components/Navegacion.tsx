@@ -34,6 +34,7 @@ export function Navegacion(
         { href: '/leads', texto: 'Leads', icono: '☰', modulo: 'leads' },
         { href: '/kanban', texto: 'Kanban', icono: '▦', modulo: 'kanban' },
         { href: '/leads/nuevo', texto: 'Registrar lead', icono: '+', modulo: 'registrar' },
+        { href: '/costos' as Route, texto: 'Proformas', icono: '💰', modulo: 'costos' },
       ],
     },
     {
