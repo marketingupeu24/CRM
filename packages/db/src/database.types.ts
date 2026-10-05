@@ -125,6 +125,25 @@ isOneToOne: false
       referencedColumns: ["asesor_id"]
     }
                   ]
+                },"lead_alias": {
+                  Row: {
+                    "alias": string,"created_at": string,"lead_id": string
+                  }
+                  Insert: {
+                    "alias": string,"created_at"?: string,"lead_id": string
+                  }
+                  Update: {
+                    "alias"?: string,"created_at"?: string,"lead_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "lead_alias_lead_id_fkey"
+      columns: ["lead_id"]
+isOneToOne: false
+      referencedRelation: "leads"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"lead_interacciones": {
                   Row: {
                     "adjunto_url": string | null,"autor_id": string | null,"contenido": string | null,"created_at": string,"error_envio": string | null,"estado_envio": string | null,"id": number,"lead_id": string,"tipo": Database["public"]['Enums']["interaccion_tipo"]
@@ -436,6 +455,9 @@ isOneToOne: false
               "estado": string,"fila": number,"lead_id": string,"mensaje": string
             }[]
                            },
+"lead_de_contacto":
+{ Args: { "p_contacto": string }; Returns: string
+                           },
 "lead_existente":
 { Args: { "p_dni"?: string,"p_telefono"?: string }; Returns: Json
                            },
@@ -466,7 +488,7 @@ isOneToOne: false
 { Args: { "p_horas"?: number,"p_maximo"?: number,"p_solo_horario"?: boolean }; Returns: Json
                            },
 "registrar_lead":
-{ Args: { "p_mensaje"?: string,"p_telefono": string }; Returns: {
+{ Args: { "p_es_lid"?: boolean,"p_mensaje"?: string,"p_telefono": string }; Returns: {
               "actividad_id": number | null,
 "asesor_id": string | null,
 "bot_pausado_hasta": string | null,

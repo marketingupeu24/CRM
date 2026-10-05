@@ -40,12 +40,13 @@ export async function registrarseEnActividad(codigo: string, _previo: ResultadoR
   // Los mensajes de la base ya están escritos para el alumno ("Escribe tu DNI (8 dígitos)", etc.)
   if (error) return { error: error.message || 'No pudimos registrarte. Intenta de nuevo.' }
 
-  const r = data as { actividad?: string; whatsapp?: string | null }
+  const r = data as { actividad?: string; whatsapp?: string | null; ref?: string }
   const nombre = texto('nombre').split(/\s+/)[0]
   const dni = texto('dni').replace(/\D/g, '')
   const tema = temaDeInteres(texto('carrera'))
-  // Con DNI, el mensaje lo incluye (une al alumno aunque escriba desde otro celular); sin DNI, lo identifica su celular
-  const mensaje = `Hola, soy ${nombre}${dni ? ` (DNI ${dni})` : ''}. Me registré en ${r.actividad ?? 'la feria de la UPeU'} y quiero información ${tema.startsWith('el ') ? 'del ' + tema.slice(3) : 'de ' + tema}.`
+  // Con DNI, el mensaje lo incluye (une al alumno aunque escriba desde otro celular); sin DNI, lo identifica su celular.
+  // "Ref." une el chat al registro cuando WhatsApp oculta el número del alumno (contactos con privacidad @lid).
+  const mensaje = `Hola, soy ${nombre}${dni ? ` (DNI ${dni})` : ''}. Me registré en ${r.actividad ?? 'la feria de la UPeU'} y quiero información ${tema.startsWith('el ') ? 'del ' + tema.slice(3) : 'de ' + tema}.${r.ref ? ` (Ref. ${r.ref})` : ''}`
   const numero = (r.whatsapp ?? '').replace(/\D/g, '')
   return {
     ok: true,

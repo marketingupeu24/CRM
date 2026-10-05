@@ -223,6 +223,7 @@ async function registrar(cuerpo: Cuerpo): Promise<Respuesta> {
   const { data, error } = await supabase.rpc('registrar_lead', {
     p_telefono: telefono,
     p_mensaje: mensaje ?? undefined,
+    p_es_lid: cuerpo.es_lid === true,
   })
   if (error) throw error
 
@@ -514,6 +515,11 @@ async function sincronizarBot(cuerpo: Cuerpo): Promise<Respuesta> {
     const debeSilenciar = USAR_BLACKLIST && pausaVigente
     if (debeSilenciar === lead.en_blacklist) continue
     const r = await cambiarBlacklist(lead.telefono, debeSilenciar)
+    // Sus alias (LID) también: es el mismo alumno escribiendo sin mostrar su número
+    if (r.ok) {
+      const { data: alias } = await supabase.from('lead_alias').select('alias').eq('lead_id', lead.id)
+      for (const a of alias ?? []) await cambiarBlacklist(a.alias, debeSilenciar)
+    }
     if (!r.ok) {
       errores++
       console.error(`[genesys] Blacklist ${debeSilenciar ? 'agregar' : 'quitar'} ${lead.telefono}:`, r.error)
@@ -578,14 +584,18 @@ async function evento(cuerpo: Cuerpo, registroId: number | null): Promise<Respue
   const saliente = /out|send|sent|bot/.test(tipo) || (cuerpo as { fromMe?: unknown }).fromMe === true
   const telefono = normalizarTelefono(buscarCampo(cuerpo, ['from', 'phone', 'number', 'remoteJid', 'telefono', 'to']))
   const texto = valorResuelto(buscarCampo(cuerpo, ['body', 'message', 'text', 'content', 'mensaje', 'answer']))
+  // Contacto con privacidad de WhatsApp: llega un identificador (@lid) en vez del número
+  const jid = buscarCampo(cuerpo, ['remoteJid']) ?? ''
+  const esLid = jid.endsWith('@lid') && !!telefono && jid.replace(/D/g, '') === telefono
 
   if (!telefono) { await marcar('sin teléfono'); return { ok: true, procesado: 'sin teléfono' } }
   if (saliente) {
     // Respuesta del bot: se guarda en la conversación (los mensajes del CRM ya están guardados)
     if (texto && !/^\*[^*\n]{1,40}:\* /.test(texto) && !esAvisoParaAsesor(texto)) {
-      const { data: lead } = await supabase.from('leads').select('id').eq('telefono', telefono).maybeSingle()
-      if (lead) {
-        await supabase.from('lead_interacciones').insert({ lead_id: lead.id, tipo: 'respuesta_bot', contenido: texto.slice(0, 4000) })
+      // Por celular o por alias (LID unido a un lead registrado)
+      const { data: leadId } = await supabase.rpc('lead_de_contacto', { p_contacto: telefono })
+      if (leadId) {
+        await supabase.from('lead_interacciones').insert({ lead_id: leadId, tipo: 'respuesta_bot', contenido: texto.slice(0, 4000) })
         await marcar('respuesta del bot guardada')
         return { ok: true, procesado: 'respuesta_bot' }
       }
@@ -593,7 +603,7 @@ async function evento(cuerpo: Cuerpo, registroId: number | null): Promise<Respue
     await marcar('saliente ignorado')
     return { ok: true, procesado: 'saliente ignorado' }
   }
-  const r = await registrar({ telefono, mensaje: texto ?? undefined })
+  const r = await registrar({ telefono, mensaje: texto ?? undefined, es_lid: esLid })
   await marcar(texto ? 'mensaje del lead guardado' : 'contacto registrado (sin texto)')
   return { ok: true, procesado: 'mensaje_lead', bot_atiende: r.bot_atiende }
 }

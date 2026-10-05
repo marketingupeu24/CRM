@@ -581,6 +581,27 @@ seccion('actividades con QR')
   await q(`select registrar_lead('51966600999', 'Hola, soy Rosa (DNI 71234567). Me registré en Feria Juliaca 2026 y quiero información del CEPRE')`)
   const unido = await uno(`select (select count(*)::int from leads where dni = '71234567') n, (select telefono from leads where dni = '71234567') tel, (select count(*)::int from leads where telefono = '51966600999') nuevos`)
   ok(unido.n === 1 && unido.tel === '51966600999' && unido.nuevos === 1, 'si escribe desde otro celular con su DNI, se une a su lead (sin duplicar)')
+  // WhatsApp oculta el número (@lid): la referencia del mensaje lo une a su registro sin tocar su celular
+  await db.exec(`set request.jwt.claim.sub = ''; set role anon`)
+  const conRef = (await uno(`select registrar_lead_actividad($1, 'Luis Condori Apaza', '955111333', null, null, null, 'Psicología') r`, [act.codigo])).r
+  await reset()
+  ok(/^[0-9a-f]{6}$/.test(conRef.ref ?? ''), 'el registro por QR devuelve la referencia para el mensaje')
+  await q(`select registrar_lead('103027675517051', $1, true)`, [`Hola, soy Luis. Me registré en Feria Juliaca 2026 y quiero información de Psicología. (Ref. ${conRef.ref})`])
+  await q(`select registrar_lead('103027675517051', 'y cuánto cuesta?', true)`)
+  const lid = await uno(`select l.telefono, (select count(*)::int from leads where telefono = '103027675517051') sueltos,
+    (select count(*)::int from lead_interacciones i where i.lead_id = l.id and i.tipo = 'mensaje_lead') msjs,
+    (select lead_de_contacto('103027675517051')) = l.id por_alias
+    from leads l where nombre = 'Luis Condori Apaza'`)
+  ok(lid.telefono === '51955111333' && lid.sueltos === 0 && lid.msjs === 2 && lid.por_alias, 'un LID con la referencia se une al lead del QR (conserva su celular, guarda el chat)')
+  // Ya había un lead sin datos de ese LID: se fusiona con el registrado al llegar la referencia
+  await db.exec(`set request.jwt.claim.sub = ''; set role anon`)
+  const otraRef = (await uno(`select registrar_lead_actividad($1, 'Ana Ticona Mamani', '955111444', null, null, null, null) r`, [act.codigo])).r
+  await reset()
+  await q(`select registrar_lead('64085240614950', 'hola', true)`)
+  await q(`select registrar_lead('64085240614950', $1, true)`, [`Hola, soy Ana. Me registré en Feria Juliaca 2026. (Ref. ${otraRef.ref})`])
+  const fus = await uno(`select (select count(*)::int from leads where telefono = '64085240614950') sueltos,
+    (select count(*)::int from lead_interacciones i join leads l on l.id = i.lead_id where l.nombre = 'Ana Ticona Mamani' and i.tipo = 'mensaje_lead') msjs`)
+  ok(fus.sueltos === 0 && fus.msjs === 2, 'el lead sin datos de un LID se fusiona con su registro del QR')
   await q(`update actividades set activa = false where id = $1`, [act.id])
   await db.exec(`set request.jwt.claim.sub = ''; set role anon`)
   await falla(`select registrar_lead_actividad('${act.codigo}', 'Otra Persona', '955111299', null, null, null, null)`, 'una actividad cerrada ya no recibe registros')
@@ -588,7 +609,7 @@ seccion('actividades con QR')
   await reset()
   await comoUsuario('a@test.pe')
   ok((await q(`update actividades set nombre = 'x' where id = $1 returning id`, [act.id])).length === 0, 'un asesor no edita actividades ajenas')
-  ok((await q(`select * from resumen_actividades() where actividad_id = $1`, [act.id]))[0].registrados === 2, 'resumen de registrados por actividad')
+  ok((await q(`select * from resumen_actividades() where actividad_id = $1`, [act.id]))[0].registrados === 4, 'resumen de registrados por actividad')
   await reset()
 }
 
