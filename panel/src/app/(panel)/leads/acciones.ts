@@ -86,19 +86,24 @@ export async function actualizarDatos(leadId: string, _previo: Resultado, formDa
   const dni = texto('dni')?.replace(/\D/g, '') || null
   if (dni && !/^\d{8,12}$/.test(dni)) return { error: 'El DNI debe tener entre 8 y 12 dígitos.' }
 
-  // El celular solo lo cambia el admin: es el número al que escribe el chat del CRM
-  const { puede } = await obtenerSesion()
+  // El celular (número al que escribe el chat del CRM) lo cambia quien tiene el módulo
+  // o el asesor que subió ese lead (por si se equivocó al registrarlo)
+  const { puede, perfil } = await obtenerSesion()
+  const supabase = await crearClienteServidor()
   let telefono: string | undefined
-  if (puede('editar_celular') && formData.has('telefono')) {
+  const { data: actual } = await supabase.from('leads').select('registrado_por').eq('id', leadId).maybeSingle()
+  if (!actual) return { error: 'No tienes acceso a este lead.' }
+  if ((puede('editar_celular') || actual.registrado_por === perfil.id) && formData.has('telefono')) {
     const digitos = String(formData.get('telefono') ?? '').replace(/\D/g, '')
     telefono = /^9\d{8}$/.test(digitos) ? `51${digitos}` : digitos
     if (!/^\d{9,15}$/.test(telefono)) return { error: 'Revisa el celular (9 dígitos, o con código de país).' }
   }
 
-  const supabase = await crearClienteServidor()
   const { error } = await supabase.from('leads').update({
     ...(telefono ? { telefono } : {}),
     nombre: texto('nombre'),
+    colegio: texto('colegio'),
+    grado: texto('grado'),
     dni,
     carrera_interes: texto('carrera_interes'),
     modalidad: texto('modalidad'),

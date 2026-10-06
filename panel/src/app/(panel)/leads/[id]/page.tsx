@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { carreraParecida, ETIQUETAS_FUENTE, type Fuente, type InteraccionTipo } from '@crm/db'
+import { carreraParecida, carreras, ETIQUETAS_FUENTE, type Fuente, type InteraccionTipo } from '@crm/db'
 import { InsigniaEstado } from '@/components/InsigniaEstado'
 import { fechaHora, haceCuanto } from '@/lib/formato'
 import { exigirPermiso } from '@/lib/sesion'
@@ -13,6 +13,9 @@ import { ControlesChat } from './ControlesChat'
 import { AccionesRapidas } from './AccionesRapidas'
 import { ProformaRapida } from './ProformaRapida'
 import { BotonesTarea, FormularioTarea } from '@/components/Tareas'
+
+/** Sugerencias de carrera al editar los datos (presencial, campus Juliaca) */
+const CARRERAS_EDITAR = [...new Set(carreras('PRES', 'JUL').map((c) => c[0]))]
 
 export const metadata: Metadata = { title: 'Ficha del lead' }
 
@@ -137,10 +140,10 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
             }
           />
 
-          <section className="tarjeta p-6">
-            <div className="mb-4 flex items-center justify-between">
+          <section id="datos" className="tarjeta scroll-mt-32 p-6">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-semibold">Datos del lead</h2>
-              <EditarDatos lead={lead} esAdmin={puede('editar_celular')} />
+              <EditarDatos lead={lead} puedeCelular={puede('editar_celular') || lead.registrado_por === perfil.id} carreras={CARRERAS_EDITAR} />
             </div>
             <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
               {datos.map(([etiqueta, valor]) => (

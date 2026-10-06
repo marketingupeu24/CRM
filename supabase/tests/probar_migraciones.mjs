@@ -741,7 +741,7 @@ seccion('QR personal del asesor (presencial)')
   const nuevo = (await uno(`select (registrar_lead('51933377701', $1)).id`, [`Hola 👋 Me atendió General C en Admisión UPeU y quiero más información. (Cód. A-${gc.codigo_qr})`])).id
   const r1 = (await uno(`select asignar_lead_qr_asesor($1, $2) r`, [nuevo, gc.codigo_qr])).r
   const l1 = await uno(`select asesor_id, registrado_por, estado from leads where id = $1`, [nuevo])
-  ok(r1.asignado && l1.asesor_id === gc.id && l1.registrado_por === gc.id && l1.estado === 'lead_asignado', 'al escribir con el QR queda asignado a ese asesor y es suyo')
+  ok(r1.asignado && l1.asesor_id === gc.id && l1.registrado_por === gc.id && l1.estado === 'lead_contactado', 'al escribir con el QR queda como lead de ese asesor, ya contactado (lo atiende en persona)')
   const r2 = (await uno(`select asignar_lead_qr_asesor($1, $2) r`, [nuevo, (await asesor('General A')).codigo_qr])).r
   ok(!r2.asignado && (await uno(`select asesor_id from leads where id = $1`, [nuevo])).asesor_id === gc.id, 'si ya tiene asesor, el QR de otro no lo cambia')
   ok(!(await uno(`select asignar_lead_qr_asesor($1, 'ZZZZZZ') r`, [nuevo])).r.asignado, 'un código desconocido no hace nada')

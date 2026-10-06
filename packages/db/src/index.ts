@@ -96,6 +96,9 @@ export const MODULOS = [
 export type Modulo = (typeof MODULOS)[number]['clave']
 export const CLAVES_MODULOS: readonly Modulo[] = MODULOS.map((m) => m.clave)
 
+/** Grado o situación escolar del interesado (fichas, formulario del QR y ficha del lead). */
+export const GRADOS = ['5.° de secundaria', '4.° de secundaria', '3.° de secundaria o menos', 'Ya terminé el colegio', 'Universitario / traslado', 'Otro'] as const
+
 /** Lo que recibe un asesor nuevo (igual al valor por defecto de asesores.permisos). */
 export const PERMISOS_ASESOR: readonly Modulo[] = ['pendientes', 'chats', 'leads', 'kanban', 'registrar', 'costos', 'actividades', 'qr_asesor', 'dashboard', 'campanas', 'exportar']
 

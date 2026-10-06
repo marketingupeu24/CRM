@@ -228,7 +228,10 @@ export function RegistroRapido({ carreras, actividades, asignacion, convocatoria
                   {r.leadId ? <Link href={`/leads/${r.leadId}`} className="block truncate font-medium text-marca-700 hover:underline">{r.nombre}</Link> : <span className="block truncate font-medium">{r.nombre}</span>}
                   <span className="block truncate text-xs text-slate-500">{r.hora} · {r.mensaje}</span>
                 </span>
-                <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${ESTILO[r.estado ?? 'error']}`}>{r.estado}</span>
+                <span className="flex shrink-0 items-center gap-2">
+                  {r.leadId && <Link href={`/leads/${r.leadId}#editar`} target="_blank" className="text-xs font-medium text-marca-700 hover:underline" title="Corregir los datos de esta ficha">✏️ Editar</Link>}
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${ESTILO[r.estado ?? 'error']}`}>{r.estado}</span>
+                </span>
               </li>
             ))}
           </ol>

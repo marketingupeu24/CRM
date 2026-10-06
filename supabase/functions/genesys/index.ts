@@ -217,7 +217,7 @@ async function telefonosAsesores(): Promise<Set<string>> {
 const CODIGO_QR_ASESOR = /c[oó]d\.?\s*a-([0-9a-f]{6})\b/i
 
 /**
- * El mensaje viene del QR personal de un asesor: el lead se le asigna (y es suyo), se avisa
+ * El mensaje viene del QR personal de un asesor (lo atiende en persona): el lead es suyo y queda contactado, se avisa
  * al asesor y Genesys confirma al interesado. Devuelve el lead actualizado si se asignó.
  */
 async function asignarPorQrAsesor(lead: Lead, mensaje: string, telefono: string): Promise<Lead | null> {
@@ -238,8 +238,8 @@ async function asignarPorQrAsesor(lead: Lead, mensaje: string, telefono: string)
   }
   // Respuesta a quien escribió primero (no es un mensaje en frío). El webhook de salientes la guarda en el chat.
   EdgeRuntime.waitUntil(enviarWhatsApp(telefono, [
-    '¡Gracias por escribirnos! 😊 Soy Genesys, de Admisión de la *Universidad Peruana Unión – campus Juliaca*.',
-    `${asesor ? `Tu asesor(a) *${asesor}*` : 'Tu asesor(a)'} te escribirá por aquí con toda la información.`,
+    '¡Listo, ya quedaste registrado(a)! 😊 Soy Genesys, de Admisión de la *Universidad Peruana Unión – campus Juliaca*.',
+    `${asesor ? `Tu asesor(a) *${asesor}*` : 'Tu asesor(a)'} te sigue atendiendo, y por este chat te enviaremos la información que necesites.`,
   ].join('\n')))
   return actualizado
 }

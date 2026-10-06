@@ -32,6 +32,7 @@ export function AccionesRapidas({ telefono, proformaHref }: { telefono: string; 
       <button className={boton} onClick={() => irA('chat', 'textarea')}>✉ Responder</button>
       <button className={boton} onClick={() => irA('proxima-accion', 'input')}>📅 Agendar</button>
       <button className={boton} onClick={() => irA('nueva-nota', 'textarea')}>📝 Nota</button>
+      <button className={boton} onClick={() => window.dispatchEvent(new Event('crm:editar-datos'))}>✏️ Editar datos</button>
       {proformaHref && <Link href={proformaHref as `/costos?${string}`} className={boton} title="Calcular costos y enviar la proforma por el chat">💰 Proforma</Link>}
     </div>
   )
