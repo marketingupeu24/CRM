@@ -220,7 +220,7 @@ const CODIGO_QR_ASESOR = /c[oó]d\.?\s*a-([0-9a-f]{6})\b/i
  * El mensaje viene del QR personal de un asesor (lo atiende en persona): el lead es suyo y queda contactado, se avisa
  * al asesor y Genesys confirma al interesado. Devuelve el lead actualizado si se asignó.
  */
-async function asignarPorQrAsesor(lead: Lead, mensaje: string, telefono: string): Promise<Lead | null> {
+async function asignarPorQrAsesor(lead: Lead, mensaje: string, telefono: string, esLid: boolean): Promise<Lead | null> {
   const codigo = mensaje.match(CODIGO_QR_ASESOR)?.[1]
   if (!codigo) return null
   const { data, error } = await supabase.rpc('asignar_lead_qr_asesor', { p_lead_id: lead.id, p_codigo: codigo })
@@ -237,7 +237,10 @@ async function asignarPorQrAsesor(lead: Lead, mensaje: string, telefono: string)
     EdgeRuntime.waitUntil(notificarAsesor(actualizado, r.asesor_telefono, 'manual', 'asignado', 'tu QR personal · presencial'))
   }
   // Respuesta a quien escribió primero (no es un mensaje en frío). El webhook de salientes la guarda en el chat.
-  EdgeRuntime.waitUntil(enviarWhatsApp(telefono, [
+  // A un identificador @lid no se envía por la API: no es un número y BuilderBot se queda esperando (504)
+  // (el flujo del bot no indica si es @lid: un número largo que no es de Perú se trata igual)
+  const pareceLid = esLid || (telefono.length >= 14 && !telefono.startsWith('51'))
+  if (!pareceLid) EdgeRuntime.waitUntil(enviarWhatsApp(telefono, [
     '¡Listo, ya quedaste registrado(a)! 😊 Soy Genesys, de Admisión de la *Universidad Peruana Unión – campus Juliaca*.',
     `${asesor ? `Tu asesor(a) *${asesor}*` : 'Tu asesor(a)'} te sigue atendiendo, y por este chat te enviaremos la información que necesites.`,
   ].join('\n')))
@@ -260,7 +263,7 @@ async function registrar(cuerpo: Cuerpo): Promise<Respuesta> {
 
   let lead = data
   // QR personal de un asesor (atención presencial): el lead es de ese asesor
-  const porQr = mensaje ? await asignarPorQrAsesor(lead, mensaje, telefono) : null
+  const porQr = mensaje ? await asignarPorQrAsesor(lead, mensaje, telefono, cuerpo.es_lid === true) : null
   if (porQr) lead = porQr
   if (lead.estado === 'lead_nuevo') {
     const actualizado = await supabase.from('leads').update({ estado: 'lead_en_conversacion' })
@@ -443,12 +446,14 @@ async function respuestaBot(cuerpo: Cuerpo): Promise<Respuesta> {
  * 1) Reintenta notificaciones pendientes o con error (máx. 3 intentos).
  * 2) Envía a cada asesor un resumen de sus leads asignados hace más de 12 h sin contactar.
  */
-async function recordatorios(): Promise<Respuesta> {
-  if (MODO !== 'activo') return { ok: true, omitido: 'En modo sombra los recordatorios los envía el Apps Script' }
+const SELECCION_CON_ASESOR = '*, asesor:asesores!leads_asesor_id_fkey(nombre, telefono)'
 
-  const seleccion = '*, asesor:asesores!leads_asesor_id_fkey(nombre, telefono)'
-
-  // 1) Reintentos de notificación
+/**
+ * Avisos al asesor que fallaron (p. ej. BuilderBot respondió "Bot endpoint timed out"):
+ * se reintentan cada 10 min (cron genesys-reintentar-avisos) hasta MAX_INTENTOS_NOTIFICACION.
+ */
+async function reintentarAvisos(): Promise<number> {
+  const seleccion = SELECCION_CON_ASESOR
   const pendientes = await supabase.from('leads').select(seleccion)
     .in('notificacion_estado', ['pendiente', 'error'])
     .lt('notificacion_intentos', MAX_INTENTOS_NOTIFICACION)
@@ -462,6 +467,20 @@ async function recordatorios(): Promise<Respuesta> {
     const fuente = (FUENTES as readonly string[]).includes(lead.origen) ? (lead.origen as Fuente) : 'whatsapp_genesys'
     if (await notificarAsesor(lead, lead.asesor.telefono, fuente, 'reenvio')) reenviadas++
   }
+  return reenviadas
+}
+
+async function reintentar(): Promise<Respuesta> {
+  if (MODO !== 'activo') return { ok: true, omitido: 'Solo en modo activo' }
+  return { ok: true, notificaciones_reenviadas: await reintentarAvisos() }
+}
+
+async function recordatorios(): Promise<Respuesta> {
+  if (MODO !== 'activo') return { ok: true, omitido: 'En modo sombra los recordatorios los envía el Apps Script' }
+  const seleccion = SELECCION_CON_ASESOR
+
+  // 1) Reintentos de notificación
+  const reenviadas = await reintentarAvisos()
 
   // 2) Resumen por asesor de leads sin contactar
   const sinContactar = await supabase.from('leads').select(seleccion)
@@ -832,6 +851,7 @@ const ACCIONES: Record<string, (cuerpo: Cuerpo) => Promise<Respuesta> | Respuest
   'recordatorios': recordatorios,
   'sincronizar-bot': sincronizarBot,
   'reasignar': reasignar,
+  'reintentar-avisos': reintentar,
   'notificar': notificarAsignacion,
   'ping': ping,
 }
