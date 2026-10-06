@@ -351,16 +351,16 @@ seccion('reasignación automática y origen del lead')
 await reset()
 const ra = await procesar({ p_telefono: '51944400001', p_nombre: 'Sin contactar', p_carrera: 'Derecho' })
 const rb = await procesar({ p_telefono: '51944400002', p_nombre: 'Contactado a tiempo', p_carrera: 'Derecho' })
-await q(`update leads set fecha_asignado = now() - interval '5 hours' where id in ($1, $2)`, [ra.lead_id, rb.lead_id])
+await q(`update leads set fecha_asignado = now() - interval '10 days' where id in ($1, $2)`, [ra.lead_id, rb.lead_id])
 await q(`insert into lead_interacciones (lead_id, tipo, contenido, autor_id, estado_envio) values ($1, 'mensaje_asesor', 'hola', $2, 'enviado')`, [rb.lead_id, rb.asesor_id])
 const cambios = (await uno(`select reasignar_sin_contacto(4, 2, false) r`)).r
 const lra = await uno(`select asesor_id, reasignaciones, fecha_asignado > now() - interval '1 minute' reciente from leads where id = $1`, [ra.lead_id])
 ok(cambios.some((c) => c.lead_id === ra.lead_id) && lra.asesor_id !== ra.asesor_id && lra.reasignaciones === 1 && lra.reciente, 'lead sin contactar en 4 h pasa a otro asesor (y reinicia su tiempo)')
 ok(!cambios.some((c) => c.lead_id === rb.lead_id), 'lead ya contactado no se reasigna')
 ok((await q(`select 1 from lead_interacciones where lead_id = $1 and contenido like 'Reasignado automáticamente%'`, [ra.lead_id])).length === 1, 'la reasignación queda en el historial')
-await q(`update leads set fecha_asignado = now() - interval '5 hours' where id = $1`, [ra.lead_id])
+await q(`update leads set fecha_asignado = now() - interval '10 days' where id = $1`, [ra.lead_id])
 await uno(`select reasignar_sin_contacto(4, 2, false) r`)
-await q(`update leads set fecha_asignado = now() - interval '5 hours' where id = $1`, [ra.lead_id])
+await q(`update leads set fecha_asignado = now() - interval '10 days' where id = $1`, [ra.lead_id])
 const tercera = (await uno(`select reasignar_sin_contacto(4, 2, false) r`)).r
 ok(!tercera.some((c) => c.lead_id === ra.lead_id) && (await uno(`select reasignaciones from leads where id = $1`, [ra.lead_id])).reasignaciones === 2, 'como máximo 2 reasignaciones por lead')
 await q(`update leads set origen_campana = 'TikTok' where id = $1`, [rb.lead_id])
@@ -683,7 +683,7 @@ seccion('repartir leads y eliminar actividades')
   await reset()
   ok((await uno(`select asesor_id from leads where telefono = '51957100099'`)).asesor_id === usrB.id, 'por defecto, a nombre de quien registra')
   // El lead que subió el asesor es suyo: la reasignación automática (4 h sin contacto) no se lo quita
-  await q(`update leads set fecha_asignado = now() - interval '6 hours', primer_contacto_asesor_at = null, estado = 'lead_asignado', reasignaciones = 0
+  await q(`update leads set fecha_asignado = now() - interval '10 days', primer_contacto_asesor_at = null, estado = 'lead_asignado', reasignaciones = 0
            where telefono in ('51957100099', '51957100101', '51957100102', '51957100103', '51957100104')`)
   await uno(`select reasignar_sin_contacto(4, 2, false) r`)
   const propio = await uno(`select asesor_id, registrado_por from leads where telefono = '51957100099'`)
@@ -793,6 +793,20 @@ seccion('QR personal del asesor (presencial)')
   await uno(`select registrar_lead_asesor($1, 'Mateo Quispe Ramos', '933377704') r`, [codigoA])
   await reset()
   ok((await uno(`select asesor_id from leads where id = $1`, [lf.id])).asesor_id === gb.id, 'si ya era lead de otro asesor, el formulario de otro no lo cambia')
+}
+
+seccion('horario de atención')
+{
+  const en = async (t) => (await uno(`select en_horario_atencion($1::timestamptz) r`, [t])).r
+  const prox = async (t) => new Date((await uno(`select proxima_atencion($1::timestamptz) r`, [t])).r).toISOString()
+  const horas = async (a, b) => Number((await uno(`select horas_habiles($1::timestamptz, $2::timestamptz) r`, [a, b])).r)
+  ok(await en('2026-10-06 10:00-05') && !(await en('2026-10-06 13:00-05')) && await en('2026-10-06 17:59-05'), 'lunes a jueves: 8:00–12:30 y 14:00–18:00')
+  ok(await en('2026-10-09 12:59-05') && !(await en('2026-10-09 13:00-05')), 'viernes: hasta la 1:00 p. m.')
+  ok(!(await en('2026-10-10 10:00-05')) && !(await en('2026-10-11 10:00-05')), 'sábado y domingo cerrado')
+  ok(await prox('2026-10-10 10:00-05') === new Date('2026-10-12T08:00:00-05:00').toISOString(), 'si escriben el sábado, la próxima atención es el lunes a las 8:00')
+  ok(await prox('2026-10-06 12:45-05') === new Date('2026-10-06T14:00:00-05:00').toISOString(), 'al mediodía, la próxima atención es a las 2:00 p. m.')
+  ok(await horas('2026-10-09 12:00-05', '2026-10-12 09:00-05') === 2, 'horas hábiles: viernes 12–13 + lunes 8–9 = 2 h (el fin de semana no cuenta)')
+  ok(await horas('2026-10-05 08:00-05', '2026-10-05 20:00-05') === 8.5, 'un día completo de lunes son 8,5 h hábiles')
 }
 
 seccion('anon')

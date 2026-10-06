@@ -88,3 +88,45 @@ export function normalizarOrigen(valor: unknown): string | null {
   ]
   return reglas.find(([re]) => re.test(t))?.[1] ?? texto.slice(0, 60)
 }
+
+// ---------------------------------------------------------------------
+// Horario de atención de los asesores (hora de Lima, UTC-5 todo el año).
+// Igual que public.franjas_atencion en la base de datos.
+// ---------------------------------------------------------------------
+export const HORARIO_ATENCION_TEXTO =
+  'de lunes a jueves de 8:00 a. m. a 12:30 p. m. y de 2:00 a 6:00 p. m., y los viernes de 8:00 a. m. a 1:00 p. m.'
+
+/** Franjas por día de la semana (1 = lunes … 7 = domingo), en minutos desde la medianoche. */
+const FRANJAS: Record<number, [number, number][]> = {
+  1: [[480, 750], [840, 1080]], 2: [[480, 750], [840, 1080]], 3: [[480, 750], [840, 1080]], 4: [[480, 750], [840, 1080]],
+  5: [[480, 780]], 6: [], 7: [],
+}
+const DESFASE_LIMA_MS = -5 * 3_600_000
+
+/** null si está en horario; si no, la próxima apertura. */
+export function proximaAtencion(ahora = new Date()): Date | null {
+  const local = new Date(ahora.getTime() + DESFASE_LIMA_MS) // "reloj" de Lima en campos UTC
+  const minutos = local.getUTCHours() * 60 + local.getUTCMinutes()
+  const diaSemana = (d: Date) => ((d.getUTCDay() + 6) % 7) + 1
+  if ((FRANJAS[diaSemana(local)] ?? []).some(([a, b]) => minutos >= a && minutos < b)) return null
+  for (let i = 0; i <= 8; i++) {
+    const dia = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate() + i))
+    for (const [a] of FRANJAS[diaSemana(dia)] ?? []) {
+      if (i === 0 && a <= minutos) continue
+      return new Date(dia.getTime() + a * 60_000 - DESFASE_LIMA_MS)
+    }
+  }
+  return null
+}
+
+/** "hoy a las 2:00 p. m.", "mañana a las 8:00 a. m.", "el lunes a las 8:00 a. m." */
+export function textoProximaAtencion(apertura: Date, ahora = new Date()): string {
+  const local = (d: Date) => new Date(d.getTime() + DESFASE_LIMA_MS)
+  const a = local(apertura), h = local(ahora)
+  const dias = Math.round((Date.UTC(a.getUTCFullYear(), a.getUTCMonth(), a.getUTCDate()) - Date.UTC(h.getUTCFullYear(), h.getUTCMonth(), h.getUTCDate())) / 86_400_000)
+  const hora24 = a.getUTCHours(), min = a.getUTCMinutes()
+  const hora = `${((hora24 + 11) % 12) + 1}:${String(min).padStart(2, '0')} ${hora24 < 12 ? 'a. m.' : 'p. m.'}`
+  const nombres = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
+  const cuando = dias === 0 ? 'hoy' : dias === 1 ? 'mañana' : `el ${nombres[a.getUTCDay()]}`
+  return `${cuando} a las ${hora}`
+}

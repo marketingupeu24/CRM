@@ -177,13 +177,13 @@ isOneToOne: false
                   ]
                 },"leads": {
                   Row: {
-                    "actividad_id": number | null,"asesor_id": string | null,"bot_pausado_hasta": string | null,"carrera_interes": string | null,"colegio": string | null,"convocatoria": string | null,"created_at": string,"dni": string | null,"duplicados_ignorados": number,"eliminado_at": string | null,"eliminado_por": string | null,"en_blacklist": boolean,"estado": Database["public"]['Enums']["lead_estado"],"fecha_asignado": string | null,"fecha_interesado": string | null,"fecha_notificacion": string | null,"fecha_postulacion": string | null,"grado": string | null,"id": string,"modalidad": string | null,"motivo_no_interes": string | null,"nombre": string | null,"notificacion_error": string | null,"notificacion_estado": string | null,"notificacion_intentos": number,"origen": string,"origen_campana": string | null,"primer_contacto": string,"primer_contacto_asesor_at": string | null,"programa": string,"reasignaciones": number,"reconsultas": number,"recordatorio_enviado": string | null,"registrado_por": string | null,"resumen": string | null,"sede": string | null,"sin_responder": boolean | null,"telefono": string,"total_mensajes": number,"ultima_respuesta_at": string | null,"ultimo_aviso_mensaje_at": string | null,"ultimo_contacto": string,"ultimo_mensaje_at": string | null,"ultimo_mensaje_lead_at": string | null,"ultimo_mensaje_texto": string | null,"ultimo_registro_at": string | null,"updated_at": string
+                    "actividad_id": number | null,"asesor_id": string | null,"aviso_horario_para": string | null,"bot_pausado_hasta": string | null,"carrera_interes": string | null,"colegio": string | null,"convocatoria": string | null,"created_at": string,"dni": string | null,"duplicados_ignorados": number,"eliminado_at": string | null,"eliminado_por": string | null,"en_blacklist": boolean,"estado": Database["public"]['Enums']["lead_estado"],"fecha_asignado": string | null,"fecha_interesado": string | null,"fecha_notificacion": string | null,"fecha_postulacion": string | null,"grado": string | null,"id": string,"modalidad": string | null,"motivo_no_interes": string | null,"nombre": string | null,"notificacion_error": string | null,"notificacion_estado": string | null,"notificacion_intentos": number,"origen": string,"origen_campana": string | null,"primer_contacto": string,"primer_contacto_asesor_at": string | null,"programa": string,"reasignaciones": number,"reconsultas": number,"recordatorio_enviado": string | null,"registrado_por": string | null,"resumen": string | null,"sede": string | null,"sin_responder": boolean | null,"telefono": string,"total_mensajes": number,"ultima_respuesta_at": string | null,"ultimo_aviso_mensaje_at": string | null,"ultimo_contacto": string,"ultimo_mensaje_at": string | null,"ultimo_mensaje_lead_at": string | null,"ultimo_mensaje_texto": string | null,"ultimo_registro_at": string | null,"updated_at": string
                   }
                   Insert: {
-                    "actividad_id"?: number | null,"asesor_id"?: string | null,"bot_pausado_hasta"?: string | null,"carrera_interes"?: string | null,"colegio"?: string | null,"convocatoria"?: string | null,"created_at"?: string,"dni"?: string | null,"duplicados_ignorados"?: number,"eliminado_at"?: string | null,"eliminado_por"?: string | null,"en_blacklist"?: boolean,"estado"?: Database["public"]['Enums']["lead_estado"],"fecha_asignado"?: string | null,"fecha_interesado"?: string | null,"fecha_notificacion"?: string | null,"fecha_postulacion"?: string | null,"grado"?: string | null,"id"?: string,"modalidad"?: string | null,"motivo_no_interes"?: string | null,"nombre"?: string | null,"notificacion_error"?: string | null,"notificacion_estado"?: string | null,"notificacion_intentos"?: number,"origen"?: string,"origen_campana"?: string | null,"primer_contacto"?: string,"primer_contacto_asesor_at"?: string | null,"programa"?: string,"reasignaciones"?: number,"reconsultas"?: number,"recordatorio_enviado"?: string | null,"registrado_por"?: string | null,"resumen"?: string | null,"sede"?: string | null,"sin_responder"?: never,"telefono": string,"total_mensajes"?: number,"ultima_respuesta_at"?: string | null,"ultimo_aviso_mensaje_at"?: string | null,"ultimo_contacto"?: string,"ultimo_mensaje_at"?: string | null,"ultimo_mensaje_lead_at"?: string | null,"ultimo_mensaje_texto"?: string | null,"ultimo_registro_at"?: string | null,"updated_at"?: string
+                    "actividad_id"?: number | null,"asesor_id"?: string | null,"aviso_horario_para"?: string | null,"bot_pausado_hasta"?: string | null,"carrera_interes"?: string | null,"colegio"?: string | null,"convocatoria"?: string | null,"created_at"?: string,"dni"?: string | null,"duplicados_ignorados"?: number,"eliminado_at"?: string | null,"eliminado_por"?: string | null,"en_blacklist"?: boolean,"estado"?: Database["public"]['Enums']["lead_estado"],"fecha_asignado"?: string | null,"fecha_interesado"?: string | null,"fecha_notificacion"?: string | null,"fecha_postulacion"?: string | null,"grado"?: string | null,"id"?: string,"modalidad"?: string | null,"motivo_no_interes"?: string | null,"nombre"?: string | null,"notificacion_error"?: string | null,"notificacion_estado"?: string | null,"notificacion_intentos"?: number,"origen"?: string,"origen_campana"?: string | null,"primer_contacto"?: string,"primer_contacto_asesor_at"?: string | null,"programa"?: string,"reasignaciones"?: number,"reconsultas"?: number,"recordatorio_enviado"?: string | null,"registrado_por"?: string | null,"resumen"?: string | null,"sede"?: string | null,"sin_responder"?: never,"telefono": string,"total_mensajes"?: number,"ultima_respuesta_at"?: string | null,"ultimo_aviso_mensaje_at"?: string | null,"ultimo_contacto"?: string,"ultimo_mensaje_at"?: string | null,"ultimo_mensaje_lead_at"?: string | null,"ultimo_mensaje_texto"?: string | null,"ultimo_registro_at"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "actividad_id"?: number | null,"asesor_id"?: string | null,"bot_pausado_hasta"?: string | null,"carrera_interes"?: string | null,"colegio"?: string | null,"convocatoria"?: string | null,"created_at"?: string,"dni"?: string | null,"duplicados_ignorados"?: number,"eliminado_at"?: string | null,"eliminado_por"?: string | null,"en_blacklist"?: boolean,"estado"?: Database["public"]['Enums']["lead_estado"],"fecha_asignado"?: string | null,"fecha_interesado"?: string | null,"fecha_notificacion"?: string | null,"fecha_postulacion"?: string | null,"grado"?: string | null,"id"?: string,"modalidad"?: string | null,"motivo_no_interes"?: string | null,"nombre"?: string | null,"notificacion_error"?: string | null,"notificacion_estado"?: string | null,"notificacion_intentos"?: number,"origen"?: string,"origen_campana"?: string | null,"primer_contacto"?: string,"primer_contacto_asesor_at"?: string | null,"programa"?: string,"reasignaciones"?: number,"reconsultas"?: number,"recordatorio_enviado"?: string | null,"registrado_por"?: string | null,"resumen"?: string | null,"sede"?: string | null,"sin_responder"?: never,"telefono"?: string,"total_mensajes"?: number,"ultima_respuesta_at"?: string | null,"ultimo_aviso_mensaje_at"?: string | null,"ultimo_contacto"?: string,"ultimo_mensaje_at"?: string | null,"ultimo_mensaje_lead_at"?: string | null,"ultimo_mensaje_texto"?: string | null,"ultimo_registro_at"?: string | null,"updated_at"?: string
+                    "actividad_id"?: number | null,"asesor_id"?: string | null,"aviso_horario_para"?: string | null,"bot_pausado_hasta"?: string | null,"carrera_interes"?: string | null,"colegio"?: string | null,"convocatoria"?: string | null,"created_at"?: string,"dni"?: string | null,"duplicados_ignorados"?: number,"eliminado_at"?: string | null,"eliminado_por"?: string | null,"en_blacklist"?: boolean,"estado"?: Database["public"]['Enums']["lead_estado"],"fecha_asignado"?: string | null,"fecha_interesado"?: string | null,"fecha_notificacion"?: string | null,"fecha_postulacion"?: string | null,"grado"?: string | null,"id"?: string,"modalidad"?: string | null,"motivo_no_interes"?: string | null,"nombre"?: string | null,"notificacion_error"?: string | null,"notificacion_estado"?: string | null,"notificacion_intentos"?: number,"origen"?: string,"origen_campana"?: string | null,"primer_contacto"?: string,"primer_contacto_asesor_at"?: string | null,"programa"?: string,"reasignaciones"?: number,"reconsultas"?: number,"recordatorio_enviado"?: string | null,"registrado_por"?: string | null,"resumen"?: string | null,"sede"?: string | null,"sin_responder"?: never,"telefono"?: string,"total_mensajes"?: number,"ultima_respuesta_at"?: string | null,"ultimo_aviso_mensaje_at"?: string | null,"ultimo_contacto"?: string,"ultimo_mensaje_at"?: string | null,"ultimo_mensaje_lead_at"?: string | null,"ultimo_mensaje_texto"?: string | null,"ultimo_registro_at"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -485,6 +485,9 @@ isOneToOne: false
 "email_de_usuario":
 { Args: { "p_usuario": string }; Returns: string
                            },
+"en_horario_atencion":
+{ Args: { "p_momento"?: string }; Returns: boolean
+                           },
 "enviar_avisos_pendientes":
 { Args: Record<PropertyKey, never>; Returns: number
                            },
@@ -494,8 +497,16 @@ isOneToOne: false
 "es_superadmin":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"franjas_atencion":
+{ Args: { "p_dia": string }; Returns: {
+              "fin": string,"inicio": string
+            }[]
+                           },
 "guardar_permisos":
 { Args: { "p_asesor_id": string,"p_permisos": (string)[],"p_superadmin"?: boolean }; Returns: undefined
+                           },
+"horas_habiles":
+{ Args: { "p_desde": string,"p_hasta"?: string }; Returns: number
                            },
 "importar_leads":
 { Args: { "p_actividad_id"?: number,"p_asesor_id"?: string,"p_aviso_diferido"?: boolean,"p_filas": Json,"p_origen"?: string,"p_repartir"?: boolean }; Returns: {
@@ -531,6 +542,9 @@ isOneToOne: false
 "procesar_lead":
 { Args: { "p_asesor_id"?: string,"p_asignar"?: boolean,"p_carrera"?: string,"p_consulta"?: string,"p_convocatoria"?: string,"p_dni"?: string,"p_modalidad"?: string,"p_nombre"?: string,"p_notificar"?: boolean,"p_origen"?: string,"p_programa"?: string,"p_telefono"?: string }; Returns: Json
                            },
+"proxima_atencion":
+{ Args: { "p_momento"?: string }; Returns: string
+                           },
 "puede_gestionar_usuario":
 { Args: { "p_asesor_id": string }; Returns: boolean
                            },
@@ -544,6 +558,7 @@ isOneToOne: false
 { Args: { "p_es_lid"?: boolean,"p_mensaje"?: string,"p_telefono": string }; Returns: {
               "actividad_id": number | null,
 "asesor_id": string | null,
+"aviso_horario_para": string | null,
 "bot_pausado_hasta": string | null,
 "carrera_interes": string | null,
 "colegio": string | null,
@@ -604,6 +619,9 @@ isOneToOne: false
                            },
 "registrar_lead_manual":
 { Args: { "p_asesor_id"?: string,"p_carrera"?: string,"p_convocatoria"?: string,"p_dni"?: string,"p_modalidad"?: string,"p_nombre": string,"p_observacion"?: string,"p_programa"?: string,"p_telefono"?: string }; Returns: Json
+                           },
+"reservar_aviso_horario":
+{ Args: { "p_lead_id": string }; Returns: string
                            },
 "restablecer_clave_usuario":
 { Args: { "p_asesor_id": string,"p_clave": string,"p_debe_cambiar"?: boolean }; Returns: undefined

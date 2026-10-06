@@ -31,8 +31,11 @@ import {
   elegir,
   type Fuente,
   FUENTES,
+  HORARIO_ATENCION_TEXTO,
   normalizarDni,
   normalizarTelefono,
+  proximaAtencion,
+  textoProximaAtencion,
   valorResuelto,
 } from '../_shared/dominio.ts'
 import { cambiarBlacklist, descargarArchivo, enviarWhatsApp, problemasBuilderBot } from '../_shared/builderbot.ts'
@@ -246,7 +249,7 @@ async function asignarPorQrAsesor(lead: Lead, mensaje: string, telefono: string,
   // Respuesta a quien escribió primero (no es un mensaje en frío). El webhook de salientes la guarda en el chat.
   // A un identificador @lid no se envía por la API: no es un número y BuilderBot se queda esperando (504)
   // (el flujo del bot no indica si es @lid: un número largo que no es de Perú se trata igual)
-  const pareceLid = esLid || (telefono.length >= 14 && !telefono.startsWith('51'))
+  const pareceLid = pareceIdentificadorLid(telefono, esLid)
   if (!pareceLid) EdgeRuntime.waitUntil(enviarWhatsApp(telefono, [
     `¡Listo${persona ? `, ${persona}` : ''}, ya quedaste registrado(a)! 😊 Soy Genesys, de Admisión de la *Universidad Peruana Unión – campus Juliaca*.`,
     `${asesor ? `Tu asesor(a) *${asesor}*` : 'Tu asesor(a)'} te sigue atendiendo, y por este chat te enviaremos la información que necesites.`,
@@ -281,15 +284,47 @@ async function registrar(cuerpo: Cuerpo): Promise<Respuesta> {
   // Recién asignado por QR: el asesor ya recibe el aviso de asignación (no uno de "nuevo mensaje")
   if (mensaje && !porQr) EdgeRuntime.waitUntil(avisarMensajeNuevo(lead, mensaje))
 
+  const botAtiende = botAtiendeLead(lead.estado, lead.bot_pausado_hasta)
+  const apertura = proximaAtencion()
+  // Fuera de horario y el bot no responde (lead de un asesor): se le dice cuándo le responderán
+  if (apertura && mensaje && !porQr && !botAtiende && lead.asesor_id && !pareceIdentificadorLid(telefono, cuerpo.es_lid === true)) {
+    EdgeRuntime.waitUntil(avisarFueraDeHorario(lead, telefono))
+  }
+
   return {
     ok: true,
     lead_id: lead.id,
     es_nuevo: lead.total_mensajes <= 1,
     estado: lead.estado,
     nombre: lead.nombre ?? '',
-    bot_atiende: botAtiendeLead(lead.estado, lead.bot_pausado_hasta),
+    bot_atiende: botAtiende,
     bot_pausado_hasta: lead.bot_pausado_hasta ?? '',
+    fuera_de_horario: !!apertura,
+    proxima_atencion: apertura ? textoProximaAtencion(apertura) : '',
   }
+}
+
+/** Un identificador @lid no es un número: la API de BuilderBot no debe enviarle mensajes (se queda esperando). */
+function pareceIdentificadorLid(telefono: string, esLid: boolean): boolean {
+  return esLid || (telefono.length >= 14 && !telefono.startsWith('51'))
+}
+
+/**
+ * Quien escribe fuera del horario de atención (y su asesor no puede responder ahora) recibe una sola
+ * vez por cierre el horario y cuándo le responderán. reservar_aviso_horario evita repetirlo.
+ */
+async function avisarFueraDeHorario(lead: Lead, telefono: string) {
+  const { data: apertura } = await supabase.rpc('reservar_aviso_horario', { p_lead_id: lead.id })
+  if (!apertura) return
+  const { data: asesor } = await supabase.from('asesores').select('nombre').eq('id', lead.asesor_id!).maybeSingle()
+  const nombreAsesor = asesor?.nombre?.trim().split(/\s+/)[0]
+  const primerNombre = (lead.nombre ?? '').trim().split(/\s+/)[0]
+  const texto = [
+    `¡Gracias por escribirnos${primerNombre ? ', ' + primerNombre : ''}! 😊 Nuestro horario de atención es ${HORARIO_ATENCION_TEXTO}`,
+    `${nombreAsesor ? `Tu asesor(a) *${nombreAsesor}*` : 'Tu asesor(a)'} te responderá ${textoProximaAtencion(new Date(apertura))}.`,
+  ].join('\n')
+  const envio = await enviarWhatsApp(telefono, texto)
+  if (!envio.ok) console.error('[genesys] No se pudo enviar el aviso de horario:', envio.error)
 }
 
 /**
@@ -321,6 +356,17 @@ async function registroRepetido(telefono: string | null, dni: string | null, nom
 
 /** Para el agente de IA de BuilderBot: el registro terminó, no debe repetirlo. */
 const INSTRUCCION_REGISTRADO = 'REGISTRO COMPLETADO. Confirma al alumno UNA sola vez y no vuelvas a llamar a esta herramienta en esta conversación.'
+
+/** Fuera de horario: lo que se agrega al mensaje y a la instrucción de Genesys tras registrar. */
+function notaHorario(): { cliente: string; instruccion: string } {
+  const apertura = proximaAtencion()
+  if (!apertura) return { cliente: '', instruccion: '' }
+  const cuando = textoProximaAtencion(apertura)
+  return {
+    cliente: ` Ahora estamos fuera del horario de atención (${HORARIO_ATENCION_TEXTO}): tu asesor(a) te escribirá ${cuando}.`,
+    instruccion: ` Estamos FUERA DEL HORARIO de atención: dile que su asesor(a) le escribirá ${cuando}.`,
+  }
+}
 
 async function webhook(cuerpo: Cuerpo): Promise<Respuesta> {
   const nombre = elegir(cuerpo.Nombres, cuerpo.nombres, cuerpo.Nombre, cuerpo.nombre, cuerpo.name)
@@ -441,9 +487,9 @@ async function webhook(cuerpo: Cuerpo): Promise<Respuesta> {
       lead_id: r.lead_id, notificacion_asesor: notificacion, bot_atiende: botAtiendeLead(r.estado), modo: MODO,
       enviar_mensaje_cliente: true,
       mensaje_cliente: r.asesor_nombre
-        ? `Recibimos tu nueva consulta. ${r.asesor_nombre} te escribirá pronto.`
-        : 'Recibimos tu nueva consulta. Un asesor se comunicará contigo pronto.',
-      instruccion_bot: INSTRUCCION_REGISTRADO,
+        ? `Recibimos tu nueva consulta. ${r.asesor_nombre} te escribirá pronto.${notaHorario().cliente}`
+        : `Recibimos tu nueva consulta. Un asesor se comunicará contigo pronto.${notaHorario().cliente}`,
+      instruccion_bot: INSTRUCCION_REGISTRADO + notaHorario().instruccion,
     }
   }
 
@@ -453,9 +499,9 @@ async function webhook(cuerpo: Cuerpo): Promise<Respuesta> {
     lead_id: r.lead_id, notificacion_asesor: notificacion, bot_atiende: botAtiendeLead(r.estado), modo: MODO,
     enviar_mensaje_cliente: true,
     mensaje_cliente: r.asesor_nombre
-      ? `Tu información fue registrada correctamente. Se te asignó a ${r.asesor_nombre}.`
-      : 'Tu información fue registrada correctamente. Un asesor se comunicará contigo pronto.',
-    instruccion_bot: INSTRUCCION_REGISTRADO,
+      ? `Tu información fue registrada correctamente. Se te asignó a ${r.asesor_nombre}.${notaHorario().cliente}`
+      : `Tu información fue registrada correctamente. Un asesor se comunicará contigo pronto.${notaHorario().cliente}`,
+    instruccion_bot: INSTRUCCION_REGISTRADO + notaHorario().instruccion,
   }
 }
 
