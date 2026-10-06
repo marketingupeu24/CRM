@@ -45,13 +45,13 @@ isOneToOne: false
                   ]
                 },"asesores": {
                   Row: {
-                    "activo": boolean,"carreras": (string)[],"created_at": string,"eliminado_at": string | null,"email": string | null,"en_blacklist": boolean,"id": string,"nombre": string,"permisos": (string)[],"rol": Database["public"]['Enums']["asesor_rol"],"superadmin": boolean,"telefono": string | null,"ultimo_lead_asignado": string | null,"user_id": string | null,"usuario": string | null
+                    "activo": boolean,"carreras": (string)[],"codigo_qr": string,"created_at": string,"eliminado_at": string | null,"email": string | null,"en_blacklist": boolean,"id": string,"nombre": string,"permisos": (string)[],"rol": Database["public"]['Enums']["asesor_rol"],"superadmin": boolean,"telefono": string | null,"ultimo_lead_asignado": string | null,"user_id": string | null,"usuario": string | null
                   }
                   Insert: {
-                    "activo"?: boolean,"carreras"?: (string)[],"created_at"?: string,"eliminado_at"?: string | null,"email"?: string | null,"en_blacklist"?: boolean,"id"?: string,"nombre": string,"permisos"?: (string)[],"rol"?: Database["public"]['Enums']["asesor_rol"],"superadmin"?: boolean,"telefono"?: string | null,"ultimo_lead_asignado"?: string | null,"user_id"?: string | null,"usuario"?: string | null
+                    "activo"?: boolean,"carreras"?: (string)[],"codigo_qr"?: string,"created_at"?: string,"eliminado_at"?: string | null,"email"?: string | null,"en_blacklist"?: boolean,"id"?: string,"nombre": string,"permisos"?: (string)[],"rol"?: Database["public"]['Enums']["asesor_rol"],"superadmin"?: boolean,"telefono"?: string | null,"ultimo_lead_asignado"?: string | null,"user_id"?: string | null,"usuario"?: string | null
                   }
                   Update: {
-                    "activo"?: boolean,"carreras"?: (string)[],"created_at"?: string,"eliminado_at"?: string | null,"email"?: string | null,"en_blacklist"?: boolean,"id"?: string,"nombre"?: string,"permisos"?: (string)[],"rol"?: Database["public"]['Enums']["asesor_rol"],"superadmin"?: boolean,"telefono"?: string | null,"ultimo_lead_asignado"?: string | null,"user_id"?: string | null,"usuario"?: string | null
+                    "activo"?: boolean,"carreras"?: (string)[],"codigo_qr"?: string,"created_at"?: string,"eliminado_at"?: string | null,"email"?: string | null,"en_blacklist"?: boolean,"id"?: string,"nombre"?: string,"permisos"?: (string)[],"rol"?: Database["public"]['Enums']["asesor_rol"],"superadmin"?: boolean,"telefono"?: string | null,"ultimo_lead_asignado"?: string | null,"user_id"?: string | null,"usuario"?: string | null
                   }
                   Relationships: [
                     
@@ -409,6 +409,7 @@ isOneToOne: false
 { Args: { "p_lead_id": string }; Returns: {
               "activo": boolean,
 "carreras": (string)[],
+"codigo_qr": string,
 "created_at": string,
 "eliminado_at": string | null,
 "email": string | null,
@@ -429,6 +430,9 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"asignar_lead_qr_asesor":
+{ Args: { "p_codigo": string,"p_lead_id": string }; Returns: Json
+                           },
 "borrar_asesor_definitivo":
 { Args: { "p_id": string }; Returns: undefined
                            },
@@ -495,6 +499,9 @@ isOneToOne: false
                            },
 "puede_gestionar_usuario":
 { Args: { "p_asesor_id": string }; Returns: boolean
+                           },
+"qr_asesor_publico":
+{ Args: { "p_codigo": string }; Returns: Json
                            },
 "reasignar_sin_contacto":
 { Args: { "p_horas"?: number,"p_maximo"?: number,"p_solo_horario"?: boolean }; Returns: Json

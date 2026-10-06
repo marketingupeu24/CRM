@@ -213,6 +213,37 @@ async function telefonosAsesores(): Promise<Set<string>> {
   return new Set((data ?? []).map((a) => a.telefono!))
 }
 
+/** Código del QR personal de un asesor en el mensaje: "(Cód. A-3F9C21)". */
+const CODIGO_QR_ASESOR = /c[oó]d\.?\s*a-([0-9a-f]{6})\b/i
+
+/**
+ * El mensaje viene del QR personal de un asesor: el lead se le asigna (y es suyo), se avisa
+ * al asesor y Genesys confirma al interesado. Devuelve el lead actualizado si se asignó.
+ */
+async function asignarPorQrAsesor(lead: Lead, mensaje: string, telefono: string): Promise<Lead | null> {
+  const codigo = mensaje.match(CODIGO_QR_ASESOR)?.[1]
+  if (!codigo) return null
+  const { data, error } = await supabase.rpc('asignar_lead_qr_asesor', { p_lead_id: lead.id, p_codigo: codigo })
+  if (error) {
+    console.error('[genesys] No se pudo asignar por QR de asesor:', error.message)
+    return null
+  }
+  const r = data as { asignado: boolean; asesor_nombre?: string; asesor_telefono?: string | null }
+  if (!r.asignado) return null
+  const { data: actualizado } = await supabase.from('leads').select('*').eq('id', lead.id).single()
+  if (!actualizado) return null
+  const asesor = (r.asesor_nombre ?? '').trim().split(/\s+/)[0]
+  if (r.asesor_telefono) {
+    EdgeRuntime.waitUntil(notificarAsesor(actualizado, r.asesor_telefono, 'manual', 'asignado', 'tu QR personal · presencial'))
+  }
+  // Respuesta a quien escribió primero (no es un mensaje en frío). El webhook de salientes la guarda en el chat.
+  EdgeRuntime.waitUntil(enviarWhatsApp(telefono, [
+    '¡Gracias por escribirnos! 😊 Soy Genesys, de Admisión de la *Universidad Peruana Unión – campus Juliaca*.',
+    `${asesor ? `Tu asesor(a) *${asesor}*` : 'Tu asesor(a)'} te escribirá por aquí con toda la información.`,
+  ].join('\n')))
+  return actualizado
+}
+
 async function registrar(cuerpo: Cuerpo): Promise<Respuesta> {
   const telefono = telefonoDe(cuerpo)
   const mensaje = valorResuelto(cuerpo.mensaje)
@@ -228,13 +259,17 @@ async function registrar(cuerpo: Cuerpo): Promise<Respuesta> {
   if (error) throw error
 
   let lead = data
+  // QR personal de un asesor (atención presencial): el lead es de ese asesor
+  const porQr = mensaje ? await asignarPorQrAsesor(lead, mensaje, telefono) : null
+  if (porQr) lead = porQr
   if (lead.estado === 'lead_nuevo') {
     const actualizado = await supabase.from('leads').update({ estado: 'lead_en_conversacion' })
       .eq('id', lead.id).select().single()
     if (actualizado.error) throw actualizado.error
     lead = actualizado.data
   }
-  if (mensaje) EdgeRuntime.waitUntil(avisarMensajeNuevo(lead, mensaje))
+  // Recién asignado por QR: el asesor ya recibe el aviso de asignación (no uno de "nuevo mensaje")
+  if (mensaje && !porQr) EdgeRuntime.waitUntil(avisarMensajeNuevo(lead, mensaje))
 
   return {
     ok: true,

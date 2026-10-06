@@ -36,6 +36,7 @@ export function Navegacion(
         { href: '/leads/nuevo', texto: 'Registrar lead', icono: '+', modulo: 'registrar' },
         { href: '/costos' as Route, texto: 'Proformas', icono: '💰', modulo: 'costos' },
         { href: '/actividades' as Route, texto: 'Actividades y QR', icono: '🎪', modulo: 'actividades' },
+        { href: '/qr' as Route, texto: 'Mi QR (presencial)', icono: '🔳', modulo: 'qr_asesor' },
       ],
     },
     {

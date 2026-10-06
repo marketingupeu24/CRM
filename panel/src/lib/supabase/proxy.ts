@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import type { Database } from '@crm/db'
 
 // /r/<codigo>: formulario del QR de ferias y colegios (lo llenan los alumnos, sin sesión)
-const RUTAS_PUBLICAS = ['/login', '/r/']
+const RUTAS_PUBLICAS = ['/login', '/r/', '/w/']
 
 export async function actualizarSesion(request: NextRequest) {
   let respuesta = NextResponse.next({ request })

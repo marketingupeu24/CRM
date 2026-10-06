@@ -77,6 +77,7 @@ export const MODULOS = [
   { clave: 'kanban', grupo: 'Trabajo diario', titulo: 'Kanban', descripcion: 'Tablero por estado', ruta: '/kanban' },
   { clave: 'registrar', grupo: 'Trabajo diario', titulo: 'Registrar lead', descripcion: 'Registrar leads a mano', ruta: '/leads/nuevo' },
   { clave: 'actividades', grupo: 'Trabajo diario', titulo: 'Actividades y QR', descripcion: 'Crear ferias y visitas a colegios con QR de registro', ruta: '/actividades' },
+  { clave: 'qr_asesor', grupo: 'Trabajo diario', titulo: 'Mi QR (presencial)', descripcion: 'QR personal para que el interesado escriba por WhatsApp y quede como su lead', ruta: '/qr' },
   { clave: 'costos', grupo: 'Trabajo diario', titulo: 'Proformas de costos', descripcion: 'Calcular costos, descargar la proforma y enviarla por el chat', ruta: '/costos' },
   { clave: 'dashboard', grupo: 'Análisis', titulo: 'Dashboard', descripcion: 'Indicadores y gráficos', ruta: '/dashboard' },
   { clave: 'campanas', grupo: 'Análisis', titulo: 'Campañas', descripcion: 'Ver campañas y sus resultados', ruta: '/campanas' },
@@ -96,7 +97,7 @@ export type Modulo = (typeof MODULOS)[number]['clave']
 export const CLAVES_MODULOS: readonly Modulo[] = MODULOS.map((m) => m.clave)
 
 /** Lo que recibe un asesor nuevo (igual al valor por defecto de asesores.permisos). */
-export const PERMISOS_ASESOR: readonly Modulo[] = ['pendientes', 'chats', 'leads', 'kanban', 'registrar', 'costos', 'actividades', 'dashboard', 'campanas', 'exportar']
+export const PERMISOS_ASESOR: readonly Modulo[] = ['pendientes', 'chats', 'leads', 'kanban', 'registrar', 'costos', 'actividades', 'qr_asesor', 'dashboard', 'campanas', 'exportar']
 
 /** Secciones de la base de conocimiento de Genesys (conocimiento.categoria), en orden. */
 export const CATEGORIAS_CONOCIMIENTO = {

@@ -726,6 +726,29 @@ seccion('quién recibe leads (interruptor, no el rol)')
   await q(`update asesores set activo = (nombre <> 'Inactivo' and rol = 'asesor')`)
 }
 
+seccion('QR personal del asesor (presencial)')
+{
+  await reset()
+  const gc = await asesor('General C')
+  ok(/^[0-9A-F]{6}$/.test(gc.codigo_qr), 'cada asesor tiene su código de QR')
+  ok(gc.permisos.includes('qr_asesor'), 'todos tienen el módulo "Mi QR"')
+  await q(`update ajustes set valor = '51951301933' where clave = 'whatsapp_genesys'`)
+  await db.exec(`set request.jwt.claim.sub = ''; set role anon`)
+  const pub = (await uno(`select qr_asesor_publico($1) r`, [gc.codigo_qr.toLowerCase()])).r
+  await reset()
+  ok(pub.nombre === 'General C' && pub.whatsapp === '51951301933', 'el enlace público del QR obtiene el asesor y el número (sin sesión)')
+  // Escribe por primera vez con el mensaje del QR
+  const nuevo = (await uno(`select (registrar_lead('51933377701', $1)).id`, [`Hola 👋 Me atendió General C en Admisión UPeU y quiero más información. (Cód. A-${gc.codigo_qr})`])).id
+  const r1 = (await uno(`select asignar_lead_qr_asesor($1, $2) r`, [nuevo, gc.codigo_qr])).r
+  const l1 = await uno(`select asesor_id, registrado_por, estado from leads where id = $1`, [nuevo])
+  ok(r1.asignado && l1.asesor_id === gc.id && l1.registrado_por === gc.id && l1.estado === 'lead_asignado', 'al escribir con el QR queda asignado a ese asesor y es suyo')
+  const r2 = (await uno(`select asignar_lead_qr_asesor($1, $2) r`, [nuevo, (await asesor('General A')).codigo_qr])).r
+  ok(!r2.asignado && (await uno(`select asesor_id from leads where id = $1`, [nuevo])).asesor_id === gc.id, 'si ya tiene asesor, el QR de otro no lo cambia')
+  ok(!(await uno(`select asignar_lead_qr_asesor($1, 'ZZZZZZ') r`, [nuevo])).r.asignado, 'un código desconocido no hace nada')
+  await falla(`set role authenticated; select asignar_lead_qr_asesor('${nuevo}', '${gc.codigo_qr}')`, 'el panel no puede usar la asignación por QR (solo Genesys)')
+  await reset()
+}
+
 seccion('anon')
 await db.exec(`reset role; set request.jwt.claim.sub = ''; set role anon`)
 await falla(`select * from tareas`, 'anon no puede ver tareas')
