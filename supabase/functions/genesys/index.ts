@@ -301,6 +301,24 @@ async function registrar(cuerpo: Cuerpo): Promise<Respuesta> {
  *   telefono_asesor  asesor ya elegido y avisado (modo sombra: el que asignó el Apps Script).
  *                    Con asesor fijo no se asigna por turnos ni se vuelve a notificar.
  */
+/** Minutos en los que un registro con los mismos datos se considera repetido (no una nueva consulta). */
+const MINUTOS_REGISTRO_REPETIDO = 30
+
+/** Lead registrado hace poco con exactamente los mismos datos (nombre, documento y carrera). */
+async function registroRepetido(telefono: string | null, dni: string | null, nombre: string | null, carrera: string | null) {
+  if (!telefono && !dni) return null
+  const desde = new Date(Date.now() - MINUTOS_REGISTRO_REPETIDO * 60_000).toISOString()
+  const consulta = supabase.from('leads').select('id, nombre, dni, carrera_interes, modalidad, estado, asesor_id, duplicados_ignorados, ultimo_registro_at')
+    .gte('ultimo_registro_at', desde).is('eliminado_at', null).limit(1)
+  const { data } = dni ? await consulta.eq('dni', dni) : await consulta.eq('telefono', telefono!)
+  const lead = data?.[0]
+  if (!lead) return null
+  const igual = (a: string | null | undefined, b: string | null | undefined) =>
+    (a ?? '').trim().toLowerCase() === (b ?? '').trim().toLowerCase()
+  const mismaCarrera = !carrera || igual(carrera, lead.carrera_interes) || igual(carrera, lead.modalidad)
+  return igual(nombre, lead.nombre) && (!dni || dni === lead.dni) && mismaCarrera ? lead : null
+}
+
 /** Para el agente de IA de BuilderBot: el registro terminó, no debe repetirlo. */
 const INSTRUCCION_REGISTRADO = 'REGISTRO COMPLETADO. Confirma al alumno UNA sola vez y no vuelvas a llamar a esta herramienta en esta conversación.'
 
@@ -344,6 +362,25 @@ async function webhook(cuerpo: Cuerpo): Promise<Respuesta> {
   // Solo se notifica cuando la asignación la hace Supabase: si el asesor llega fijo,
   // quien lo eligió (Apps Script, formulario web) ya le avisó.
   const notificar = MODO === 'activo' && !asesorFijoId && fuente !== 'manual'
+
+  // El mismo registro otra vez (mismos datos, < 30 min): el agente de IA de BuilderBot a veces
+  // repite la herramienta en bucle. No es una "nueva consulta": no se reavisa al asesor.
+  const repetido = await registroRepetido(telefono, dni, nombre, carrera ?? modalidad)
+  if (repetido) {
+    await supabase.from('leads').update({ duplicados_ignorados: repetido.duplicados_ignorados + 1 }).eq('id', repetido.id)
+    const { data: asesorRep } = repetido.asesor_id
+      ? await supabase.from('asesores').select('nombre, telefono').eq('id', repetido.asesor_id).maybeSingle()
+      : { data: null }
+    return {
+      status: 'success', accion: 'ya_registrado', registrado: true, duplicado: true,
+      mensaje: asesorRep?.nombre ?? '', telefono_asesor: asesorRep?.telefono ?? '',
+      lead_id: repetido.id, notificacion_asesor: 'ya_enviada', bot_atiende: botAtiendeLead(repetido.estado), modo: MODO,
+      enviar_mensaje_cliente: false,
+      mensaje_cliente: 'Listo: el registro ya está hecho. No lo repitas ni vuelvas a enviar la confirmación.',
+      instruccion_bot: 'REGISTRO YA COMPLETADO. No vuelvas a llamar a esta herramienta ni repitas el mensaje de confirmación.',
+    }
+  }
+
   const { data, error } = await supabase.rpc('procesar_lead', {
     p_telefono: telefono ?? undefined,
     p_dni: dni ?? undefined,
