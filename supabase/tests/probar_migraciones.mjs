@@ -682,6 +682,26 @@ seccion('repartir leads y eliminar actividades')
   await q(`select * from importar_leads($1::jsonb)`, [JSON.stringify([{ nombre: 'Por Defecto Mio', celular: '957100099' }])])
   await reset()
   ok((await uno(`select asesor_id from leads where telefono = '51957100099'`)).asesor_id === usrB.id, 'por defecto, a nombre de quien registra')
+  // El lead que subió el asesor es suyo: la reasignación automática (4 h sin contacto) no se lo quita
+  await q(`update leads set fecha_asignado = now() - interval '6 hours', primer_contacto_asesor_at = null, estado = 'lead_asignado', reasignaciones = 0
+           where telefono in ('51957100099', '51957100101', '51957100102', '51957100103', '51957100104')`)
+  await uno(`select reasignar_sin_contacto(4, 2, false) r`)
+  const propio = await uno(`select asesor_id, registrado_por from leads where telefono = '51957100099'`)
+  ok(propio.asesor_id === usrB.id && propio.registrado_por === usrB.id, 'el lead que subió el asesor para sí no se reasigna')
+  const repartidos = await q(`select asesor_id, registrado_por, reasignaciones from leads where telefono like '5195710010%' and asesor_id <> registrado_por`)
+  ok(repartidos.length > 0 && repartidos.every((r) => r.reasignaciones === 1), 'los que repartió a otros asesores siguen la regla normal (se reasignan)')
+  // Tampoco cambia de dueño si vuelve a llegar por otro camino
+  const usrA = await asesor('General A')
+  const actA = await uno(`insert into actividades (nombre, asignacion, responsable_id) values ('Feria de General A', 'responsable', $1) returning id, codigo`, [usrA.id])
+  await db.exec(`set request.jwt.claim.sub = ''; set role anon`)
+  await uno(`select registrar_lead_actividad($1, 'Por Defecto Mio', '957100099', null, null, null, null) r`, [actA.codigo])
+  await reset()
+  ok((await uno(`select asesor_id from leads where telefono = '51957100099'`)).asesor_id === usrB.id, 'si se registra con el QR de otro asesor, sigue con quien lo subió')
+  await q(`update asesores set activo = false where id = $1`, [usrB.id])
+  await uno(`select procesar_lead(p_telefono => '51957100099', p_nombre => 'Por Defecto Mio', p_carrera => 'CEPRE', p_programa => 'cepre') r`)
+  ok((await uno(`select asesor_id from leads where telefono = '51957100099'`)).asesor_id === usrB.id, 'aunque su asesor no reciba leads o cambie a CEPRE, sigue con quien lo subió')
+  await q(`update asesores set activo = true where id = $1`, [usrB.id])
+  await q(`delete from actividades where id = $1`, [actA.id])
 
   await comoUsuario('admin@test.pe')
   const vacia = (await uno(`insert into actividades (nombre) values ('Actividad vacía') returning id`)).id
