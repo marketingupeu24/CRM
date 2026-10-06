@@ -230,6 +230,37 @@ isOneToOne: false
       referencedColumns: ["asesor_id"]
     }
                   ]
+                },"prerregistros": {
+                  Row: {
+                    "asesor_id": string,"carrera": string | null,"codigo": string,"colegio": string | null,"created_at": string,"dni": string | null,"grado": string | null,"id": string,"lead_id": string | null,"nombre": string,"usado_at": string | null
+                  }
+                  Insert: {
+                    "asesor_id"?: string,"carrera"?: string | null,"codigo"?: string,"colegio"?: string | null,"created_at"?: string,"dni"?: string | null,"grado"?: string | null,"id"?: string,"lead_id"?: string | null,"nombre": string,"usado_at"?: string | null
+                  }
+                  Update: {
+                    "asesor_id"?: string,"carrera"?: string | null,"codigo"?: string,"colegio"?: string | null,"created_at"?: string,"dni"?: string | null,"grado"?: string | null,"id"?: string,"lead_id"?: string | null,"nombre"?: string,"usado_at"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "prerregistros_asesor_id_fkey"
+      columns: ["asesor_id"]
+isOneToOne: false
+      referencedRelation: "asesores"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "prerregistros_asesor_id_fkey"
+      columns: ["asesor_id"]
+isOneToOne: false
+      referencedRelation: "vista_leads_por_asesor"
+      referencedColumns: ["asesor_id"]
+    },{
+      foreignKeyName: "prerregistros_lead_id_fkey"
+      columns: ["lead_id"]
+isOneToOne: false
+      referencedRelation: "leads"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"proformas": {
                   Row: {
                     "ahorro": number,"archivo_url": string | null,"asesor_id": string | null,"beneficio": string,"campus": string,"carrera": string,"created_at": string,"cuota": number,"cuotas": number,"datos": NonNullable<Json>,"enviada_at": string | null,"id": number,"inicial": number,"lead_id": string | null,"modalidad": string,"numero": string,"pago": string,"total": number
@@ -494,6 +525,9 @@ isOneToOne: false
               "interaccion_id": number,"lead_id": string,"lead_nombre": string,"lead_telefono": string,"pregunta": string,"respondida_at": string,"respuesta": string,"revisada": boolean
             }[]
                            },
+"prerregistro_publico":
+{ Args: { "p_codigo": string }; Returns: Json
+                           },
 "procesar_lead":
 { Args: { "p_asesor_id"?: string,"p_asignar"?: boolean,"p_carrera"?: string,"p_consulta"?: string,"p_convocatoria"?: string,"p_dni"?: string,"p_modalidad"?: string,"p_nombre"?: string,"p_notificar"?: boolean,"p_origen"?: string,"p_programa"?: string,"p_telefono"?: string }; Returns: Json
                            },
@@ -593,6 +627,9 @@ isOneToOne: false
                            },
 "tiene_permiso":
 { Args: { "p_modulo": string }; Returns: boolean
+                           },
+"usar_prerregistro":
+{ Args: { "p_codigo": string,"p_lead_id": string }; Returns: Json
                            }
           }
           Enums: {

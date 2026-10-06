@@ -215,25 +215,32 @@ async function telefonosAsesores(): Promise<Set<string>> {
 
 /** Código del QR personal de un asesor en el mensaje: "(Cód. A-3F9C21)". */
 const CODIGO_QR_ASESOR = /c[oó]d\.?\s*a-([0-9a-f]{6})\b/i
+/** Código del QR por persona (datos escritos por el asesor): "(Cód. P-1A2B3C4D)". */
+const CODIGO_PRERREGISTRO = /c[oó]d\.?\s*p-([0-9a-f]{8})\b/i
 
 /**
  * El mensaje viene del QR personal de un asesor (lo atiende en persona): el lead es suyo y queda contactado, se avisa
  * al asesor y Genesys confirma al interesado. Devuelve el lead actualizado si se asignó.
  */
 async function asignarPorQrAsesor(lead: Lead, mensaje: string, telefono: string, esLid: boolean): Promise<Lead | null> {
-  const codigo = mensaje.match(CODIGO_QR_ASESOR)?.[1]
-  if (!codigo) return null
-  const { data, error } = await supabase.rpc('asignar_lead_qr_asesor', { p_lead_id: lead.id, p_codigo: codigo })
+  // QR por persona (el asesor ya escribió sus datos) o QR general del asesor
+  const prerregistro = mensaje.match(CODIGO_PRERREGISTRO)?.[1]
+  const codigo = prerregistro ? null : mensaje.match(CODIGO_QR_ASESOR)?.[1]
+  if (!prerregistro && !codigo) return null
+  const { data, error } = prerregistro
+    ? await supabase.rpc('usar_prerregistro', { p_lead_id: lead.id, p_codigo: prerregistro })
+    : await supabase.rpc('asignar_lead_qr_asesor', { p_lead_id: lead.id, p_codigo: codigo! })
   if (error) {
-    console.error('[genesys] No se pudo asignar por QR de asesor:', error.message)
+    console.error('[genesys] No se pudo registrar por QR de asesor:', error.message)
     return null
   }
-  const r = data as { asignado: boolean; asesor_nombre?: string; asesor_telefono?: string | null }
-  if (!r.asignado) return null
+  const r = data as { usado?: boolean; asignado: boolean; asesor_nombre?: string; asesor_telefono?: string | null; persona?: string }
+  if (!(prerregistro ? r.usado : r.asignado)) return null
   const { data: actualizado } = await supabase.from('leads').select('*').eq('id', lead.id).single()
   if (!actualizado) return null
   const asesor = (r.asesor_nombre ?? '').trim().split(/\s+/)[0]
-  if (r.asesor_telefono) {
+  const persona = (r.persona ?? '').trim().split(/\s+/)[0]
+  if (r.asignado && r.asesor_telefono) {
     EdgeRuntime.waitUntil(notificarAsesor(actualizado, r.asesor_telefono, 'manual', 'asignado', 'tu QR personal · presencial'))
   }
   // Respuesta a quien escribió primero (no es un mensaje en frío). El webhook de salientes la guarda en el chat.
@@ -241,7 +248,7 @@ async function asignarPorQrAsesor(lead: Lead, mensaje: string, telefono: string,
   // (el flujo del bot no indica si es @lid: un número largo que no es de Perú se trata igual)
   const pareceLid = esLid || (telefono.length >= 14 && !telefono.startsWith('51'))
   if (!pareceLid) EdgeRuntime.waitUntil(enviarWhatsApp(telefono, [
-    '¡Listo, ya quedaste registrado(a)! 😊 Soy Genesys, de Admisión de la *Universidad Peruana Unión – campus Juliaca*.',
+    `¡Listo${persona ? `, ${persona}` : ''}, ya quedaste registrado(a)! 😊 Soy Genesys, de Admisión de la *Universidad Peruana Unión – campus Juliaca*.`,
     `${asesor ? `Tu asesor(a) *${asesor}*` : 'Tu asesor(a)'} te sigue atendiendo, y por este chat te enviaremos la información que necesites.`,
   ].join('\n')))
   return actualizado

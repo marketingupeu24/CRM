@@ -5,9 +5,13 @@ import { fechaHora } from '@/lib/formato'
 import { exigirPermiso } from '@/lib/sesion'
 import { urlBase } from '@/lib/sitio'
 import { crearClienteServidor } from '@/lib/supabase/server'
+import { carreras } from '@crm/db'
+import { RegistroPresencial } from './RegistroPresencial'
 import { TarjetasQr, type TarjetaQr } from './TarjetasQr'
 
 export const metadata: Metadata = { title: 'Mi QR (presencial)' }
+
+const CARRERAS = [...new Set(carreras('PRES', 'JUL').map((c) => c[0]))]
 
 /**
  * QR personal de cada asesor para la atención presencial: el interesado lo escanea, escribe
@@ -49,9 +53,9 @@ export default async function PaginaQrAsesor() {
       <div className="no-imprimir">
         <h1 className="text-2xl font-semibold">{todos ? 'QR de los asesores' : 'Mi QR'} (atención presencial)</h1>
         <p className="max-w-3xl text-sm text-slate-500">
-          Muéstralo o entrégalo impreso a quien atiendes en persona. Al escanearlo se abre WhatsApp con un mensaje listo:
-          la persona lo envía (sin llenar formularios) y queda registrada <b>como tu lead</b>, ya contactada. Luego completa sus datos
-          (nombre, DNI, carrera…) aquí abajo en <b>Escaneados recientemente</b> y sigue la atención desde el chat del CRM.
+          Para la atención en persona. <b>Lo mejor:</b> escribe sus datos en <b>Registrar a quien atiendo ahora</b> y muéstrale su QR:
+          al enviar el mensaje queda registrada con esos datos y su celular real, como tu lead. <b>Tu QR impreso</b> (abajo) también
+          sirve: quien lo escanea queda como tu lead y luego completas sus datos en <b>Escaneados recientemente</b>.
         </p>
       </div>
       {!ajuste?.valor && (
@@ -59,6 +63,7 @@ export default async function PaginaQrAsesor() {
           Falta el número de WhatsApp de Genesys (lo configura el super admin en <b>Actividades y QR</b>). Sin él, el QR no puede abrir el chat.
         </p>
       )}
+      <RegistroPresencial carreras={CARRERAS} />
       <section className="no-imprimir tarjeta p-5">
         <h2 className="font-semibold">Escaneados recientemente</h2>
         <p className="mb-3 text-xs text-slate-500">Últimos 14 días. Se actualiza solo al llegar un escaneo nuevo.</p>

@@ -15,9 +15,21 @@ main{background:#fff;border-radius:16px;padding:28px;max-width:360px;text-align:
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ codigo: string }> }) {
   const { codigo } = await ctx.params
-  if (!/^[0-9a-f]{6}$/i.test(codigo)) return pagina('QR no válido', 'Pide a tu asesor(a) que te muestre su QR de nuevo.', 404)
+  if (!/^([0-9a-f]{6}|[0-9a-f]{8})$/i.test(codigo)) return pagina('QR no válido', 'Pide a tu asesor(a) que te muestre su QR de nuevo.', 404)
 
   const supabase = await crearClienteServidor()
+
+  // QR por persona (8 caracteres): el asesor ya escribió sus datos
+  if (codigo.length === 8) {
+    const { data: pre } = await supabase.rpc('prerregistro_publico', { p_codigo: codigo })
+    const p = pre as { codigo: string; persona: string; asesor: string; whatsapp: string | null } | null
+    if (!p) return pagina('QR vencido', 'Este QR ya no está activo. Pide a tu asesor(a) que genere uno nuevo.', 404)
+    const numeroP = (p.whatsapp ?? '').replace(/\D/g, '')
+    if (!numeroP) return pagina('Escríbenos pronto', 'El WhatsApp de Admisión aún no está configurado. Avísale a tu asesor(a).', 503)
+    const texto = `Hola 👋 Soy ${p.persona}, me atendió ${p.asesor} en Admisión UPeU. (Cód. P-${p.codigo})`
+    return NextResponse.redirect(`https://wa.me/${numeroP}?text=${encodeURIComponent(texto)}`, 302)
+  }
+
   const { data } = await supabase.rpc('qr_asesor_publico', { p_codigo: codigo })
   const r = data as { codigo: string; nombre: string; whatsapp: string | null } | null
   if (!r) return pagina('QR no válido', 'Este QR ya no está activo. Pide a tu asesor(a) uno nuevo.', 404)

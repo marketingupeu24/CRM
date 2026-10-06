@@ -747,6 +747,33 @@ seccion('QR personal del asesor (presencial)')
   ok(!(await uno(`select asignar_lead_qr_asesor($1, 'ZZZZZZ') r`, [nuevo])).r.asignado, 'un código desconocido no hace nada')
   await falla(`set role authenticated; select asignar_lead_qr_asesor('${nuevo}', '${gc.codigo_qr}')`, 'el panel no puede usar la asignación por QR (solo Genesys)')
   await reset()
+
+  // QR por persona: el asesor escribe los datos y la persona escanea
+  const gb = await asesor('General B')
+  await q(`update asesores set permisos = array_append(permisos, 'qr_asesor') where id = $1 and not ('qr_asesor' = any(permisos))`, [gb.id])
+  await comoUsuario('b@test.pe')
+  const pre = await uno(`insert into prerregistros (nombre, dni, carrera, colegio, grado) values ('Lucía Mamani Ccori', '72223334', 'Enfermería', 'IE Las Mercedes', '5.° de secundaria') returning id, codigo, asesor_id`)
+  ok(pre.asesor_id === gb.id && /^[0-9A-F]{8}$/.test(pre.codigo), 'el asesor crea el QR por persona a su nombre')
+  await reset()
+  await db.exec(`set request.jwt.claim.sub = ''; set role anon`)
+  const pubP = (await uno(`select prerregistro_publico($1) r`, [pre.codigo])).r
+  await reset()
+  ok(pubP.persona === 'Lucía' && pubP.asesor === 'General B', 'el enlace del QR por persona obtiene su nombre y el asesor (sin sesión)')
+  const lp = (await uno(`select (registrar_lead('51933377702', $1)).id`, [`Hola 👋 Soy Lucía, me atendió General B en Admisión UPeU. (Cód. P-${pre.codigo})`])).id
+  const u1 = (await uno(`select usar_prerregistro($1, $2) r`, [lp, pre.codigo])).r
+  const datosP = await uno(`select nombre, dni, carrera_interes, colegio, grado, asesor_id, registrado_por, estado from leads where id = $1`, [lp])
+  ok(u1.usado && datosP.nombre === 'Lucía Mamani Ccori' && datosP.dni === '72223334' && datosP.carrera_interes === 'Enfermería'
+    && datosP.colegio === 'IE Las Mercedes' && datosP.asesor_id === gb.id && datosP.registrado_por === gb.id && datosP.estado === 'lead_contactado',
+    'al escanear, el lead queda con los datos que escribió el asesor, suyo y contactado')
+  ok(!(await uno(`select usar_prerregistro($1, $2) r`, [lp, pre.codigo])).r.usado, 'el mismo mensaje repetido no vuelve a registrar')
+  ok((await uno(`select usado_at is not null u, lead_id from prerregistros where id = $1`, [pre.id])).lead_id === lp, 'el QR por persona queda marcado como usado con su lead')
+  // DNI que ya tiene otro lead: no se duplica
+  await comoUsuario('b@test.pe')
+  const pre2 = await uno(`insert into prerregistros (nombre, dni) values ('Otra Persona Dni', '72223334') returning codigo`)
+  await reset()
+  const lp2 = (await uno(`select (registrar_lead('51933377703', 'hola')).id`)).id
+  await uno(`select usar_prerregistro($1, $2) r`, [lp2, pre2.codigo])
+  ok((await uno(`select dni from leads where id = $1`, [lp2])).dni === null, 'si el DNI ya es de otro lead, no se repite')
 }
 
 seccion('anon')
