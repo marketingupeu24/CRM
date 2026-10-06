@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { AvisosEscritorio } from '@/components/AvisosEscritorio'
 import { BotonBuscar } from '@/components/BotonBuscar'
+import { ProveedorConfirmacion } from '@/components/Confirmacion'
 import { LogoUpeu } from '@/components/LogoUpeu'
 import { Navegacion } from '@/components/Navegacion'
 import { PaletaComandos } from '@/components/PaletaComandos'
@@ -28,6 +29,7 @@ export default async function LayoutPanel({ children }: { children: React.ReactN
   const iniciales = perfil.nombre.split(' ').slice(0, 2).map((p) => p[0]).join('').toUpperCase()
 
   return (
+    <ProveedorConfirmacion>
     <div className="min-h-screen md:flex">
       {!debeCambiarClave && <RefrescoEnVivo />}
       {!debeCambiarClave && <PaletaComandos permisos={permisos} superadmin={superadmin} />}
@@ -84,5 +86,6 @@ export default async function LayoutPanel({ children }: { children: React.ReactN
         </main>
       </div>
     </div>
+    </ProveedorConfirmacion>
   )
 }

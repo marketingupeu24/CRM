@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useTransition } from 'react'
 import type { Asesor } from '@crm/db'
+import { useConfirmar } from '@/components/Confirmacion'
 import {
   actualizarAsesor, cambiarActivo, crearAsesor, crearCuenta, eliminarAsesor, restablecerClave, type Resultado,
 } from './acciones'
@@ -101,6 +102,7 @@ export function AccionesAsesor({ asesor, esYo = false }: { asesor: Asesor; esYo?
   const [abierto, setAbierto] = useState<Panel>(null)
   const [rActivo, setRActivo] = useState<Resultado>({})
   const [pendiente, iniciar] = useTransition()
+  const confirmar = useConfirmar()
   const [rCuenta, accionCuenta, creando] = useActionState<Resultado, FormData>(crearCuenta.bind(null, asesor.id), {})
   const [rClave, accionClave, guardandoClave] = useActionState<Resultado, FormData>(restablecerClave.bind(null, asesor.id), {})
   const [rEditar, accionEditar, guardando] = useActionState<Resultado, FormData>(actualizarAsesor.bind(null, asesor.id), {})
@@ -117,8 +119,8 @@ export function AccionesAsesor({ asesor, esYo = false }: { asesor: Asesor; esYo?
         {!esYo && (
           <button
             disabled={pendiente} className="text-rose-600 hover:underline"
-            onClick={() => {
-              if (confirm(`¿Enviar a ${asesor.nombre} a la papelera? No podrá entrar al panel ni recibirá leads. Puedes restaurarlo desde la Papelera.`)) {
+            onClick={async () => {
+              if (await confirmar({ titulo: `¿Enviar a ${asesor.nombre} a la papelera?`, mensaje: 'No podrá entrar al panel ni recibirá leads. Puedes restaurarlo desde la Papelera.', confirmar: 'Enviar a la papelera', peligro: true })) {
                 iniciar(async () => setRActivo(await eliminarAsesor(asesor.id)))
               }
             }}

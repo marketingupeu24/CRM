@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useActionState, useEffect, useState, useTransition } from 'react'
 import QRCode from 'qrcode'
+import { useConfirmar } from '@/components/Confirmacion'
 import { cambiarActiva, eliminarActividad, guardarActividad, guardarWhatsappGenesys, type Resultado } from './acciones'
 
 export interface Actividad {
@@ -119,6 +120,7 @@ export function TarjetaActividad({ actividad, base, asesores }: { actividad: Act
   const [editando, setEditando] = useState(false)
   const [r, setR] = useState<Resultado>({})
   const [pendiente, iniciar] = useTransition()
+  const confirmar = useConfirmar()
   useEffect(() => {
     QRCode.toDataURL(url, { width: 360, margin: 1, color: { dark: '#003865', light: '#ffffff' } }).then(setQr)
   }, [url])
@@ -178,7 +180,11 @@ export function TarjetaActividad({ actividad, base, asesores }: { actividad: Act
               {actividad.eliminable && (
                 <button
                   disabled={pendiente} className="text-rose-600 hover:underline"
-                  onClick={() => { if (confirm(`¿Eliminar la actividad "${actividad.nombre}"? Su QR dejará de funcionar.`)) iniciar(async () => setR(await eliminarActividad(actividad.id))) }}
+                  onClick={async () => {
+                    if (await confirmar({ titulo: `¿Eliminar la actividad "${actividad.nombre}"?`, mensaje: 'Su QR dejará de funcionar.', confirmar: 'Eliminar', peligro: true })) {
+                      iniciar(async () => setR(await eliminarActividad(actividad.id)))
+                    }
+                  }}
                 >
                   Eliminar
                 </button>

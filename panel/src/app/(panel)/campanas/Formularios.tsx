@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useTransition } from 'react'
 import { ORIGENES } from '@crm/db'
+import { useConfirmar } from '@/components/Confirmacion'
 import type { Campana } from '@/lib/periodos'
 import { cambiarActiva, eliminarCampana, guardarCampana, type Resultado } from './acciones'
 
@@ -50,6 +51,7 @@ export function AccionesCampana({ campana }: { campana: Campana }) {
   const [editando, setEditando] = useState(false)
   const [r, setR] = useState<Resultado>({})
   const [pendiente, iniciar] = useTransition()
+  const confirmar = useConfirmar()
 
   return (
     <>
@@ -60,7 +62,11 @@ export function AccionesCampana({ campana }: { campana: Campana }) {
         </button>
         <button
           disabled={pendiente} className="text-rose-600 hover:underline"
-          onClick={() => { if (confirm(`¿Eliminar la campaña "${campana.nombre}"? Los leads no se borran.`)) iniciar(async () => setR(await eliminarCampana(campana.id))) }}
+          onClick={async () => {
+            if (await confirmar({ titulo: `¿Eliminar la campaña "${campana.nombre}"?`, mensaje: 'Los leads no se borran.', confirmar: 'Eliminar', peligro: true })) {
+              iniciar(async () => setR(await eliminarCampana(campana.id)))
+            }
+          }}
         >
           Eliminar
         </button>

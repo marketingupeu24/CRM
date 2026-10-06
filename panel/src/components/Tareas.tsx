@@ -3,6 +3,7 @@
 // Tareas ("próxima acción"): formulario para agendar y botones de cada tarea.
 import { useState, useTransition } from 'react'
 import { completarTarea, crearTarea, eliminarTarea, posponerTarea, type Resultado } from '@/app/(panel)/pendientes/acciones'
+import { useAviso, useConfirmar } from '@/components/Confirmacion'
 
 /** Fecha para <input type="datetime-local"> en la hora local del navegador. */
 function aInputLocal(fecha: Date): string {
@@ -65,8 +66,10 @@ export function FormularioTarea({ leadId }: { leadId: string }) {
 
 export function BotonesTarea({ tareaId, leadId }: { tareaId: number; leadId: string }) {
   const [pendiente, iniciar] = useTransition()
+  const confirmar = useConfirmar()
+  const avisar = useAviso()
   const ejecutar = (accion: () => Promise<Resultado>) =>
-    iniciar(async () => { const r = await accion(); if (r.error) alert(r.error) })
+    iniciar(async () => { const r = await accion(); if (r.error) void avisar(r.error) })
 
   return (
     <div className="flex shrink-0 gap-1 text-xs">
@@ -78,7 +81,9 @@ export function BotonesTarea({ tareaId, leadId }: { tareaId: number; leadId: str
       </button>
       <button
         disabled={pendiente} title="Eliminar"
-        onClick={() => { if (confirm('¿Eliminar esta tarea?')) ejecutar(() => eliminarTarea(tareaId, leadId)) }}
+        onClick={async () => {
+          if (await confirmar({ titulo: '¿Eliminar esta tarea?', confirmar: 'Eliminar', peligro: true })) ejecutar(() => eliminarTarea(tareaId, leadId))
+        }}
         className="rounded px-1.5 py-0.5 text-slate-400 hover:text-rose-600"
       >
         ✕

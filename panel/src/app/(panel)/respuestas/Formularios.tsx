@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useTransition } from 'react'
 import type { RespuestaRapida } from '@crm/db'
+import { useConfirmar } from '@/components/Confirmacion'
 import { cambiarActiva, eliminarRespuesta, guardarRespuesta, type Resultado } from './acciones'
 
 function Mensaje({ r }: { r: Resultado }) {
@@ -46,6 +47,7 @@ export function FilaRespuesta({ respuesta }: { respuesta: RespuestaRapida }) {
   const [editando, setEditando] = useState(false)
   const [r, setR] = useState<Resultado>({})
   const [pendiente, iniciar] = useTransition()
+  const confirmar = useConfirmar()
 
   return (
     <li className={`px-5 py-4 ${respuesta.activa ? '' : 'bg-slate-50 opacity-70'}`}>
@@ -64,7 +66,11 @@ export function FilaRespuesta({ respuesta }: { respuesta: RespuestaRapida }) {
           </button>
           <button
             disabled={pendiente} className="text-rose-600 hover:underline"
-            onClick={() => { if (confirm('¿Eliminar esta respuesta rápida?')) iniciar(async () => setR(await eliminarRespuesta(respuesta.id))) }}
+            onClick={async () => {
+              if (await confirmar({ titulo: '¿Eliminar esta respuesta rápida?', mensaje: `"${respuesta.titulo}" dejará de aparecer en el chat de todos.`, confirmar: 'Eliminar', peligro: true })) {
+                iniciar(async () => setR(await eliminarRespuesta(respuesta.id)))
+              }
+            }}
           >
             Eliminar
           </button>

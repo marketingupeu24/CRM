@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useConfirmar } from '@/components/Confirmacion'
 import { borrarAsesor, borrarLeads, restaurarAsesor, restaurarLeads, type Resultado } from './acciones'
 
 function Mensaje({ r }: { r: Resultado }) {
@@ -13,6 +14,7 @@ function Mensaje({ r }: { r: Resultado }) {
 export function AccionesLeads({ ids, texto, compacto = false }: { ids: string[]; texto: string; compacto?: boolean }) {
   const [r, setR] = useState<Resultado>({})
   const [pendiente, iniciar] = useTransition()
+  const confirmar = useConfirmar()
   if (!ids.length) return null
   return (
     <div className={compacto ? 'flex flex-wrap items-center gap-3 text-xs font-medium' : 'flex flex-wrap items-center gap-2'}>
@@ -24,8 +26,8 @@ export function AccionesLeads({ ids, texto, compacto = false }: { ids: string[];
       </button>
       <button
         disabled={pendiente} className={compacto ? 'text-rose-600 hover:underline' : 'rounded-lg px-3 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50'}
-        onClick={() => {
-          if (confirm(`¿Borrar para siempre ${texto}? Se pierden su conversación y su historial. No se puede deshacer.`)) {
+        onClick={async () => {
+          if (await confirmar({ titulo: `¿Borrar para siempre ${texto}?`, mensaje: 'Se pierden su conversación y su historial. No se puede deshacer.', confirmar: 'Borrar para siempre', peligro: true })) {
             iniciar(async () => setR(await borrarLeads(ids)))
           }
         }}
@@ -40,6 +42,7 @@ export function AccionesLeads({ ids, texto, compacto = false }: { ids: string[];
 export function AccionesUsuario({ id, nombre }: { id: string; nombre: string }) {
   const [r, setR] = useState<Resultado>({})
   const [pendiente, iniciar] = useTransition()
+  const confirmar = useConfirmar()
   return (
     <div className="flex flex-wrap items-center gap-3 text-xs font-medium">
       <button disabled={pendiente} className="text-marca-700 hover:underline" onClick={() => iniciar(async () => setR(await restaurarAsesor(id)))}>
@@ -47,8 +50,8 @@ export function AccionesUsuario({ id, nombre }: { id: string; nombre: string }) 
       </button>
       <button
         disabled={pendiente} className="text-rose-600 hover:underline"
-        onClick={() => {
-          if (confirm(`¿Borrar para siempre a ${nombre} y su cuenta de acceso? No se puede deshacer.`)) {
+        onClick={async () => {
+          if (await confirmar({ titulo: `¿Borrar para siempre a ${nombre}?`, mensaje: 'También se borra su cuenta de acceso. No se puede deshacer.', confirmar: 'Borrar para siempre', peligro: true })) {
             iniciar(async () => setR(await borrarAsesor(id)))
           }
         }}

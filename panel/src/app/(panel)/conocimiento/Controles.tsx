@@ -2,6 +2,7 @@
 
 import { useActionState, useRef, useState, useTransition } from 'react'
 import { CATEGORIAS_CONOCIMIENTO } from '@crm/db'
+import { useConfirmar } from '@/components/Confirmacion'
 import { eliminarEntrada, guardarEntrada, type Resultado } from './acciones'
 
 export interface Entrada {
@@ -65,6 +66,7 @@ export function TarjetaEntrada({ entrada, editable }: { entrada: Entrada; editab
   const [editando, setEditando] = useState(false)
   const [r, setR] = useState<Resultado>({})
   const [pendiente, iniciar] = useTransition()
+  const confirmar = useConfirmar()
 
   return (
     <li className={`rounded-xl border p-4 ${entrada.activo ? 'border-slate-200' : 'border-dashed border-amber-300 bg-amber-50/40'}`}>
@@ -78,7 +80,11 @@ export function TarjetaEntrada({ entrada, editable }: { entrada: Entrada; editab
             <button onClick={() => setEditando(!editando)} className="text-marca-700 hover:underline">{editando ? 'Cerrar' : 'Editar'}</button>
             <button
               disabled={pendiente} className="text-rose-600 hover:underline"
-              onClick={() => { if (confirm(`¿Eliminar "${entrada.titulo}"?`)) iniciar(async () => setR(await eliminarEntrada(entrada.id))) }}
+              onClick={async () => {
+                if (await confirmar({ titulo: `¿Eliminar "${entrada.titulo}"?`, mensaje: 'Genesys dejará de usar esta información.', confirmar: 'Eliminar', peligro: true })) {
+                  iniciar(async () => setR(await eliminarEntrada(entrada.id)))
+                }
+              }}
             >
               Eliminar
             </button>

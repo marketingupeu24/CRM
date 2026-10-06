@@ -3,6 +3,7 @@
 // Controles interactivos de la ficha del lead.
 import { useActionState, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAviso, useConfirmar } from '@/components/Confirmacion'
 import { ESTADOS_LEAD, ETIQUETAS_ESTADO, GRADOS, MOTIVOS_PERDIDA, ORIGENES, type Lead, type LeadEstado } from '@crm/db'
 import {
   actualizarDatos, agregarNota, cambiarEstado, eliminarNota, enviarAPapelera, reasignarAsesor, type Resultado,
@@ -61,11 +62,14 @@ export function FormularioNota({ leadId }: { leadId: string }) {
 
 export function BotonEliminarNota({ leadId, notaId }: { leadId: string; notaId: number }) {
   const [pendiente, iniciar] = useTransition()
+  const confirmar = useConfirmar()
+  const avisar = useAviso()
   return (
     <button
       disabled={pendiente}
-      onClick={() => {
-        if (confirm('¿Eliminar esta nota?')) iniciar(async () => { const r = await eliminarNota(leadId, notaId); if (r.error) alert(r.error) })
+      onClick={async () => {
+        if (!(await confirmar({ titulo: '¿Eliminar esta nota?', confirmar: 'Eliminar', peligro: true }))) return
+        iniciar(async () => { const r = await eliminarNota(leadId, notaId); if (r.error) void avisar(r.error) })
       }}
       className="text-xs text-slate-400 hover:text-rose-600"
     >
@@ -197,12 +201,13 @@ export function BotonPapelera({ leadId, nombre }: { leadId: string; nombre: stri
   const router = useRouter()
   const [error, setError] = useState('')
   const [pendiente, iniciar] = useTransition()
+  const confirmar = useConfirmar()
   return (
     <span className="inline-flex items-center gap-2">
       <button
         disabled={pendiente} className="text-sm font-medium text-rose-600 hover:underline"
-        onClick={() => {
-          if (!confirm(`¿Enviar a "${nombre}" a la papelera? Desaparece del panel; puedes restaurarlo desde la Papelera.`)) return
+        onClick={async () => {
+          if (!(await confirmar({ titulo: `¿Enviar a "${nombre}" a la papelera?`, mensaje: 'Desaparece del panel. Puedes restaurarlo desde la Papelera.', confirmar: 'Enviar a la papelera', peligro: true }))) return
           iniciar(async () => {
             const r = await enviarAPapelera([leadId])
             if (r.error) setError(r.error)

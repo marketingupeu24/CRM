@@ -4,6 +4,7 @@
 // data-lead-sel; esta barra las lee, y aparece cuando hay alguna marcada.
 import { useEffect, useState, useTransition } from 'react'
 import { ESTADOS_LEAD, ETIQUETAS_ESTADO, MOTIVOS_PERDIDA, type LeadEstado } from '@crm/db'
+import { useConfirmar } from '@/components/Confirmacion'
 import { accionMasiva, enviarAPapelera } from './acciones'
 
 const SELECTOR = 'input[data-lead-sel]'
@@ -19,6 +20,7 @@ export function BarraMasiva({ asesores, puedePapelera = false }: { asesores: { i
   const [asesorId, setAsesorId] = useState('')
   const [aviso, setAviso] = useState<{ texto: string; error?: boolean } | null>(null)
   const [pendiente, iniciar] = useTransition()
+  const confirmar = useConfirmar()
 
   useEffect(() => {
     const leer = () => setIds(casillas().filter((c) => c.checked).map((c) => c.value))
@@ -100,7 +102,11 @@ export function BarraMasiva({ asesores, puedePapelera = false }: { asesores: { i
           <span className="mx-1 hidden h-6 border-l border-marca-200 sm:block" />
           <button
             type="button" disabled={pendiente} className="rounded-lg px-3 py-2 font-medium text-rose-600 hover:bg-rose-50"
-            onClick={() => { if (confirm(`¿Enviar ${ids.length} lead(s) a la papelera? Puedes restaurarlos desde la Papelera.`)) ejecutar('papelera') }}
+            onClick={async () => {
+              if (await confirmar({ titulo: `¿Enviar ${ids.length} lead(s) a la papelera?`, mensaje: 'Desaparecen del panel. Puedes restaurarlos desde la Papelera.', confirmar: 'Enviar a la papelera', peligro: true })) {
+                ejecutar('papelera')
+              }
+            }}
           >
             🗑 Papelera
           </button>
