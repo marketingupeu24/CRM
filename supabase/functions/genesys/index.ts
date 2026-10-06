@@ -301,6 +301,9 @@ async function registrar(cuerpo: Cuerpo): Promise<Respuesta> {
  *   telefono_asesor  asesor ya elegido y avisado (modo sombra: el que asignó el Apps Script).
  *                    Con asesor fijo no se asigna por turnos ni se vuelve a notificar.
  */
+/** Para el agente de IA de BuilderBot: el registro terminó, no debe repetirlo. */
+const INSTRUCCION_REGISTRADO = 'REGISTRO COMPLETADO. Confirma al alumno UNA sola vez y no vuelvas a llamar a esta herramienta en esta conversación.'
+
 async function webhook(cuerpo: Cuerpo): Promise<Respuesta> {
   const nombre = elegir(cuerpo.Nombres, cuerpo.nombres, cuerpo.Nombre, cuerpo.nombre, cuerpo.name)
   const dni = normalizarDni(elegir(cuerpo.DNI, cuerpo.dni, cuerpo.Documento, cuerpo.documento))
@@ -359,13 +362,17 @@ async function webhook(cuerpo: Cuerpo): Promise<Respuesta> {
   if (error) throw error
   const r = data as unknown as ResultadoProcesar
 
+  // Repetido (< 2 min): el registro YA está hecho. Se responde como éxito ("ya_registrado"):
+  // con registrado:false el agente de IA de BuilderBot lo tomaba como falla y reintentaba en bucle,
+  // reenviando la confirmación al alumno cada pocos segundos (hasta 60 veces).
   if (r.status === 'duplicate') {
     return {
-      status: 'duplicate', accion: 'duplicado_ignorado', registrado: false, duplicado: true,
+      status: 'success', accion: 'ya_registrado', registrado: true, duplicado: true,
       mensaje: r.asesor_nombre ?? '', telefono_asesor: r.asesor_telefono ?? '',
-      lead_id: r.lead_id, notificacion_asesor: '', bot_atiende: botAtiendeLead(r.estado), modo: MODO,
+      lead_id: r.lead_id, notificacion_asesor: 'ya_enviada', bot_atiende: botAtiendeLead(r.estado), modo: MODO,
       enviar_mensaje_cliente: false,
-      mensaje_cliente: 'Tu registro ya fue recibido anteriormente. Un asesor se comunicará contigo.',
+      mensaje_cliente: 'Listo: el registro ya está hecho. No lo repitas ni vuelvas a enviar la confirmación.',
+      instruccion_bot: 'REGISTRO YA COMPLETADO. No vuelvas a llamar a esta herramienta ni repitas el mensaje de confirmación.',
     }
   }
 
@@ -399,6 +406,7 @@ async function webhook(cuerpo: Cuerpo): Promise<Respuesta> {
       mensaje_cliente: r.asesor_nombre
         ? `Recibimos tu nueva consulta. ${r.asesor_nombre} te escribirá pronto.`
         : 'Recibimos tu nueva consulta. Un asesor se comunicará contigo pronto.',
+      instruccion_bot: INSTRUCCION_REGISTRADO,
     }
   }
 
@@ -410,6 +418,7 @@ async function webhook(cuerpo: Cuerpo): Promise<Respuesta> {
     mensaje_cliente: r.asesor_nombre
       ? `Tu información fue registrada correctamente. Se te asignó a ${r.asesor_nombre}.`
       : 'Tu información fue registrada correctamente. Un asesor se comunicará contigo pronto.',
+    instruccion_bot: INSTRUCCION_REGISTRADO,
   }
 }
 
