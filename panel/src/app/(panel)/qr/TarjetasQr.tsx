@@ -43,7 +43,7 @@ function Tarjeta({ t, refNodo }: { t: TarjetaQr; refNodo: (n: HTMLDivElement | n
         <img src="/marca/logo-upeu-blanco.svg" alt="Universidad Peruana Unión" style={{ height: '7mm', margin: '0 auto' }} />
         <p style={{ color: '#ffffff', fontSize: '2.6mm', marginTop: '1mm', fontWeight: 600, letterSpacing: '0.2mm' }}>ADMISIÓN 2027 · CAMPUS JULIACA</p>
       </div>
-      <p style={{ fontSize: '3.4mm', fontWeight: 700, marginTop: '2.6mm', lineHeight: 1.15 }}>Escanéame y escríbenos<br />por WhatsApp</p>
+      <p style={{ fontSize: '3.4mm', fontWeight: 700, marginTop: '2.6mm', lineHeight: 1.15 }}>Escanéame y déjanos<br />tus datos</p>
       <div className="[&_svg]:h-full [&_svg]:w-full" style={{ width: '36mm', height: '36mm', marginTop: '2mm' }} dangerouslySetInnerHTML={{ __html: t.svg }} />
       <p style={{ fontSize: '4mm', fontWeight: 800, marginTop: '2.4mm', lineHeight: 1.1, padding: '0 3mm' }}>{nombreCorto(t.nombre)}</p>
       <p style={{ fontSize: '2.7mm', color: '#475569', marginTop: '0.6mm' }}>Tu asesor(a) de Admisión</p>

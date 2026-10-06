@@ -774,6 +774,25 @@ seccion('QR personal del asesor (presencial)')
   const lp2 = (await uno(`select (registrar_lead('51933377703', 'hola')).id`)).id
   await uno(`select usar_prerregistro($1, $2) r`, [lp2, pre2.codigo])
   ok((await uno(`select dni from leads where id = $1`, [lp2])).dni === null, 'si el DNI ya es de otro lead, no se repite')
+
+  // QR del asesor con formulario: el interesado llena sus datos
+  await db.exec(`set request.jwt.claim.sub = ''; set role anon`)
+  const rf = (await uno(`select registrar_lead_asesor($1, 'Mateo Quispe Ramos', '933377704', '73334445', 'IE San Juan', '5.° de secundaria', 'Ingeniería Civil') r`, [gb.codigo_qr])).r
+  await reset()
+  const lf = await uno(`select id, nombre, dni, carrera_interes, colegio, asesor_id, registrado_por, estado from leads where telefono = '51933377704'`)
+  ok(rf.ok && rf.asesor === 'General B' && /^[0-9a-f]{6}$/.test(rf.ref) && lf.nombre === 'Mateo Quispe Ramos' && lf.dni === '73334445'
+    && lf.colegio === 'IE San Juan' && lf.asesor_id === gb.id && lf.registrado_por === gb.id && lf.estado === 'lead_contactado',
+    'el formulario del QR del asesor registra al interesado como lead suyo, contactado')
+  ok((await llamadas()).some((l) => l.accion === 'notificar' && l.cuerpo.lead_ids?.includes(lf.id)), 'se avisa al asesor')
+  // Luego escribe por WhatsApp (con número oculto): la referencia lo une a su registro
+  await q(`select registrar_lead('120000000000099', $1, true)`, [`Hola, soy Mateo. Acabo de enviar mis datos con General B en Admisión UPeU y quiero información de Ingeniería Civil. (Ref. ${rf.ref})`])
+  ok((await uno(`select lead_de_contacto('120000000000099') = $1 ok`, [lf.id])).ok, 'su primer mensaje por WhatsApp se une a su registro (aunque oculte el número)')
+  // Ya era lead de otro asesor: no se cambia
+  const codigoA = (await asesor('General A')).codigo_qr
+  await db.exec(`set request.jwt.claim.sub = ''; set role anon`)
+  await uno(`select registrar_lead_asesor($1, 'Mateo Quispe Ramos', '933377704') r`, [codigoA])
+  await reset()
+  ok((await uno(`select asesor_id from leads where id = $1`, [lf.id])).asesor_id === gb.id, 'si ya era lead de otro asesor, el formulario de otro no lo cambia')
 }
 
 seccion('anon')

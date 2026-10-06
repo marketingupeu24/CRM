@@ -5,8 +5,16 @@ import { registrarseEnActividad, type ResultadoRegistro } from './acciones'
 
 const GRADOS = ['5.° de secundaria', '4.° de secundaria', '3.° de secundaria o menos', 'Ya terminé el colegio', 'Universitario / traslado', 'Otro']
 
-export function FormularioRegistro({ codigo, carreras, colegio }: { codigo: string; carreras: string[]; colegio: string | null }) {
-  const [r, accion, enviando] = useActionState<ResultadoRegistro, FormData>(registrarseEnActividad.bind(null, codigo), {})
+type Enviar = (previo: ResultadoRegistro, formData: FormData) => Promise<ResultadoRegistro>
+
+/**
+ * Formulario público del QR. Por defecto registra en una actividad (feria, colegio); con `enviar`
+ * y `asesor` sirve para el QR de un asesor (atención presencial).
+ */
+export function FormularioRegistro({ codigo, carreras, colegio, enviar, asesor }: {
+  codigo: string; carreras: string[]; colegio: string | null; enviar?: Enviar; asesor?: string
+}) {
+  const [r, accion, enviando] = useActionState<ResultadoRegistro, FormData>(enviar ?? registrarseEnActividad.bind(null, codigo), {})
 
   if (r.ok) {
     return (
@@ -16,7 +24,9 @@ export function FormularioRegistro({ codigo, carreras, colegio }: { codigo: stri
         {r.enlaceWhatsApp ? (
           <>
             <p className="text-sm text-slate-600">
-              Último paso: toca el botón y <b>envía el mensaje</b>. Genesys, nuestra asesora virtual, te responde al instante con la información de <b>{r.tema}</b>.
+              {asesor
+                ? <>Tus datos ya quedaron registrados. Último paso: toca el botón y <b>envía el mensaje</b> para abrir tu chat con Admisión; <b>{asesor}</b> te sigue atendiendo.</>
+                : <>Último paso: toca el botón y <b>envía el mensaje</b>. Genesys, nuestra asesora virtual, te responde al instante con la información de <b>{r.tema}</b>.</>}
             </p>
             <a href={r.enlaceWhatsApp} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-4 text-base font-bold text-white shadow-sm transition hover:brightness-105">
               <svg viewBox="0 0 24 24" aria-hidden className="h-6 w-6 fill-current"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.4.6-.4.4c-.1.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.7-.1 1.3Z"/></svg>
@@ -69,7 +79,7 @@ export function FormularioRegistro({ codigo, carreras, colegio }: { codigo: stri
       </label>
       {r.error && <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{r.error}</p>}
       <button disabled={enviando} className="w-full rounded-xl bg-[#003865] px-4 py-3.5 text-base font-semibold text-white shadow-sm transition hover:brightness-110 disabled:opacity-60">
-        {enviando ? 'Enviando…' : 'Quiero recibir información'}
+        {enviando ? 'Enviando…' : asesor ? 'Enviar mis datos' : 'Quiero recibir información'}
       </button>
     </form>
   )

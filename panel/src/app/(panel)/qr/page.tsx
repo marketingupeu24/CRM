@@ -53,9 +53,9 @@ export default async function PaginaQrAsesor() {
       <div className="no-imprimir">
         <h1 className="text-2xl font-semibold">{todos ? 'QR de los asesores' : 'Mi QR'} (atención presencial)</h1>
         <p className="max-w-3xl text-sm text-slate-500">
-          Para la atención en persona. <b>Lo mejor:</b> escribe sus datos en <b>Registrar a quien atiendo ahora</b> y muéstrale su QR:
-          al enviar el mensaje queda registrada con esos datos y su celular real, como tu lead. <b>Tu QR impreso</b> (abajo) también
-          sirve: quien lo escanea queda como tu lead y luego completas sus datos en <b>Escaneados recientemente</b>.
+          Para la atención en persona. <b>Tu QR impreso</b> (abajo): quien lo escanea llena un formulario corto con sus datos, queda
+          registrado <b>como tu lead</b> y luego te escribe por WhatsApp con un mensaje listo. Si prefieres escribir tú sus datos, usa
+          <b> Registrar a quien atiendo ahora</b>: se genera un QR solo para esa persona.
         </p>
       </div>
       {!ajuste?.valor && (
