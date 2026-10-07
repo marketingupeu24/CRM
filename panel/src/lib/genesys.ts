@@ -48,6 +48,9 @@ export function promptGenesys(fichas: FichaGenesys[], fecha: Date = new Date()):
   const salida: string[] = [
     '# Genesys – Asesora virtual de Admisión UPeU, campus Juliaca',
     `(Actualizado el ${hoy} desde el CRM de Admisión. Usa solo esta información; si un dato no está aquí, no lo inventes.)`,
+    '',
+    // BuilderBot reemplaza {contexto} con el campo "contexto" de la consulta al CRM (/genesys/registrar)
+    'CONTEXTO DEL ALUMNO (lo envía el CRM): {contexto}',
   ]
   let n = 0
   const seccion = (titulo: string, cuerpo: string[]) => {

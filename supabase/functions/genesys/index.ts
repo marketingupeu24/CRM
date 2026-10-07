@@ -301,7 +301,38 @@ async function registrar(cuerpo: Cuerpo): Promise<Respuesta> {
     bot_pausado_hasta: lead.bot_pausado_hasta ?? '',
     fuera_de_horario: !!apertura,
     proxima_atencion: apertura ? textoProximaAtencion(apertura) : '',
+    // Lo que el CRM ya sabe del alumno: BuilderBot lo pasa al asistente para no volver a pedir datos
+    registrado: leadRegistrado(lead),
+    contexto: await contextoDelAlumno(lead),
   }
+}
+
+/** Ya dejó sus datos (con Genesys, QR, formulario o un asesor): no hay que volver a pedírselos. */
+function leadRegistrado(lead: Lead): boolean {
+  return !!lead.asesor_id || !!lead.fecha_interesado || (!!lead.nombre && (!!lead.dni || !!lead.carrera_interes))
+}
+
+/**
+ * Resumen en texto del alumno para el prompt de Genesys ("CONTEXTO DEL ALUMNO").
+ * Así, si escribe otro día, Genesys sabe quién es y no le vuelve a pedir nombre, documento ni carrera.
+ */
+async function contextoDelAlumno(lead: Lead): Promise<string> {
+  if (!leadRegistrado(lead) && !lead.nombre) return 'Alumno nuevo: todavía no ha dado sus datos.'
+  let asesor: string | null = null
+  if (lead.asesor_id) {
+    const { data } = await supabase.from('asesores').select('nombre').eq('id', lead.asesor_id).maybeSingle()
+    asesor = data?.nombre?.trim().split(/\s+/).slice(0, 2).join(' ') ?? null
+  }
+  const interes = lead.programa === 'cepre' ? `CEPRE${lead.modalidad ? ` ${lead.modalidad}` : ''}` : lead.carrera_interes
+  const datos = [
+    lead.nombre && `Nombre: ${lead.nombre}`,
+    lead.dni && `Documento: ${lead.dni}`,
+    interes && `Interés: ${interes}`,
+    lead.colegio && `Colegio: ${lead.colegio}`,
+    asesor && `Su asesor(a): ${asesor}`,
+  ].filter(Boolean).join(' · ')
+  if (!leadRegistrado(lead)) return `Datos que ya dio: ${datos}. Aún no está registrado: pide solo lo que falte.`
+  return `YA REGISTRADO (no le vuelvas a pedir sus datos ni lo registres otra vez): ${datos}.`
 }
 
 /** Un identificador @lid no es un número: la API de BuilderBot no debe enviarle mensajes (se queda esperando). */
@@ -1083,10 +1114,11 @@ Deno.serve(async (req) => {
     const respuesta = await manejar(cuerpo)
     // Diagnóstico del registro que hace el bot (BuilderBot a veces lo repite en bucle):
     // qué envió, qué se respondió y cuánto tardó, en webhook_eventos.
-    if (accion === 'webhook') {
+    // registrar: cómo consulta BuilderBot en cada mensaje (para conectar el contexto del alumno)
+    if (accion === 'webhook' || accion === 'registrar') {
       EdgeRuntime.waitUntil(Promise.resolve(supabase.from('webhook_eventos').insert({
-        payload: { accion: 'webhook', cuerpo, respuesta, ms: Date.now() - inicio, user_agent: req.headers.get('user-agent') } as never,
-        procesado: `webhook: ${String((respuesta as { accion?: unknown }).accion ?? '')}`,
+        payload: { accion, cuerpo, respuesta, ms: Date.now() - inicio, user_agent: req.headers.get('user-agent') } as never,
+        procesado: `${accion}: ${String((respuesta as { accion?: unknown; estado?: unknown }).accion ?? (respuesta as { estado?: unknown }).estado ?? '')}`,
       })).then(() => undefined))
     }
     return responder(respuesta)
