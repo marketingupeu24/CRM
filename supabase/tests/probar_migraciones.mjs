@@ -807,6 +807,15 @@ seccion('horario de atención')
   ok(await prox('2026-10-06 12:45-05') === new Date('2026-10-06T14:00:00-05:00').toISOString(), 'al mediodía, la próxima atención es a las 2:00 p. m.')
   ok(await horas('2026-10-09 12:00-05', '2026-10-12 09:00-05') === 2, 'horas hábiles: viernes 12–13 + lunes 8–9 = 2 h (el fin de semana no cuenta)')
   ok(await horas('2026-10-05 08:00-05', '2026-10-05 20:00-05') === 8.5, 'un día completo de lunes son 8,5 h hábiles')
+  const cierre = async (t) => new Date((await uno(`select ultimo_cierre($1::timestamptz) r`, [t])).r).toISOString()
+  ok(await cierre('2026-10-12 08:30-05') === new Date('2026-10-09T13:00:00-05:00').toISOString(), 'el lunes, "llegaron con la oficina cerrada" cuenta desde el viernes 1:00 p. m.')
+  ok(await cierre('2026-10-06 13:00-05') === new Date('2026-10-06T12:30:00-05:00').toISOString(), 'al mediodía, el último cierre fue a las 12:30')
+  // Posponer una tarea vuelve a activar su recordatorio
+  const tareaLead = (await uno(`select id, asesor_id from leads where asesor_id is not null limit 1`))
+  const tarea = (await uno(`insert into tareas (lead_id, asesor_id, titulo, vence_at, recordatorio_enviado_at) values ($1, $2, 'Llamar', now(), now()) returning id`, [tareaLead.id, tareaLead.asesor_id])).id
+  await q(`update tareas set vence_at = now() + interval '1 day' where id = $1`, [tarea])
+  ok((await uno(`select recordatorio_enviado_at from tareas where id = $1`, [tarea])).recordatorio_enviado_at === null, 'al posponer una tarea se vuelve a recordar en su nueva fecha')
+  await q(`delete from tareas where id = $1`, [tarea])
 }
 
 seccion('anon')

@@ -338,13 +338,13 @@ isOneToOne: false
                   ]
                 },"tareas": {
                   Row: {
-                    "asesor_id": string,"completada_at": string | null,"creada_por": string | null,"created_at": string,"id": number,"lead_id": string,"titulo": string,"vence_at": string
+                    "asesor_id": string,"completada_at": string | null,"creada_por": string | null,"created_at": string,"id": number,"lead_id": string,"recordatorio_enviado_at": string | null,"titulo": string,"vence_at": string
                   }
                   Insert: {
-                    "asesor_id": string,"completada_at"?: string | null,"creada_por"?: string | null,"created_at"?: string,"id"?: never,"lead_id": string,"titulo": string,"vence_at": string
+                    "asesor_id": string,"completada_at"?: string | null,"creada_por"?: string | null,"created_at"?: string,"id"?: never,"lead_id": string,"recordatorio_enviado_at"?: string | null,"titulo": string,"vence_at": string
                   }
                   Update: {
-                    "asesor_id"?: string,"completada_at"?: string | null,"creada_por"?: string | null,"created_at"?: string,"id"?: never,"lead_id"?: string,"titulo"?: string,"vence_at"?: string
+                    "asesor_id"?: string,"completada_at"?: string | null,"creada_por"?: string | null,"created_at"?: string,"id"?: never,"lead_id"?: string,"recordatorio_enviado_at"?: string | null,"titulo"?: string,"vence_at"?: string
                   }
                   Relationships: [
                     {
@@ -648,6 +648,9 @@ isOneToOne: false
                            },
 "tiene_permiso":
 { Args: { "p_modulo": string }; Returns: boolean
+                           },
+"ultimo_cierre":
+{ Args: { "p_momento"?: string }; Returns: string
                            },
 "usar_prerregistro":
 { Args: { "p_codigo": string,"p_lead_id": string }; Returns: Json

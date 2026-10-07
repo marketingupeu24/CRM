@@ -581,37 +581,51 @@ async function recordatorios(): Promise<Respuesta> {
   // 1) Reintentos de notificación
   const reenviadas = await reintentarAvisos()
 
-  // 2) Resumen por asesor de leads sin contactar
-  const sinContactar = await supabase.from('leads').select(seleccion)
-    .eq('estado', 'lead_asignado')
-    .is('recordatorio_enviado', null)
-    .is('eliminado_at', null)
-    .lt('fecha_asignado', new Date(Date.now() - 12 * 3_600_000).toISOString())
-    .order('fecha_asignado')
+  // 2) Resumen de apertura por asesor (lunes a viernes 8:00):
+  //    a) leads que llegaron con la oficina cerrada y aún no contacta
+  //    b) leads sin contactar desde hace más de 12 h (una sola vez por lead)
+  const { data: cierre } = await supabase.rpc('ultimo_cierre')
+  const desdeCierre = cierre ? new Date(cierre as string).toISOString() : new Date(Date.now() - 16 * 3_600_000).toISOString()
+  const [llegaron, sinContactar] = await Promise.all([
+    supabase.from('leads').select(seleccion)
+      .eq('estado', 'lead_asignado').is('primer_contacto_asesor_at', null).is('eliminado_at', null)
+      .gte('fecha_asignado', desdeCierre).order('fecha_asignado'),
+    supabase.from('leads').select(seleccion)
+      .eq('estado', 'lead_asignado').is('recordatorio_enviado', null).is('eliminado_at', null)
+      .lt('fecha_asignado', new Date(Date.now() - 12 * 3_600_000).toISOString()).order('fecha_asignado'),
+  ])
+  if (llegaron.error) throw llegaron.error
   if (sinContactar.error) throw sinContactar.error
 
-  const porAsesor = new Map<string, typeof sinContactar.data>()
-  for (const lead of sinContactar.data) {
-    if (!lead.asesor?.telefono || !lead.asesor_id) continue
-    porAsesor.set(lead.asesor_id, [...(porAsesor.get(lead.asesor_id) ?? []), lead])
+  type LeadConAsesor = (typeof sinContactar.data)[number]
+  const porAsesor = new Map<string, { nuevos: LeadConAsesor[]; atrasados: LeadConAsesor[] }>()
+  const grupo = (l: LeadConAsesor) => {
+    const g = porAsesor.get(l.asesor_id!) ?? { nuevos: [], atrasados: [] }
+    porAsesor.set(l.asesor_id!, g)
+    return g
   }
+  for (const l of llegaron.data) if (l.asesor?.telefono && l.asesor_id) grupo(l).nuevos.push(l)
+  const enNuevos = new Set(llegaron.data.map((l) => l.id))
+  for (const l of sinContactar.data) if (l.asesor?.telefono && l.asesor_id && !enNuevos.has(l.id)) grupo(l).atrasados.push(l)
 
   let recordatoriosEnviados = 0
-  for (const leads of porAsesor.values()) {
+  for (const { nuevos, atrasados } of porAsesor.values()) {
+    const leads = [...nuevos, ...atrasados]
     const asesor = leads[0]!.asesor!
     const dias = (fecha: string | null) => Math.max(0, Math.floor((Date.now() - Date.parse(fecha ?? '')) / 86_400_000))
-    const lineas = leads.slice(0, 15).map((l) =>
+    const linea = (l: LeadConAsesor) =>
       `• ${l.nombre ?? 'Sin nombre'} – wa.me/${l.telefono} (${dias(l.fecha_asignado) === 0 ? 'hoy' : `hace ${dias(l.fecha_asignado)} d`})`
-    )
     const texto = [
-      '*RECORDATORIO DE ADMISIÓN*',
+      `*☀️ BUENOS DÍAS, ${asesor.nombre.split(' ')[0].toUpperCase()}*`,
+      nuevos.length ? `\n*Llegaron con la oficina cerrada (${nuevos.length}):*` : null,
+      ...nuevos.slice(0, 15).map(linea),
+      nuevos.length > 15 ? `… y ${nuevos.length - 15} más.` : null,
+      atrasados.length ? `\n*Siguen sin contactar (${atrasados.length}):*` : null,
+      ...atrasados.slice(0, 15).map(linea),
+      atrasados.length > 15 ? `… y ${atrasados.length - 15} más.` : null,
       '',
-      `Hola *${asesor.nombre.split(' ')[0]}*, tienes ${leads.length} lead(s) sin contactar:`,
-      ...lineas,
-      leads.length > 15 ? `… y ${leads.length - 15} más en el panel.` : null,
-      '',
-      'Por favor, inicia la gestión y actualiza su estado en el panel.',
-    ].filter((linea) => linea !== null).join('\n')
+      `Escríbeles desde el CRM: ${PANEL_URL}/pendientes`,
+    ].filter((l) => l !== null).join('\n')
 
     const envio = await enviarWhatsApp(asesor.telefono!, texto)
     if (!envio.ok) {
@@ -625,6 +639,51 @@ async function recordatorios(): Promise<Respuesta> {
   }
 
   return { ok: true, notificaciones_reenviadas: reenviadas, recordatorios_enviados: recordatoriosEnviados }
+}
+
+/**
+ * Próxima acción: cuando vence una tarea agendada, WhatsApp a su asesor (cron cada 10 min).
+ * Solo en horario de atención: lo que vence con la oficina cerrada se recuerda al abrir.
+ * Un mensaje por asesor con todas sus tareas vencidas; cada tarea se recuerda una vez (posponer la reactiva).
+ */
+async function recordarTareas(): Promise<Respuesta> {
+  if (MODO !== 'activo') return { ok: true, omitido: 'Solo en modo activo' }
+  if (proximaAtencion()) return { ok: true, omitido: 'Fuera del horario de atención' }
+  const { data: tareas, error } = await supabase.from('tareas')
+    .select('id, titulo, vence_at, asesor_id, lead:leads!tareas_lead_id_fkey(id, nombre, telefono, eliminado_at), asesor:asesores!tareas_asesor_id_fkey(nombre, telefono, eliminado_at)')
+    .is('completada_at', null).is('recordatorio_enviado_at', null)
+    .lte('vence_at', new Date().toISOString()).order('vence_at').limit(200)
+  if (error) throw error
+
+  type Tarea = NonNullable<typeof tareas>[number]
+  const porAsesor = new Map<string, Tarea[]>()
+  for (const t of tareas ?? []) {
+    if (!t.asesor?.telefono || t.asesor.eliminado_at || !t.lead || t.lead.eliminado_at) continue
+    porAsesor.set(t.asesor_id, [...(porAsesor.get(t.asesor_id) ?? []), t])
+  }
+
+  const hora = (iso: string) => new Intl.DateTimeFormat('es-PE', { timeZone: 'America/Lima', day: '2-digit', month: '2-digit', hour: 'numeric', minute: '2-digit' }).format(new Date(iso))
+  let enviados = 0
+  for (const lista of porAsesor.values()) {
+    const asesor = lista[0]!.asesor!
+    const texto = [
+      `*⏰ PRÓXIMA ACCIÓN${lista.length > 1 ? ` (${lista.length})` : ''}*`,
+      '',
+      ...lista.slice(0, 10).flatMap((t) => [
+        `• *${t.titulo}* — ${t.lead!.nombre ?? t.lead!.telefono} (agendada ${hora(t.vence_at)})`,
+        `  ${PANEL_URL}/leads/${t.lead!.id}`,
+      ]),
+      lista.length > 10 ? `… y ${lista.length - 10} más en ${PANEL_URL}/pendientes` : null,
+    ].filter((l) => l !== null).join('\n')
+    const envio = await enviarWhatsApp(asesor.telefono!, texto)
+    if (!envio.ok) {
+      console.error(`[genesys] Recordatorio de tareas a ${asesor.nombre} falló:`, envio.error)
+      continue
+    }
+    enviados++
+    await supabase.from('tareas').update({ recordatorio_enviado_at: new Date().toISOString() }).in('id', lista.map((t) => t.id))
+  }
+  return { ok: true, asesores_avisados: enviados, tareas: (tareas ?? []).length }
 }
 
 /** Diagnóstico sin exponer secretos (equivale a doGet ?v=bot + diagnosticarConfigBuilderBot). */
@@ -951,6 +1010,7 @@ const ACCIONES: Record<string, (cuerpo: Cuerpo) => Promise<Respuesta> | Respuest
   'sincronizar-bot': sincronizarBot,
   'reasignar': reasignar,
   'reintentar-avisos': reintentar,
+  'recordar-tareas': recordarTareas,
   'notificar': notificarAsignacion,
   'ping': ping,
 }
