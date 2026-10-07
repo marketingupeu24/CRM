@@ -129,16 +129,18 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
       </div>
 
       {!!deApoyo?.length && (
-        <details className="tarjeta p-4">
+        <details className="tarjeta p-4" open={deApoyo.some((l) => l.cubriendo)}>
           <summary className="cursor-pointer text-sm font-semibold">
-            🤝 Atendidos como apoyo <span className="font-normal text-slate-500">· {deApoyo.length} · leads de otros asesores que atendiste en persona</span>
+            🤝 Atendidos como apoyo <span className="font-normal text-slate-500">· {deApoyo.length} · leads de otros asesores que atendiste en persona o que cubres por su ausencia</span>
           </summary>
           <ul className="mt-3 divide-y divide-slate-100 text-sm">
             {deApoyo.map((l) => (
               <li key={l.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
                 <Link href={`/leads/${l.id}`} className="font-medium text-marca-700 hover:underline">{l.nombre ?? l.telefono}</Link>
                 <span className="text-xs text-slate-500">
-                  De {l.asesor ?? 'otro asesor'} · lo atendiste {haceCuanto(l.desde)}{l.motivo ? ` (${l.motivo})` : ''}
+                  {l.cubriendo
+                    ? <>De {l.asesor ?? 'otro asesor'} · 🧳 {l.motivo}</>
+                    : <>De {l.asesor ?? 'otro asesor'} · lo atendiste {haceCuanto(l.desde)}{l.motivo ? ` (${l.motivo})` : ''}</>}
                 </span>
               </li>
             ))}

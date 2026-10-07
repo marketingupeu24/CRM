@@ -45,16 +45,28 @@ isOneToOne: false
                   ]
                 },"asesores": {
                   Row: {
-                    "activo": boolean,"carreras": (string)[],"codigo_qr": string,"created_at": string,"eliminado_at": string | null,"email": string | null,"en_blacklist": boolean,"id": string,"nombre": string,"permisos": (string)[],"rol": Database["public"]['Enums']["asesor_rol"],"superadmin": boolean,"telefono": string | null,"ultimo_lead_asignado": string | null,"user_id": string | null,"usuario": string | null
+                    "activo": boolean,"activo_antes": boolean | null,"ausencia_activa": boolean,"ausente_desde": string | null,"ausente_hasta": string | null,"ausente_motivo": string | null,"ausente_reemplazo": string | null,"carreras": (string)[],"codigo_qr": string,"created_at": string,"eliminado_at": string | null,"email": string | null,"en_blacklist": boolean,"id": string,"nombre": string,"permisos": (string)[],"rol": Database["public"]['Enums']["asesor_rol"],"superadmin": boolean,"telefono": string | null,"ultimo_lead_asignado": string | null,"user_id": string | null,"usuario": string | null
                   }
                   Insert: {
-                    "activo"?: boolean,"carreras"?: (string)[],"codigo_qr"?: string,"created_at"?: string,"eliminado_at"?: string | null,"email"?: string | null,"en_blacklist"?: boolean,"id"?: string,"nombre": string,"permisos"?: (string)[],"rol"?: Database["public"]['Enums']["asesor_rol"],"superadmin"?: boolean,"telefono"?: string | null,"ultimo_lead_asignado"?: string | null,"user_id"?: string | null,"usuario"?: string | null
+                    "activo"?: boolean,"activo_antes"?: boolean | null,"ausencia_activa"?: boolean,"ausente_desde"?: string | null,"ausente_hasta"?: string | null,"ausente_motivo"?: string | null,"ausente_reemplazo"?: string | null,"carreras"?: (string)[],"codigo_qr"?: string,"created_at"?: string,"eliminado_at"?: string | null,"email"?: string | null,"en_blacklist"?: boolean,"id"?: string,"nombre": string,"permisos"?: (string)[],"rol"?: Database["public"]['Enums']["asesor_rol"],"superadmin"?: boolean,"telefono"?: string | null,"ultimo_lead_asignado"?: string | null,"user_id"?: string | null,"usuario"?: string | null
                   }
                   Update: {
-                    "activo"?: boolean,"carreras"?: (string)[],"codigo_qr"?: string,"created_at"?: string,"eliminado_at"?: string | null,"email"?: string | null,"en_blacklist"?: boolean,"id"?: string,"nombre"?: string,"permisos"?: (string)[],"rol"?: Database["public"]['Enums']["asesor_rol"],"superadmin"?: boolean,"telefono"?: string | null,"ultimo_lead_asignado"?: string | null,"user_id"?: string | null,"usuario"?: string | null
+                    "activo"?: boolean,"activo_antes"?: boolean | null,"ausencia_activa"?: boolean,"ausente_desde"?: string | null,"ausente_hasta"?: string | null,"ausente_motivo"?: string | null,"ausente_reemplazo"?: string | null,"carreras"?: (string)[],"codigo_qr"?: string,"created_at"?: string,"eliminado_at"?: string | null,"email"?: string | null,"en_blacklist"?: boolean,"id"?: string,"nombre"?: string,"permisos"?: (string)[],"rol"?: Database["public"]['Enums']["asesor_rol"],"superadmin"?: boolean,"telefono"?: string | null,"ultimo_lead_asignado"?: string | null,"user_id"?: string | null,"usuario"?: string | null
                   }
                   Relationships: [
-                    
+                    {
+      foreignKeyName: "asesores_ausente_reemplazo_fkey"
+      columns: ["ausente_reemplazo"]
+isOneToOne: false
+      referencedRelation: "asesores"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "asesores_ausente_reemplazo_fkey"
+      columns: ["ausente_reemplazo"]
+isOneToOne: false
+      referencedRelation: "vista_leads_por_asesor"
+      referencedColumns: ["asesor_id"]
+    }
                   ]
                 },"avisos_pendientes": {
                   Row: {
@@ -555,9 +567,18 @@ isOneToOne: false
             "actividad_publica":
 { Args: { "p_codigo": string }; Returns: Json
                            },
+"aplicar_ausencias":
+{ Args: Record<PropertyKey, never>; Returns: undefined
+                           },
 "asignar_asesor_lead":
 { Args: { "p_lead_id": string }; Returns: {
               "activo": boolean,
+"activo_antes": boolean | null,
+"ausencia_activa": boolean,
+"ausente_desde": string | null,
+"ausente_hasta": string | null,
+"ausente_motivo": string | null,
+"ausente_reemplazo": string | null,
 "carreras": (string)[],
 "codigo_qr": string,
 "created_at": string,
@@ -661,11 +682,16 @@ isOneToOne: false
                            },
 "mis_leads_apoyo":
 { Args: Record<PropertyKey, never>; Returns: {
-              "asesor": string,"desde": string,"id": string,"motivo": string,"nombre": string,"telefono": string,"ultimo_contacto": string
+              "asesor": string,"cubriendo": boolean,"desde": string,"id": string,"motivo": string,"nombre": string,"telefono": string,"ultimo_contacto": string
             }[]
                            },
 "papelera":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"posibles_reemplazos":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "id": string,"nombre": string
+            }[]
                            },
 "preguntas_sin_respuesta":
 { Args: { "p_dias"?: number }; Returns: {
@@ -678,10 +704,16 @@ isOneToOne: false
 "procesar_lead":
 { Args: { "p_asesor_id"?: string,"p_asignar"?: boolean,"p_carrera"?: string,"p_consulta"?: string,"p_convocatoria"?: string,"p_dni"?: string,"p_modalidad"?: string,"p_nombre"?: string,"p_notificar"?: boolean,"p_origen"?: string,"p_programa"?: string,"p_telefono"?: string }; Returns: Json
                            },
+"programar_ausencia":
+{ Args: { "p_asesor_id": string,"p_desde": string,"p_hasta": string,"p_motivo"?: string,"p_reemplazo"?: string }; Returns: Json
+                           },
 "proxima_atencion":
 { Args: { "p_momento"?: string }; Returns: string
                            },
 "puede_gestionar_usuario":
+{ Args: { "p_asesor_id": string }; Returns: boolean
+                           },
+"puede_programar_ausencia":
 { Args: { "p_asesor_id": string }; Returns: boolean
                            },
 "qr_asesor_publico":
@@ -781,6 +813,9 @@ isOneToOne: false
                            },
 "solicitar_sync_bot":
 { Args: { "p_lead_id"?: string }; Returns: undefined
+                           },
+"terminar_ausencia":
+{ Args: { "p_asesor_id": string }; Returns: undefined
                            },
 "tiene_permiso":
 { Args: { "p_modulo": string }; Returns: boolean

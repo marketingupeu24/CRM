@@ -28,7 +28,8 @@ export function InterruptorRecibe({ asesor, editable }: { asesor: Asesor; editab
     <div className="space-y-1">
       <button
         type="button" role="switch" aria-checked={asesor.activo} aria-label={`${asesor.nombre} recibe leads`}
-        disabled={!editable || pendiente}
+        disabled={!editable || pendiente || asesor.ausencia_activa}
+        title={asesor.ausencia_activa ? 'Está ausente: al terminar la ausencia vuelve como estaba' : undefined}
         onClick={() => iniciar(async () => setR(await cambiarActivo(asesor.id, !asesor.activo)))}
         className="inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
       >
@@ -36,7 +37,7 @@ export function InterruptorRecibe({ asesor, editable }: { asesor: Asesor; editab
           <span className={`absolute top-0.5 size-4 rounded-full bg-white shadow transition-all ${asesor.activo ? 'left-4.5' : 'left-0.5'}`} />
         </span>
         <span className={`text-xs font-medium ${asesor.activo ? 'text-emerald-700' : 'text-slate-500'}`}>
-          {pendiente ? 'Guardando…' : asesor.activo ? 'Recibe leads' : 'No recibe'}
+          {pendiente ? 'Guardando…' : asesor.ausencia_activa ? 'Ausente' : asesor.activo ? 'Recibe leads' : 'No recibe'}
         </span>
       </button>
       <Mensaje r={r} />

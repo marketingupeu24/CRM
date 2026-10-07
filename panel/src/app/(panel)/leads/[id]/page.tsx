@@ -116,7 +116,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
 
       {apoyo && (
         <p className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
-          🤝 Eres <b>asesor(a) de apoyo</b>: lo atendiste en persona, pero es lead de <b>{lead.asesor?.nombre ?? 'otro asesor'}</b>.
+          🤝 Eres <b>asesor(a) de apoyo</b> (lo atendiste en persona o cubres la ausencia de su asesor): es lead de <b>{lead.asesor?.nombre ?? 'otro asesor'}</b>.
           Puedes ver su conversación, escribirle y dejar notas; su estado y seguimiento los lleva su asesor(a).
         </p>
       )}

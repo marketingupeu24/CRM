@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { MODULOS } from '@crm/db'
+import { Ausencia } from '@/components/Ausencia'
 import { etiquetaRol, obtenerSesion } from '@/lib/sesion'
+import { crearClienteServidor } from '@/lib/supabase/server'
 import { FormularioClave } from './FormularioClave'
 
 export const metadata: Metadata = { title: 'Mi cuenta' }
@@ -8,6 +10,8 @@ export const metadata: Metadata = { title: 'Mi cuenta' }
 export default async function PaginaCuenta() {
   const sesion = await obtenerSesion()
   const { perfil } = sesion
+  const supabase = await crearClienteServidor()
+  const { data: reemplazos } = await supabase.rpc('posibles_reemplazos')
 
   return (
     <div className="max-w-lg space-y-6">
@@ -29,6 +33,14 @@ export default async function PaginaCuenta() {
           ))}
           {!sesion.permisos.length && <li className="text-sm text-slate-500">Ninguno por ahora.</li>}
         </ul>
+      </section>
+      <section className="tarjeta p-6">
+        <h2 className="mb-1 font-semibold">Ausencia (viaje, permiso)</h2>
+        <p className="mb-4 text-xs text-slate-500">
+          Mientras estés ausente no recibes leads nuevos y tus clientes siguen siendo tuyos.
+          Quien te cubra ve sus chats, puede escribirles y recibe los avisos de sus mensajes. Al terminar, todo vuelve como estaba.
+        </p>
+        <Ausencia asesor={perfil} reemplazos={reemplazos ?? []} />
       </section>
       <section className="tarjeta p-6">
         <h2 className="mb-4 font-semibold">Cambiar contraseña</h2>

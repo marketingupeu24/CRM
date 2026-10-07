@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { fechaHora } from '@/lib/formato'
+import { Ausencia } from '@/components/Ausencia'
 import { AccionesAsesor, FormularioNuevoAsesor, InterruptorRecibe } from './Formularios'
 
 export const metadata: Metadata = { title: 'Asesores y usuarios' }
@@ -9,7 +10,10 @@ export const metadata: Metadata = { title: 'Asesores y usuarios' }
 export default async function PaginaUsuarios() {
   const { perfil, superadmin } = await exigirPermiso('usuarios')
   const supabase = await crearClienteServidor()
-  const { data: asesores, error } = await supabase.from('asesores').select('*').is('eliminado_at', null).order('rol').order('nombre')
+  const [{ data: asesores, error }, { data: reemplazos }] = await Promise.all([
+    supabase.from('asesores').select('*').is('eliminado_at', null).order('rol').order('nombre'),
+    supabase.rpc('posibles_reemplazos'),
+  ])
 
   return (
     <div className="space-y-6">
@@ -58,6 +62,9 @@ export default async function PaginaUsuarios() {
                 <td className="px-4 py-3 text-xs">
                   <InterruptorRecibe asesor={a} editable={!a.superadmin || superadmin} />
                   {a.activo && <p className="mt-1 text-slate-500">{a.carreras.length ? a.carreras.join(', ') : 'Rotación general'}</p>}
+                  {a.user_id && (!a.superadmin || superadmin) && (
+                    <div className="mt-2 w-64"><Ausencia asesor={a} reemplazos={reemplazos ?? []} compacto /></div>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-xs whitespace-nowrap">{fechaHora(a.ultimo_lead_asignado)}</td>
                 <td className="w-72 px-4 py-3">

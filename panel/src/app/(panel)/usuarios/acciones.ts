@@ -126,6 +126,8 @@ export async function cambiarActivo(asesorId: string, activo: boolean): Promise<
     const { data } = await supabase.from('asesores').select('telefono').eq('id', asesorId).single()
     if (!data?.telefono) return { error: 'Primero agrégale un celular (Editar): ahí le llegan los avisos de sus leads.' }
   }
+  const { data: actual } = await supabase.from('asesores').select('ausencia_activa').eq('id', asesorId).single()
+  if (actual?.ausencia_activa) return { error: 'Está ausente: termina su ausencia primero.' }
   const { error } = await supabase.from('asesores').update({ activo }).eq('id', asesorId)
   if (error) return { error: mensajeError(error) }
   revalidatePath('/usuarios')

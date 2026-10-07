@@ -122,8 +122,9 @@ Deno.serve(async (req) => {
 
   // 6. Primer mensaje a un lead asignado: pasa a "contactado" (con la sesión del asesor,
   //    así el cambio queda firmado en el historial)
-  if (envio.ok && !esApoyo && lead.estado === 'lead_asignado') {
-    await usuario.from('leads').update({ estado: 'lead_contactado' }).eq('id', lead.id)
+  //    (el apoyo o reemplazo no puede editar el lead: el cambio lo hace el sistema)
+  if (envio.ok && lead.estado === 'lead_asignado') {
+    await (esApoyo ? admin : usuario).from('leads').update({ estado: 'lead_contactado' }).eq('id', lead.id)
   }
 
   if (!envio.ok) {

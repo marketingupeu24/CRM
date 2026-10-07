@@ -189,16 +189,24 @@ async function avisarMensajeNuevo(lead: Lead, mensaje: string) {
     .select('id')
   if (!reservado?.length) return
 
-  const { data: asesor } = await supabase.from('asesores').select('telefono').eq('id', lead.asesor_id).single()
-  if (!asesor?.telefono) return
+  const { data: asesor } = await supabase.from('asesores')
+    .select('telefono, nombre, ausencia_activa, ausente_hasta, ausente_reemplazo').eq('id', lead.asesor_id).single()
+  if (!asesor) return
+  // Asesor ausente con reemplazo: el aviso va a quien lo cubre (el lead sigue siendo del asesor)
+  const { data: reemplazo } = asesor.ausencia_activa && asesor.ausente_reemplazo
+    ? await supabase.from('asesores').select('telefono').eq('id', asesor.ausente_reemplazo).maybeSingle()
+    : { data: null }
+  const destino = reemplazo?.telefono ?? asesor.telefono
+  if (!destino) return
   const texto = [
     `💬 *Nuevo mensaje de ${lead.nombre ?? lead.telefono}*`,
+    reemplazo?.telefono ? `(lead de ${asesor.nombre}: lo cubres hasta el ${fechaCorta(asesor.ausente_hasta)})` : null,
     '',
     mensaje.length > 300 ? mensaje.slice(0, 300) + '…' : mensaje,
     '',
     `Responde desde el CRM: ${PANEL_URL}/leads/${lead.id}#chat`,
-  ].join('\n')
-  const envio = await enviarWhatsApp(asesor.telefono, texto)
+  ].filter((linea) => linea !== null).join('\n')
+  const envio = await enviarWhatsApp(destino, texto)
   if (!envio.ok) console.error('[genesys] No se pudo avisar el mensaje nuevo al asesor:', envio.error)
 }
 
@@ -213,7 +221,7 @@ async function avisarMensajeNuevo(lead: Lead, mensaje: string) {
 /** Celulares de quienes reciben leads (o son asesores): reciben los avisos del CRM, no son leads. */
 async function telefonosAsesores(): Promise<Set<string>> {
   const { data } = await supabase.from('asesores').select('telefono')
-    .or('rol.eq.asesor,activo.eq.true').is('eliminado_at', null).not('telefono', 'is', null)
+    .or('rol.eq.asesor,activo.eq.true,ausencia_activa.eq.true').is('eliminado_at', null).not('telefono', 'is', null)
   return new Set((data ?? []).map((a) => a.telefono!))
 }
 
@@ -319,6 +327,16 @@ async function registrar(cuerpo: Cuerpo): Promise<Respuesta> {
   }
 }
 
+/** "jueves 9 de octubre, 6:00 pm" (hora de Perú, sin puntos: BuilderBot corta los mensajes en cada punto) */
+function fechaCorta(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  const dia = new Intl.DateTimeFormat('es-PE', { timeZone: 'America/Lima', weekday: 'long', day: 'numeric', month: 'long' }).format(d)
+  const hora = new Intl.DateTimeFormat('es-PE', { timeZone: 'America/Lima', hour: 'numeric', minute: '2-digit', hour12: true }).format(d)
+    .replace(/\s*a\.?\s*m\.?/i, ' am').replace(/\s*p\.?\s*m\.?/i, ' pm')
+  return `${dia}, ${hora}`
+}
+
 /** "Hoy es miércoles 7 de octubre de 2026, 3:06 pm (hora de Perú). La oficina está abierta…" */
 function fechaYHorario(): string {
   const ahora = new Date()
@@ -378,8 +396,19 @@ async function contextoDelAlumno(lead: Lead): Promise<string> {
   if (!leadRegistrado(lead) && !lead.nombre) return 'Alumno nuevo: todavía no ha dado sus datos.'
   let asesor: string | null = null
   if (lead.asesor_id) {
-    const { data } = await supabase.from('asesores').select('nombre').eq('id', lead.asesor_id).maybeSingle()
-    asesor = data?.nombre?.trim().split(/\s+/).slice(0, 2).join(' ') ?? null
+    const { data } = await supabase.from('asesores')
+      .select('nombre, ausencia_activa, ausente_hasta, ausente_reemplazo')
+      .eq('id', lead.asesor_id).maybeSingle()
+    const corto = (n?: string | null) => n?.trim().split(/\s+/).slice(0, 2).join(' ') ?? null
+    asesor = corto(data?.nombre)
+    // Ausente (viaje, permiso): Genesys avisa hasta cuándo y quién lo atiende mientras tanto
+    if (asesor && data?.ausencia_activa) {
+      const { data: cubre } = data.ausente_reemplazo
+        ? await supabase.from('asesores').select('nombre').eq('id', data.ausente_reemplazo).maybeSingle()
+        : { data: null }
+      const reemplazo = corto(cubre?.nombre)
+      asesor += ` (ausente hasta el ${fechaCorta(data.ausente_hasta)}; ${reemplazo ? `mientras tanto lo atiende ${reemplazo}` : 'mientras tanto responde el equipo de Admisión'})`
+    }
   }
   const interes = lead.programa === 'cepre' ? `CEPRE${lead.modalidad ? ` ${lead.modalidad}` : ''}` : lead.carrera_interes
   const datos = [
@@ -1184,6 +1213,29 @@ async function avisarVisita(cuerpo: Cuerpo): Promise<Respuesta> {
   return { ok: true, avisado: envio.ok }
 }
 
+/** Se programó una ausencia con reemplazo (programar_ausencia): se avisa a quien cubrirá. */
+async function avisarAusencia(cuerpo: Cuerpo): Promise<Respuesta> {
+  const asesorId = typeof cuerpo.asesor_id === 'string' ? cuerpo.asesor_id : null
+  if (!asesorId) return { ok: false, error: 'falta asesor_id' }
+  const { data: ausente } = await supabase.from('asesores')
+    .select('nombre, ausente_desde, ausente_hasta, ausente_motivo, ausente_reemplazo')
+    .eq('id', asesorId).maybeSingle()
+  const { data: cubre } = ausente?.ausente_reemplazo
+    ? await supabase.from('asesores').select('telefono').eq('id', ausente.ausente_reemplazo).maybeSingle()
+    : { data: null }
+  const telefono = cubre?.telefono
+  if (!ausente || !telefono) return { ok: true, avisado: false }
+  const envio = await enviarWhatsApp(telefono, [
+    '*🧳 CUBRES A UN COMPAÑERO*',
+    `*${ausente.nombre}* estará ausente${ausente.ausente_motivo ? ` (${ausente.ausente_motivo})` : ''}:`,
+    `desde el ${fechaCorta(ausente.ausente_desde)} hasta el ${fechaCorta(ausente.ausente_hasta)}`,
+    '',
+    'Mientras tanto te llegan los avisos de sus clientes y puedes ver sus chats y escribirles (siguen siendo sus leads).',
+    `Encuéntralos en el CRM: ${PANEL_URL}/leads (🤝 Atendidos como apoyo)`,
+  ].join('\n'))
+  return { ok: true, avisado: envio.ok }
+}
+
 const ACCIONES: Record<string, (cuerpo: Cuerpo) => Promise<Respuesta> | Respuesta> = {
   'registrar': registrar,
   'webhook': webhook,
@@ -1196,6 +1248,7 @@ const ACCIONES: Record<string, (cuerpo: Cuerpo) => Promise<Respuesta> | Respuest
   'recordar-tareas': recordarTareas,
   'notificar': notificarAsignacion,
   'visita': avisarVisita,
+  'ausencia': avisarAusencia,
   'ping': ping,
 }
 
