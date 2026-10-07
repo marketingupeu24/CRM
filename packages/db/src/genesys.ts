@@ -34,6 +34,11 @@ export const PARTES_GENESYS: readonly ParteGenesys[] = [
     campos: TEXTO,
   },
   {
+    clave: 'plantillas', titulo: 'Plantillas de respuesta', icono: '🎨', nombreFicha: 'Plantilla',
+    descripcion: 'Cómo se ven las respuestas (emojis, negritas, orden). Genesys copia este estilo. Usa [corchetes] para lo que cambia.',
+    campos: [{ clave: 'texto', etiqueta: 'Plantilla', tipo: 'area' }],
+  },
+  {
     clave: 'registro', titulo: 'Registro de alumnos', icono: '📋', nombreFicha: 'Paso',
     descripcion: 'Cómo pide y confirma los datos. Aquí vive el único PEDIDO_CONFIRMADO del prompt.',
     campos: TEXTO,

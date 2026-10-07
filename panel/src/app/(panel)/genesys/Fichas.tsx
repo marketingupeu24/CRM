@@ -35,7 +35,7 @@ export function FormularioFicha({ parte, ficha, alGuardar }: { parte: ParteGenes
           ) : (
             <textarea
               name={c.clave} defaultValue={ficha?.campos[c.clave] ?? ''}
-              rows={c.tipo === 'lista' ? Math.max(3, (ficha?.campos[c.clave] ?? '').split('\n').length + 1) : Math.max(3, Math.ceil((ficha?.campos[c.clave] ?? '').length / 90) + 1)}
+              rows={Math.max(3, (ficha?.campos[c.clave] ?? '').split('\n').length + 1, c.tipo === 'lista' ? 0 : Math.ceil((ficha?.campos[c.clave] ?? '').length / 90) + 1)}
               className="campo mt-1"
             />
           )}

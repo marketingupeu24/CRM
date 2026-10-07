@@ -55,6 +55,7 @@ export function promptGenesys(fichas: FichaGenesys[], fecha: Date = new Date()):
     salida.push('', `## ${++n}. ${titulo}`, '', cuerpo.join('\n\n'))
   }
   seccion('Identidad y estilo', de('identidad').map(texto))
+  seccion('Plantillas de respuesta (copia su estilo y sus emojis; reemplaza lo que está entre [corchetes])', de('plantillas').map(texto))
   seccion('Registro de alumnos', de('registro').map(texto))
   seccion('Reglas y límites', de('reglas').map(texto))
 
