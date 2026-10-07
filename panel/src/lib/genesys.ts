@@ -24,7 +24,7 @@ function fichaCarrera(f: FichaGenesys): string {
     campo(f, 'perfil') && `- Perfil del egresado: ${campo(f, 'perfil')}`,
     campo(f, 'salidas') && `- Campo laboral: ${campo(f, 'salidas')}`,
     campo(f, 'duracion') && `- Duración: ${campo(f, 'duracion')}`,
-    `- Costo referencial: ${costo ?? 'lo confirma el asesor(a) con la proforma'}`,
+    `- Costo referencial (dalo SOLO si pregunta por el precio): ${costo ?? 'lo confirma el asesor(a) con la proforma'}`,
     campo(f, 'notas') && `- Nota: ${campo(f, 'notas')}`,
   ].filter(Boolean).join('\n')
 }
