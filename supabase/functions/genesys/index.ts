@@ -1141,6 +1141,33 @@ async function notificarAsignacion(cuerpo: Cuerpo): Promise<Respuesta> {
   return { ok: true, avisados, bienvenidas }
 }
 
+/**
+ * Un lead de otro asesor vino en persona y lo atendió otro (avisar_visita en la base):
+ * el lead sigue siendo de su asesor, a quien se le avisa por WhatsApp.
+ */
+async function avisarVisita(cuerpo: Cuerpo): Promise<Respuesta> {
+  const leadId = typeof cuerpo.lead_id === 'string' ? cuerpo.lead_id : null
+  if (!leadId) return { ok: false, error: 'falta lead_id' }
+  const { data: lead } = await supabase.from('leads').select('*').eq('id', leadId).maybeSingle()
+  if (!lead?.asesor_id || lead.eliminado_at) return { ok: true, avisado: false }
+  const { data: asesor } = await supabase.from('asesores').select('telefono').eq('id', lead.asesor_id).single()
+  if (!asesor?.telefono) return { ok: true, avisado: false }
+  const atendio = typeof cuerpo.atendio === 'string' ? cuerpo.atendio : 'otro asesor'
+  const como = typeof cuerpo.como === 'string' ? cuerpo.como : null
+  const texto = [
+    '*🏢 TU LEAD VINO A LA OFICINA*',
+    `Lo atendió *${atendio}*${como ? ` (${como})` : ''}. Sigue siendo tu lead: dale seguimiento.`,
+    '',
+    `*Nombre:* ${lead.nombre ?? 'Sin nombre'}`,
+    `*Interés:* ${lead.modalidad ?? lead.carrera_interes ?? 'Consulta general'}`,
+    `*Celular:* ${lead.telefono}`,
+    `*Ficha en el CRM:* ${PANEL_URL}/leads/${lead.id}`,
+  ].join('\n')
+  const envio = await enviarWhatsApp(asesor.telefono, texto)
+  if (!envio.ok) console.error('[genesys] No se pudo avisar la visita al asesor:', envio.error)
+  return { ok: true, avisado: envio.ok }
+}
+
 const ACCIONES: Record<string, (cuerpo: Cuerpo) => Promise<Respuesta> | Respuesta> = {
   'registrar': registrar,
   'webhook': webhook,
@@ -1152,6 +1179,7 @@ const ACCIONES: Record<string, (cuerpo: Cuerpo) => Promise<Respuesta> | Respuest
   'reintentar-avisos': reintentar,
   'recordar-tareas': recordarTareas,
   'notificar': notificarAsignacion,
+  'visita': avisarVisita,
   'ping': ping,
 }
 

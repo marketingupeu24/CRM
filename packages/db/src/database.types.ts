@@ -552,6 +552,12 @@ isOneToOne: false
 "asignar_lead_qr_asesor":
 { Args: { "p_codigo": string,"p_lead_id": string }; Returns: Json
                            },
+"avisar_visita":
+{ Args: { "p_atendio": string,"p_como": string,"p_lead_id": string }; Returns: undefined
+                           },
+"avisar_visita_registro":
+{ Args: { "p_dni"?: string,"p_telefono"?: string }; Returns: boolean
+                           },
 "borrar_asesor_definitivo":
 { Args: { "p_id": string }; Returns: undefined
                            },

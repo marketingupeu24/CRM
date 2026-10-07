@@ -46,6 +46,12 @@ export async function registrarFicha(ficha: Ficha, tanda: DatosTanda): Promise<R
   const r = (data ?? [])[0]
   if (!r) return { error: 'No se pudo registrar.' }
 
+  // Ya es lead de otro asesor: sigue siendo suyo, pero se le avisa que vino y lo atendiste
+  if (r.estado === 'omitido') {
+    const { data: avisado } = await supabase.rpc('avisar_visita_registro', { p_telefono: ficha.celular || undefined, p_dni: ficha.dni || undefined })
+    if (avisado) return { estado: 'omitido', mensaje: 'Ya es lead de otro asesor: sigue siendo suyo y se le avisó que lo atendiste.', leadId: null }
+  }
+
   // Observación y convocatoria (opcionales) sobre el lead recién registrado
   if (r.lead_id && (ficha.observacion.trim() || tanda.convocatoria.trim())) {
     if (tanda.convocatoria.trim()) {

@@ -185,7 +185,7 @@ export function RegistroRapido({ carreras, actividades, asignacion, convocatoria
           {existente && (
             <p className={`rounded-lg px-3 py-2 text-sm sm:col-span-2 ${existente.de_otro_asesor ? 'bg-amber-50 text-amber-800' : 'bg-marca-50 text-marca-700'}`}>
               {existente.de_otro_asesor
-                ? `Este ${existente.por === 'dni' ? 'DNI' : 'celular'} ya es de otro asesor: no se registrará de nuevo.`
+                ? `Este ${existente.por === 'dni' ? 'DNI' : 'celular'} ya es de otro asesor: sigue siendo suyo. Atiéndelo igual; al guardar, se le avisa que vino y lo atendiste.`
                 : <>Ya está registrado por su {existente.por === 'dni' ? 'DNI' : 'celular'}{existente.nombre ? <>: <b>{existente.nombre}</b></> : ''}{existente.asesor ? ` (asesor: ${existente.asesor})` : ''}. Se actualizarán sus datos, sin duplicar.{existente.en_papelera ? ' Volverá de la papelera.' : ''}
                   {existente.lead_id && <> <Link href={`/leads/${existente.lead_id}`} target="_blank" className="font-medium underline">Ver</Link></>}</>}
             </p>
