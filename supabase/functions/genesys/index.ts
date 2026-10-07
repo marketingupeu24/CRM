@@ -1079,7 +1079,17 @@ Deno.serve(async (req) => {
   }
 
   try {
-    return responder(await manejar(cuerpo))
+    const inicio = Date.now()
+    const respuesta = await manejar(cuerpo)
+    // Diagnóstico del registro que hace el bot (BuilderBot a veces lo repite en bucle):
+    // qué envió, qué se respondió y cuánto tardó, en webhook_eventos.
+    if (accion === 'webhook') {
+      EdgeRuntime.waitUntil(Promise.resolve(supabase.from('webhook_eventos').insert({
+        payload: { accion: 'webhook', cuerpo, respuesta, ms: Date.now() - inicio, user_agent: req.headers.get('user-agent') } as never,
+        procesado: `webhook: ${String((respuesta as { accion?: unknown }).accion ?? '')}`,
+      })).then(() => undefined))
+    }
+    return responder(respuesta)
   } catch (e) {
     if (e instanceof ErrorApi) {
       return responder({ ok: false, status: 'error', error: e.codigo, mensaje: e.message }, e.status)
