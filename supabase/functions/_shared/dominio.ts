@@ -71,7 +71,7 @@ export function normalizarDni(valor: unknown): string | null {
 /** Orígenes del lead ("¿cómo nos conociste?"). Deben coincidir con los del panel. */
 export const ORIGENES = [
   'Facebook', 'Instagram', 'TikTok', 'Google', 'Página web', 'Recomendación',
-  'Colegio adventista', 'Feria / colegio', 'Volante / afiche', 'Radio / TV', 'Otro',
+  'Colegio adventista', 'Iglesia', 'Colportaje', 'Feria / colegio', 'Volante / afiche', 'Radio / TV', 'Otro',
 ] as const
 
 /** Lleva lo que escribió el lead (o la campaña) al origen de la lista: "fb" -> "Facebook". */
@@ -83,6 +83,8 @@ export function normalizarOrigen(valor: unknown): string | null {
     [/face|\bfb\b|meta/, 'Facebook'], [/insta|\big\b/, 'Instagram'], [/tik ?tok/, 'TikTok'],
     [/google|busca/, 'Google'], [/web|pagina|sitio/, 'Página web'],
     [/recomend|amig|familia|conocid|referid/, 'Recomendación'],
+    // Antes de "adventista": "iglesia adventista" es Iglesia, no Colegio adventista
+    [/colport/, 'Colportaje'], [/iglesia|templo|pastor|culto/, 'Iglesia'],
     [/adventista|\bcat\b|titicaca/, 'Colegio adventista'], [/feria|colegio|charla|visita/, 'Feria / colegio'],
     [/volante|afiche|panel|letrero/, 'Volante / afiche'], [/radio|tv|tele/, 'Radio / TV'],
   ]

@@ -126,6 +126,8 @@ export const ORIGENES = [
   'Página web',
   'Recomendación',
   'Colegio adventista',
+  'Iglesia',
+  'Colportaje',
   'Feria / colegio',
   'Volante / afiche',
   'Radio / TV',
