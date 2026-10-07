@@ -259,6 +259,9 @@ async function asignarPorQrAsesor(lead: Lead, mensaje: string, telefono: string,
 
 async function registrar(cuerpo: Cuerpo): Promise<Respuesta> {
   const telefono = telefonoDe(cuerpo)
+  // Consulta de BuilderBot antes del asistente: solo lee lo que el CRM sabe del alumno
+  // (el mensaje ya llega al CRM por el webhook; así no se registra dos veces)
+  if (cuerpo.solo_contexto === true || cuerpo.solo_contexto === 'true') return contextoSinRegistrar(telefono)
   const mensaje = valorResuelto(cuerpo.mensaje)
   // La respuesta automática del WhatsApp de un asesor a un aviso del CRM no es un lead
   if (telefono && (await telefonosAsesores()).has(telefono)) {
@@ -304,6 +307,26 @@ async function registrar(cuerpo: Cuerpo): Promise<Respuesta> {
     // Lo que el CRM ya sabe del alumno: BuilderBot lo pasa al asistente para no volver a pedir datos
     registrado: leadRegistrado(lead),
     contexto: await contextoDelAlumno(lead),
+  }
+}
+
+/** Solo lectura: contexto del alumno y si el bot debe responder, sin guardar nada. */
+async function contextoSinRegistrar(telefono: string): Promise<Respuesta> {
+  const { data: leadId } = await supabase.rpc('lead_de_contacto', { p_contacto: telefono })
+  const { data: lead } = leadId ? await supabase.from('leads').select('*').eq('id', leadId as string).maybeSingle() : { data: null }
+  const apertura = proximaAtencion()
+  if (!lead) {
+    return { ok: true, registrado: false, bot_atiende: true, nombre: '', contexto: 'Alumno nuevo: todavía no ha dado sus datos.', fuera_de_horario: !!apertura }
+  }
+  return {
+    ok: true,
+    lead_id: lead.id,
+    registrado: leadRegistrado(lead),
+    bot_atiende: botAtiendeLead(lead.estado, lead.bot_pausado_hasta),
+    nombre: lead.nombre ?? '',
+    contexto: await contextoDelAlumno(lead),
+    fuera_de_horario: !!apertura,
+    proxima_atencion: apertura ? textoProximaAtencion(apertura) : '',
   }
 }
 
