@@ -979,8 +979,15 @@ async function reenviarALid(numero: string, texto: string, media: string | undef
     .eq('payload->cuerpo->>eventName', 'message.outgoing').eq('payload->cuerpo->data->>from', numero)
     .gte('recibido_at', desde).lt('id', registroId ?? Number.MAX_SAFE_INTEGER)
   await new Promise((r) => setTimeout(r, Math.min(count ?? 0, 8) * 2_500))
+  const inicio = Date.now()
   const envio = await enviarWhatsApp(`${numero}@lid`, texto, media)
   if (!envio.ok) console.error('[genesys] No se pudo reenviar a @lid:', envio.error)
+  // Diagnóstico: queda anotado en el evento original
+  if (registroId) {
+    await supabase.from('webhook_eventos')
+      .update({ procesado: `respuesta del bot guardada · reenviada a @lid (${envio.ok ? 'ok' : 'error'}, ${Math.round((Date.now() - inicio) / 1000)} s)` })
+      .eq('id', registroId)
+  }
 }
 
 async function evento(cuerpo: Cuerpo, registroId: number | null): Promise<Respuesta> {
@@ -1006,7 +1013,9 @@ async function evento(cuerpo: Cuerpo, registroId: number | null): Promise<Respue
     }
     // BuilderBot respondió a un contacto con número oculto en "<id>@s.whatsapp.net": no le llega.
     // El CRM reenvía la respuesta a "<id>@lid", que sí se entrega.
-    if (texto && destinoJid.endsWith('@s.whatsapp.net') && !esAvisoParaAsesor(texto) && await esContactoLid(supabase, telefono)) {
+    const lid = texto && destinoJid.endsWith('@s.whatsapp.net') && !esAvisoParaAsesor(texto) ? await esContactoLid(supabase, telefono) : false
+    console.log('[genesys] saliente', telefono, destinoJid, 'lid:', lid)
+    if (lid && texto) {
       const media = ((datos.options as { media?: unknown } | undefined)?.media)
       EdgeRuntime.waitUntil(reenviarALid(telefono, texto, typeof media === 'string' ? media : undefined, registroId))
     }
