@@ -39,6 +39,7 @@ import {
   valorResuelto,
 } from '../_shared/dominio.ts'
 import { cambiarBlacklist, descargarArchivo, enviarWhatsApp, problemasBuilderBot } from '../_shared/builderbot.ts'
+import { destinoWhatsApp, esContactoLid } from '../_shared/lid.ts'
 
 // Runtime de Supabase Edge Functions: mantiene viva una tarea después de responder
 declare const EdgeRuntime: { waitUntil(promesa: Promise<unknown>): void }
@@ -249,8 +250,9 @@ async function asignarPorQrAsesor(lead: Lead, mensaje: string, telefono: string,
   // Respuesta a quien escribió primero (no es un mensaje en frío). El webhook de salientes la guarda en el chat.
   // A un identificador @lid no se envía por la API: no es un número y BuilderBot se queda esperando (504)
   // (el flujo del bot no indica si es @lid: un número largo que no es de Perú se trata igual)
-  const pareceLid = pareceIdentificadorLid(telefono, esLid)
-  if (!pareceLid) EdgeRuntime.waitUntil(enviarWhatsApp(telefono, [
+  // Contacto con número oculto: se le escribe a "<id>@lid" (BuilderBot sí lo entrega)
+  const destino = esLid ? `${telefono}@lid` : await destinoWhatsApp(supabase, telefono)
+  EdgeRuntime.waitUntil(enviarWhatsApp(destino, [
     `¡Listo${persona ? `, ${persona}` : ''}, ya quedaste registrado(a)! 😊 Soy Genesys, de Admisión de la *Universidad Peruana Unión – campus Juliaca*.`,
     `${asesor ? `Tu asesor(a) *${asesor}*` : 'Tu asesor(a)'} te sigue atendiendo, y por este chat te enviaremos la información que necesites.`,
   ].join('\n')))
@@ -297,7 +299,7 @@ async function registrar(cuerpo: Cuerpo): Promise<Respuesta> {
   const botAtiende = botAtiendeLead(lead.estado, lead.bot_pausado_hasta)
   const apertura = proximaAtencion(new Date(), FERIADOS)
   // Fuera de horario y el bot no responde (lead de un asesor): se le dice cuándo le responderán
-  if (apertura && mensaje && !porQr && !botAtiende && lead.asesor_id && !pareceIdentificadorLid(telefono, cuerpo.es_lid === true)) {
+  if (apertura && mensaje && !porQr && !botAtiende && lead.asesor_id) {
     EdgeRuntime.waitUntil(avisarFueraDeHorario(lead, telefono))
   }
 
@@ -391,10 +393,6 @@ async function contextoDelAlumno(lead: Lead): Promise<string> {
   return `YA REGISTRADO (no le vuelvas a pedir sus datos ni lo registres otra vez): ${datos}.`
 }
 
-/** Un identificador @lid no es un número: la API de BuilderBot no debe enviarle mensajes (se queda esperando). */
-function pareceIdentificadorLid(telefono: string, esLid: boolean): boolean {
-  return esLid || (telefono.length >= 14 && !telefono.startsWith('51'))
-}
 
 /**
  * Quien escribe fuera del horario de atención (y su asesor no puede responder ahora) recibe una sola
@@ -410,7 +408,7 @@ async function avisarFueraDeHorario(lead: Lead, telefono: string) {
     `¡Gracias por escribirnos${primerNombre ? ', ' + primerNombre : ''}! 😊 Nuestro horario de atención es ${HORARIO_ATENCION_TEXTO}`,
     `${nombreAsesor ? `Tu asesor(a) *${nombreAsesor}*` : 'Tu asesor(a)'} te responderá ${textoProximaAtencion(new Date(apertura))}.`,
   ].join('\n')
-  const envio = await enviarWhatsApp(telefono, texto)
+  const envio = await enviarWhatsApp(await destinoWhatsApp(supabase, telefono), texto)
   if (!envio.ok) console.error('[genesys] No se pudo enviar el aviso de horario:', envio.error)
 }
 
@@ -971,6 +969,20 @@ async function guardarArchivo(leadId: string, archivo: ArchivoEntrante): Promise
   if (mensaje) await supabase.from('lead_interacciones').update({ adjunto_url: `adjuntos/${ruta}` }).eq('id', mensaje.id)
 }
 
+/**
+ * Reenvía a "<id>@lid" una respuesta de Genesys que BuilderBot mandó a una dirección que no existe.
+ * Las respuestas en varias partes llegan casi juntas: se espera según su orden para no desordenarlas.
+ */
+async function reenviarALid(numero: string, texto: string, media: string | undefined, registroId: number | null) {
+  const desde = new Date(Date.now() - 20_000).toISOString()
+  const { count } = await supabase.from('webhook_eventos').select('id', { count: 'exact', head: true })
+    .eq('payload->cuerpo->>eventName', 'message.outgoing').eq('payload->cuerpo->data->>from', numero)
+    .gte('recibido_at', desde).lt('id', registroId ?? Number.MAX_SAFE_INTEGER)
+  await new Promise((r) => setTimeout(r, Math.min(count ?? 0, 8) * 2_500))
+  const envio = await enviarWhatsApp(`${numero}@lid`, texto, media)
+  if (!envio.ok) console.error('[genesys] No se pudo reenviar a @lid:', envio.error)
+}
+
 async function evento(cuerpo: Cuerpo, registroId: number | null): Promise<Respuesta> {
   const marcar = (procesado: string) =>
     registroId ? supabase.from('webhook_eventos').update({ procesado }).eq('id', registroId) : Promise.resolve()
@@ -985,6 +997,19 @@ async function evento(cuerpo: Cuerpo, registroId: number | null): Promise<Respue
 
   if (!telefono) { await marcar('sin teléfono'); return { ok: true, procesado: 'sin teléfono' } }
   if (saliente) {
+    const datos = ((cuerpo as { data?: Record<string, unknown> }).data ?? {}) as Record<string, unknown>
+    const destinoJid = String(((datos.respMessage as { key?: { remoteJid?: string } } | undefined)?.key?.remoteJid) ?? '')
+    // Eco de un envío del CRM a "<id>@lid": ya está guardado en el chat
+    if (destinoJid.endsWith('@lid')) {
+      await marcar('saliente @lid (envío del CRM)')
+      return { ok: true, procesado: 'saliente @lid' }
+    }
+    // BuilderBot respondió a un contacto con número oculto en "<id>@s.whatsapp.net": no le llega.
+    // El CRM reenvía la respuesta a "<id>@lid", que sí se entrega.
+    if (texto && destinoJid.endsWith('@s.whatsapp.net') && !esAvisoParaAsesor(texto) && await esContactoLid(supabase, telefono)) {
+      const media = ((datos.options as { media?: unknown } | undefined)?.media)
+      EdgeRuntime.waitUntil(reenviarALid(telefono, texto, typeof media === 'string' ? media : undefined, registroId))
+    }
     // Respuesta del bot: se guarda en la conversación (los mensajes del CRM ya están guardados)
     if (texto && !/^\*[^*\n]{1,40}:\* /.test(texto) && !esAvisoParaAsesor(texto)) {
       // Por celular o por alias (LID unido a un lead registrado)

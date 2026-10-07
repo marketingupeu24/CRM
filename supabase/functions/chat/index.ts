@@ -14,6 +14,7 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../_shared/database.types.ts'
 import { enviarWhatsApp } from '../_shared/builderbot.ts'
+import { destinoWhatsApp } from '../_shared/lid.ts'
 
 const URL_SUPABASE = Deno.env.get('SUPABASE_URL')!
 const CLAVE_PUBLICA = Deno.env.get('SUPABASE_ANON_KEY')!
@@ -94,10 +95,12 @@ Deno.serve(async (req) => {
   // BuilderBot a veces responde 500 de forma pasajera: hasta 2 reintentos rápidos
   // Archivo sin texto: WhatsApp lo muestra con la firma del asesor como leyenda
   const contenido = texto ? `*${primerNombre}:* ${texto}` : `*${primerNombre}*`
-  let envio = await enviarWhatsApp(lead.telefono, contenido, adjunto ?? undefined)
+  // Contacto con número oculto: a "<id>@lid" (a "<id>" BuilderBot lo manda a un número que no existe)
+  const destino = await destinoWhatsApp(admin, lead.telefono)
+  let envio = await enviarWhatsApp(destino, contenido, adjunto ?? undefined)
   for (let intento = 1; !envio.ok && intento <= 2; intento++) {
     await new Promise((r) => setTimeout(r, intento * 2_000))
-    envio = await enviarWhatsApp(lead.telefono, contenido, adjunto ?? undefined)
+    envio = await enviarWhatsApp(destino, contenido, adjunto ?? undefined)
   }
 
   const { data: mensaje, error } = await admin.from('lead_interacciones').insert({

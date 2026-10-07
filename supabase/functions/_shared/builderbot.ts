@@ -30,16 +30,21 @@ export async function enviarWhatsApp(numero: string, texto: string, mediaUrl?: s
   if (!BUILDERBOT_URL || !BUILDERBOT_API_KEY) {
     return { ok: false, error: 'Faltan los secretos BUILDERBOT_URL o BUILDERBOT_API_KEY' }
   }
+  // Contacto con número oculto ("<id>@lid"): BuilderBot entrega el mensaje pero responde
+  // "Bot endpoint timed out" (504). Se toma como enviado: reintentar lo duplicaría.
+  const esLid = numero.endsWith('@lid')
   try {
     const res = await fetch(BUILDERBOT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-builderbot': BUILDERBOT_API_KEY },
       body: JSON.stringify({ messages: { content: texto, ...(mediaUrl ? { mediaUrl } : {}) }, number: numero, checkIfExists: false }),
-      signal: AbortSignal.timeout(45_000),
+      signal: AbortSignal.timeout(esLid ? 35_000 : 45_000),
     })
     if (res.ok) return { ok: true }
+    if (esLid && res.status === 504) return { ok: true }
     return { ok: false, error: `HTTP ${res.status}: ${(await res.text()).slice(0, 300)}` }
   } catch (e) {
+    if (esLid) return { ok: true }
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
   }
 }
