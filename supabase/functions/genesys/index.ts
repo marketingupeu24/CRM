@@ -1168,11 +1168,19 @@ Deno.serve(async (req) => {
 
   let cuerpo: Cuerpo = {}
   if (req.method === 'POST') {
+    const texto = await req.text()
     try {
-      const texto = await req.text()
       cuerpo = texto.trim() ? JSON.parse(texto) : {}
     } catch {
-      return responder({ ok: false, status: 'error', error: 'json_invalido', mensaje: 'El cuerpo debe ser JSON válido' }, 400)
+      // BuilderBot puede enviar el body como formulario (clave/valor): se acepta igual
+      cuerpo = leerCuerpoFlexible(texto, req.headers.get('content-type') ?? '', url)
+      if (!Object.keys(cuerpo).length) {
+        EdgeRuntime.waitUntil(Promise.resolve(supabase.from('webhook_eventos').insert({
+          payload: { accion, ruta: url.pathname, token_ok: true, cuerpo_crudo: texto.slice(0, 2000), content_type: req.headers.get('content-type') } as never,
+          procesado: `${accion}: cuerpo ilegible`,
+        })).then(() => undefined))
+        return responder({ ok: false, status: 'error', error: 'json_invalido', mensaje: 'El cuerpo debe ser JSON válido' }, 400)
+      }
     }
   } else if (accion !== 'ping') {
     return responder({ ok: false, error: 'metodo_no_permitido' }, 405)
