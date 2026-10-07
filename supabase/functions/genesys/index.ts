@@ -325,7 +325,22 @@ function fechaYHorario(): string {
     .replace(/\s*a\.?\s*m\.?/i, ' am').replace(/\s*p\.?\s*m\.?/i, ' pm')
   const apertura = proximaAtencion(ahora, FERIADOS)
   const oficina = apertura ? `La oficina está cerrada ahora; la próxima atención es ${textoProximaAtencion(apertura, ahora)}.` : 'La oficina está abierta ahora.'
-  return `Hoy es ${hoy}, ${hora} (hora de Perú). ${oficina}`
+  // Mañana: si no hay atención (feriado o fin de semana), se dice explícitamente
+  const fechaLima = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(d)
+  const mananaFecha = new Date(ahora.getTime() + 86_400_000)
+  const mananaTexto = new Intl.DateTimeFormat('es-PE', { timeZone: 'America/Lima', weekday: 'long', day: 'numeric', month: 'long' }).format(mananaFecha)
+  const feriadoManana = NOMBRES_FERIADOS.get(fechaLima(mananaFecha))
+  const finDeSemana = [0, 6].includes(new Date(`${fechaLima(mananaFecha)}T12:00:00Z`).getUTCDay())
+  const manana = feriadoManana || finDeSemana
+    ? ` Mañana (${mananaTexto}) NO hay atención${feriadoManana ? ` por feriado: ${feriadoManana}` : ''}.`
+    : ` Mañana (${mananaTexto}) sí hay atención en el horario normal.`
+  // Feriados de los próximos 14 días
+  const hoyFecha = fechaLima(ahora)
+  const limite = fechaLima(new Date(ahora.getTime() + 14 * 86_400_000))
+  const proximos = [...NOMBRES_FERIADOS].filter(([f]) => f > hoyFecha && f <= limite)
+    .map(([f, n]) => `${new Intl.DateTimeFormat('es-PE', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(`${f}T12:00:00Z`))} (${n})`)
+  const feriados = proximos.length ? ` Feriados próximos sin atención: ${proximos.join(', ')}.` : ''
+  return `Hoy es ${hoy}, ${hora} (hora de Perú). ${oficina}${manana}${feriados}`
 }
 
 /** Solo lectura: contexto del alumno y si el bot debe responder, sin guardar nada. */
@@ -619,11 +634,16 @@ async function respuestaBot(cuerpo: Cuerpo): Promise<Respuesta> {
  */
 /** Feriados (public.feriados, "AAAA-MM-DD"): se recargan como máximo cada 10 min. */
 let FERIADOS: ReadonlySet<string> = new Set()
+let NOMBRES_FERIADOS: ReadonlyMap<string, string> = new Map()
 let feriadosCargados = 0
 async function cargarFeriados() {
   if (Date.now() - feriadosCargados < 10 * 60_000) return
-  const { data } = await supabase.from('feriados').select('fecha')
-  if (data) { FERIADOS = new Set(data.map((f) => f.fecha)); feriadosCargados = Date.now() }
+  const { data } = await supabase.from('feriados').select('fecha, nombre')
+  if (data) {
+    FERIADOS = new Set(data.map((f) => f.fecha))
+    NOMBRES_FERIADOS = new Map(data.map((f) => [f.fecha, f.nombre]))
+    feriadosCargados = Date.now()
+  }
 }
 
 const SELECCION_CON_ASESOR = '*, asesor:asesores!leads_asesor_id_fkey(nombre, telefono)'
