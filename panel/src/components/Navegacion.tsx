@@ -51,6 +51,7 @@ export function Navegacion(
       enlaces: [
         { href: '/conocimiento' as Route, texto: 'Base de conocimiento', icono: '📚' },
         { href: '/revision-bot' as Route, texto: 'Revisión del bot', icono: '🤖', modulo: 'conocimiento', contador: { valor: revisionBot, estilo: 'bg-violet-500 text-white' } },
+        { href: '/flujos-bot' as Route, texto: 'Flujos de BuilderBot', icono: '🧩', modulo: 'conocimiento' },
       ],
     },
     {

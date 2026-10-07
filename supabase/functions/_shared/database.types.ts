@@ -125,6 +125,31 @@ isOneToOne: false
       referencedColumns: ["asesor_id"]
     }
                   ]
+                },"flujos_bot": {
+                  Row: {
+                    "actualizado_por": string | null,"created_at": string,"disparador": string,"id": number,"nombre": string,"notas": string,"orden": number,"palabras": (string)[],"prompt": string,"prompt_mejorado": string,"updated_at": string
+                  }
+                  Insert: {
+                    "actualizado_por"?: string | null,"created_at"?: string,"disparador"?: string,"id"?: never,"nombre": string,"notas"?: string,"orden"?: number,"palabras"?: (string)[],"prompt"?: string,"prompt_mejorado"?: string,"updated_at"?: string
+                  }
+                  Update: {
+                    "actualizado_por"?: string | null,"created_at"?: string,"disparador"?: string,"id"?: never,"nombre"?: string,"notas"?: string,"orden"?: number,"palabras"?: (string)[],"prompt"?: string,"prompt_mejorado"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "flujos_bot_actualizado_por_fkey"
+      columns: ["actualizado_por"]
+isOneToOne: false
+      referencedRelation: "asesores"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "flujos_bot_actualizado_por_fkey"
+      columns: ["actualizado_por"]
+isOneToOne: false
+      referencedRelation: "vista_leads_por_asesor"
+      referencedColumns: ["asesor_id"]
+    }
+                  ]
                 },"lead_alias": {
                   Row: {
                     "alias": string,"created_at": string,"lead_id": string
