@@ -232,6 +232,37 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"lead_apoyo": {
+                  Row: {
+                    "asesor_id": string,"created_at": string,"lead_id": string,"motivo": string | null
+                  }
+                  Insert: {
+                    "asesor_id": string,"created_at"?: string,"lead_id": string,"motivo"?: string | null
+                  }
+                  Update: {
+                    "asesor_id"?: string,"created_at"?: string,"lead_id"?: string,"motivo"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "lead_apoyo_asesor_id_fkey"
+      columns: ["asesor_id"]
+isOneToOne: false
+      referencedRelation: "asesores"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "lead_apoyo_asesor_id_fkey"
+      columns: ["asesor_id"]
+isOneToOne: false
+      referencedRelation: "vista_leads_por_asesor"
+      referencedColumns: ["asesor_id"]
+    },{
+      foreignKeyName: "lead_apoyo_lead_id_fkey"
+      columns: ["lead_id"]
+isOneToOne: false
+      referencedRelation: "leads"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"lead_interacciones": {
                   Row: {
                     "adjunto_url": string | null,"autor_id": string | null,"contenido": string | null,"created_at": string,"error_envio": string | null,"estado_envio": string | null,"id": number,"lead_id": string,"tipo": Database["public"]['Enums']["interaccion_tipo"]
@@ -588,6 +619,9 @@ isOneToOne: false
 "es_admin":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"es_apoyo":
+{ Args: { "p_lead_id": string }; Returns: boolean
+                           },
 "es_superadmin":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
@@ -607,6 +641,9 @@ isOneToOne: false
               "estado": string,"fila": number,"lead_id": string,"mensaje": string
             }[]
                            },
+"lead_apoyo_ficha":
+{ Args: { "p_lead_id": string }; Returns: Json
+                           },
 "lead_de_contacto":
 { Args: { "p_contacto": string }; Returns: string
                            },
@@ -621,6 +658,11 @@ isOneToOne: false
                            },
 "mi_asesor_id":
 { Args: Record<PropertyKey, never>; Returns: string
+                           },
+"mis_leads_apoyo":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "asesor": string,"desde": string,"id": string,"motivo": string,"nombre": string,"telefono": string,"ultimo_contacto": string
+            }[]
                            },
 "papelera":
 { Args: Record<PropertyKey, never>; Returns: Json

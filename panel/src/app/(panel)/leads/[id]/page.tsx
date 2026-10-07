@@ -52,7 +52,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
   const { esAdmin, perfil, puede } = await exigirPermiso('leads')
   const supabase = await crearClienteServidor()
 
-  const [{ data: lead }, { data: historial }, { data: asesores }, { data: tareas }, { data: respuestas }] = await Promise.all([
+  const [{ data: propio }, { data: historial }, { data: asesores }, { data: tareas }, { data: respuestas }] = await Promise.all([
     supabase.from('leads').select('*, asesor:asesores!leads_asesor_id_fkey(id, nombre, telefono), actividad:actividades(id, nombre)').eq('id', id).maybeSingle(),
     supabase.from('lead_interacciones')
       .select('*, autor:asesores!lead_interacciones_autor_id_fkey(nombre)')
@@ -63,6 +63,13 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
     supabase.from('tareas').select('id, titulo, vence_at').eq('lead_id', id).is('completada_at', null).order('vence_at'),
     supabase.from('respuestas_rapidas').select('id, titulo, contenido').eq('activa', true).order('orden').order('titulo'),
   ])
+  // Asesor de apoyo (atendió en persona al lead de otro): ve la ficha y el chat, el lead sigue siendo del otro
+  let lead = propio
+  const apoyo = !lead
+  if (apoyo) {
+    const { data } = await supabase.rpc('lead_apoyo_ficha', { p_lead_id: id })
+    lead = data as unknown as typeof propio
+  }
   if (!lead) notFound()
 
   // El chat muestra la conversación de WhatsApp (en orden); el resto va a "Actividad"
@@ -104,8 +111,15 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold">{lead.nombre ?? 'Lead sin nombre'}</h1>
         <InsigniaEstado estado={lead.estado} />
-        {puede('papelera') && <span className="ml-auto"><BotonPapelera leadId={lead.id} nombre={lead.nombre ?? lead.telefono} /></span>}
+        {puede('papelera') && !apoyo && <span className="ml-auto"><BotonPapelera leadId={lead.id} nombre={lead.nombre ?? lead.telefono} /></span>}
       </div>
+
+      {apoyo && (
+        <p className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+          🤝 Eres <b>asesor(a) de apoyo</b>: lo atendiste en persona, pero es lead de <b>{lead.asesor?.nombre ?? 'otro asesor'}</b>.
+          Puedes ver su conversación, escribirle y dejar notas; su estado y seguimiento los lleva su asesor(a).
+        </p>
+      )}
 
       <AccionesRapidas telefono={lead.telefono} proformaHref={puede('costos') ? `/costos?lead=${lead.id}` : undefined} />
 
@@ -132,18 +146,18 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
               carrera: lead.carrera_interes ?? lead.modalidad ?? 'la carrera de tu interés',
               asesor: perfil.nombre.split(' ')[0] ?? perfil.nombre,
             }}
-            encabezado={
+            encabezado={apoyo ? undefined : (
               <ControlesChat
                 leadId={lead.id} estado={lead.estado} botPausadoHasta={lead.bot_pausado_hasta}
                 tieneAsesor={!!lead.asesor_id} ahora={Date.now()}
               />
-            }
+            )}
           />
 
           <section id="datos" className="tarjeta scroll-mt-32 p-6">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-semibold">Datos del lead</h2>
-              <EditarDatos lead={lead} puedeCelular={puede('editar_celular') || lead.registrado_por === perfil.id} carreras={CARRERAS_EDITAR} />
+              {!apoyo && <EditarDatos lead={lead} puedeCelular={puede('editar_celular') || lead.registrado_por === perfil.id} carreras={CARRERAS_EDITAR} />}
             </div>
             <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
               {datos.map(([etiqueta, valor]) => (
@@ -186,7 +200,9 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
         <div className="space-y-6">
           <section className="tarjeta p-6">
             <h2 className="mb-3 font-semibold">Estado</h2>
-            <SelectorEstado key={lead.estado} leadId={lead.id} estado={lead.estado} />
+            {apoyo
+              ? <InsigniaEstado estado={lead.estado} />
+              : <SelectorEstado key={lead.estado} leadId={lead.id} estado={lead.estado} />}
           </section>
 
           <section className="tarjeta p-6">
@@ -198,14 +214,14 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
                 {lead.notificacion_error ? `: ${lead.notificacion_error}` : ''}
               </p>
             )}
-            {puede('asignar') && (
+            {puede('asignar') && !apoyo && (
               <div className="mt-4">
                 <ReasignarAsesor key={lead.asesor_id} leadId={lead.id} asesorId={lead.asesor_id} asesores={asesores ?? []} />
               </div>
             )}
           </section>
 
-          <section id="proxima-accion" className="tarjeta scroll-mt-36 p-6">
+          {!apoyo && <section id="proxima-accion" className="tarjeta scroll-mt-36 p-6">
             <h2 className="mb-3 font-semibold">Próxima acción</h2>
             {!!tareas?.length && (
               <ul className="mb-4 space-y-2">
@@ -226,7 +242,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
               </ul>
             )}
             <FormularioTarea leadId={lead.id} />
-          </section>
+          </section>}
 
           <section id="nueva-nota" className="tarjeta scroll-mt-36 p-6">
             <h2 className="mb-3 font-semibold">Nueva nota</h2>

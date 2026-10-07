@@ -71,7 +71,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
   if (/^\d{4}-\d{2}-\d{2}$/.test(filtros.hasta)) consulta = consulta.lte('created_at', `${filtros.hasta}T23:59:59.999-05:00`)
 
   const desde = (pagina - 1) * POR_PAGINA
-  const [{ data: leads, count, error }, { data: carreras }, { data: convocatorias }, { data: asesores }] = await Promise.all([
+  const [{ data: leads, count, error }, { data: carreras }, { data: convocatorias }, { data: asesores }, { data: deApoyo }] = await Promise.all([
     // Los que volvieron a escribir suben arriba
     consulta.order('ultimo_contacto', { ascending: false }).range(desde, desde + POR_PAGINA - 1),
     supabase.from('vista_leads_por_carrera').select('carrera'),
@@ -79,6 +79,8 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
     esAdmin || puede('asignar')
       ? supabase.from('asesores').select('id, nombre').or('rol.eq.asesor,activo.eq.true').is('eliminado_at', null).order('nombre')
       : Promise.resolve({ data: [] as { id: string; nombre: string }[] }),
+    // Leads de otros asesores que atendí en persona (apoyo): no están en mi lista, se abren desde aquí
+    supabase.rpc('mis_leads_apoyo'),
   ])
 
   const listaConvocatorias = [...new Set((convocatorias ?? []).map((c) => c.convocatoria!))].sort().reverse()
@@ -125,6 +127,24 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
           {puede('registrar') && <Link href="/leads/nuevo" className="boton">+ Registrar lead</Link>}
         </div>
       </div>
+
+      {!!deApoyo?.length && (
+        <details className="tarjeta p-4">
+          <summary className="cursor-pointer text-sm font-semibold">
+            🤝 Atendidos como apoyo <span className="font-normal text-slate-500">· {deApoyo.length} · leads de otros asesores que atendiste en persona</span>
+          </summary>
+          <ul className="mt-3 divide-y divide-slate-100 text-sm">
+            {deApoyo.map((l) => (
+              <li key={l.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <Link href={`/leads/${l.id}`} className="font-medium text-marca-700 hover:underline">{l.nombre ?? l.telefono}</Link>
+                <span className="text-xs text-slate-500">
+                  De {l.asesor ?? 'otro asesor'} · lo atendiste {haceCuanto(l.desde)}{l.motivo ? ` (${l.motivo})` : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
 
       <form className="tarjeta grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Periodo rápido: mes o campaña */}

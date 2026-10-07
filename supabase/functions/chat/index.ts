@@ -74,11 +74,17 @@ Deno.serve(async (req) => {
   }
 
   // 3. Permisos: el lead se busca con la sesión del usuario (RLS)
-  const [{ data: lead }, { data: yo }] = await Promise.all([
+  const [{ data: propio }, { data: yo }] = await Promise.all([
     usuario.from('leads').select('id, telefono, estado').eq('id', leadId).maybeSingle(),
     usuario.from('asesores').select('id, nombre').eq('user_id', user.id).maybeSingle(),
   ])
   if (!yo) return responder({ ok: false, error: 'Tu usuario no está vinculado a un asesor' }, 403)
+  // Asesor de apoyo (atendió en persona al lead de otro): puede escribirle, el lead sigue siendo del otro
+  let lead = propio
+  const esApoyo = !lead && !!(await usuario.rpc('es_apoyo', { p_lead_id: leadId })).data
+  if (esApoyo) {
+    lead = (await admin.from('leads').select('id, telefono, estado').eq('id', leadId).is('eliminado_at', null).maybeSingle()).data
+  }
   if (!lead) return responder({ ok: false, error: 'No tienes acceso a este lead' }, 403)
 
   // 4. Límite de envío por asesor
@@ -116,7 +122,7 @@ Deno.serve(async (req) => {
 
   // 6. Primer mensaje a un lead asignado: pasa a "contactado" (con la sesión del asesor,
   //    así el cambio queda firmado en el historial)
-  if (envio.ok && lead.estado === 'lead_asignado') {
+  if (envio.ok && !esApoyo && lead.estado === 'lead_asignado') {
     await usuario.from('leads').update({ estado: 'lead_contactado' }).eq('id', lead.id)
   }
 

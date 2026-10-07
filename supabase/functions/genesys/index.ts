@@ -1165,6 +1165,22 @@ async function avisarVisita(cuerpo: Cuerpo): Promise<Respuesta> {
   ].join('\n')
   const envio = await enviarWhatsApp(asesor.telefono, texto)
   if (!envio.ok) console.error('[genesys] No se pudo avisar la visita al asesor:', envio.error)
+
+  // Quien lo atendió queda de apoyo: ve el chat y puede enviarle información
+  const atendioId = typeof cuerpo.atendio_id === 'string' ? cuerpo.atendio_id : null
+  const { data: apoyo } = atendioId
+    ? await supabase.from('asesores').select('telefono').eq('id', atendioId).maybeSingle()
+    : { data: null }
+  if (apoyo?.telefono && apoyo.telefono !== asesor.telefono) {
+    const { data: dueno } = await supabase.from('asesores').select('nombre').eq('id', lead.asesor_id).single()
+    const aviso = await enviarWhatsApp(apoyo.telefono, [
+      '*🤝 QUEDASTE DE APOYO*',
+      `${lead.nombre ?? lead.telefono} es lead de *${dueno?.nombre ?? 'otro asesor'}* y sigue siendo suyo.`,
+      'Puedes ver su conversación y enviarle información desde el CRM:',
+      `${PANEL_URL}/leads/${lead.id}#chat`,
+    ].join('\n'))
+    if (!aviso.ok) console.error('[genesys] No se pudo avisar al asesor de apoyo:', aviso.error)
+  }
   return { ok: true, avisado: envio.ok }
 }
 
