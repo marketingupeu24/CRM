@@ -258,10 +258,17 @@ async function asignarPorQrAsesor(lead: Lead, mensaje: string, telefono: string,
 }
 
 async function registrar(cuerpo: Cuerpo): Promise<Respuesta> {
-  const telefono = telefonoDe(cuerpo)
   // Consulta de BuilderBot antes del asistente: solo lee lo que el CRM sabe del alumno
-  // (el mensaje ya llega al CRM por el webhook; así no se registra dos veces)
-  if (cuerpo.solo_contexto === true || cuerpo.solo_contexto === 'true') return contextoSinRegistrar(telefono)
+  // (el mensaje ya llega al CRM por el webhook; así no se registra dos veces).
+  // El número puede venir en cualquier campo (BuilderBot reemplaza solo la variable que conoce):
+  // se usa el primero que sea un celular válido. Sin número válido igual responde 200, para no
+  // dejar al bot sin respuesta.
+  if (cuerpo.solo_contexto === true || cuerpo.solo_contexto === 'true') {
+    const candidato = Object.values(cuerpo).map((v) => (typeof v === 'string' || typeof v === 'number' ? normalizarTelefono(String(v)) : null)).find(Boolean)
+    if (!candidato) return { ok: true, registrado: false, bot_atiende: true, contexto: 'Alumno nuevo: todavía no ha dado sus datos.', aviso: 'No llegó un número válido' }
+    return contextoSinRegistrar(candidato)
+  }
+  const telefono = telefonoDe(cuerpo)
   const mensaje = valorResuelto(cuerpo.mensaje)
   // La respuesta automática del WhatsApp de un asesor a un aviso del CRM no es un lead
   if (telefono && (await telefonosAsesores()).has(telefono)) {
