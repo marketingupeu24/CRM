@@ -4,7 +4,7 @@ import { LogoUpeu } from '@/components/LogoUpeu'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { FormularioRegistro } from './Formulario'
 
-export const metadata: Metadata = { title: 'Regístrate · Admisión UPeU', robots: { index: false } }
+export const metadata: Metadata = { title: 'Regístrate · Admisión de la Universidad Peruana Unión', robots: { index: false } }
 
 interface ActividadPublica { nombre: string; tipo: string; lugar: string | null; fecha: string | null; activa: boolean }
 

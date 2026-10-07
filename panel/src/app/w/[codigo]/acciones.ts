@@ -32,7 +32,7 @@ export async function registrarseConAsesor(codigo: string, _previo: ResultadoReg
   const r = data as { asesor?: string; whatsapp?: string | null; ref?: string }
   const nombre = texto('nombre').split(/\s+/)[0]
   const tema = temaDeInteres(texto('carrera'))
-  const mensaje = `Hola, soy ${nombre}. Acabo de enviar mis datos con ${r.asesor ?? 'mi asesor(a)'} en Admisión UPeU y quiero información ${tema.startsWith('el ') ? 'del ' + tema.slice(3) : 'de ' + tema}.${r.ref ? ` (Ref. ${r.ref})` : ''}`
+  const mensaje = `Hola, soy ${nombre}. Acabo de enviar mis datos con ${r.asesor ?? 'mi asesor(a)'} en Admisión de la Universidad Peruana Unión y quiero información ${tema.startsWith('el ') ? 'del ' + tema.slice(3) : 'de ' + tema}.${r.ref ? ` (Ref. ${r.ref})` : ''}`
   const numero = (r.whatsapp ?? '').replace(/\D/g, '')
   return {
     ok: true,

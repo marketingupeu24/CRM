@@ -46,7 +46,7 @@ export async function registrarseEnActividad(codigo: string, _previo: ResultadoR
   const tema = temaDeInteres(texto('carrera'))
   // Con DNI, el mensaje lo incluye (une al alumno aunque escriba desde otro celular); sin DNI, lo identifica su celular.
   // "Ref." une el chat al registro cuando WhatsApp oculta el número del alumno (contactos con privacidad @lid).
-  const mensaje = `Hola, soy ${nombre}${dni ? ` (DNI ${dni})` : ''}. Me registré en ${r.actividad ?? 'la feria de la UPeU'} y quiero información ${tema.startsWith('el ') ? 'del ' + tema.slice(3) : 'de ' + tema}.${r.ref ? ` (Ref. ${r.ref})` : ''}`
+  const mensaje = `Hola, soy ${nombre}${dni ? ` (DNI ${dni})` : ''}. Me registré en ${r.actividad ?? 'la feria de la Universidad Peruana Unión'} y quiero información ${tema.startsWith('el ') ? 'del ' + tema.slice(3) : 'de ' + tema}.${r.ref ? ` (Ref. ${r.ref})` : ''}`
   const numero = (r.whatsapp ?? '').replace(/\D/g, '')
   return {
     ok: true,

@@ -261,7 +261,7 @@ async function asignarPorQrAsesor(lead: Lead, mensaje: string, telefono: string,
   // Contacto con número oculto: se le escribe a "<id>@lid" (BuilderBot sí lo entrega)
   const destino = esLid ? `${telefono}@lid` : await destinoWhatsApp(supabase, telefono)
   EdgeRuntime.waitUntil(enviarWhatsApp(destino, [
-    `¡Listo${persona ? `, ${persona}` : ''}, ya quedaste registrado(a)! 😊 Soy Genesys, de Admisión de la *Universidad Peruana Unión – campus Juliaca*.`,
+    `¡Listo${persona ? `, ${persona}` : ''}, ya quedaste registrado(a)! 😊 Soy Genesys, de *Admisión de la Universidad Peruana Unión*, campus Juliaca`,
     `${asesor ? `Tu asesor(a) *${asesor}*` : 'Tu asesor(a)'} te sigue atendiendo, y por este chat te enviaremos la información que necesites.`,
   ].join('\n')))
   return actualizado
@@ -407,7 +407,7 @@ async function contextoDelAlumno(lead: Lead): Promise<string> {
         ? await supabase.from('asesores').select('nombre').eq('id', data.ausente_reemplazo).maybeSingle()
         : { data: null }
       const reemplazo = corto(cubre?.nombre)
-      asesor += ` (ausente hasta el ${fechaCorta(data.ausente_hasta)}; ${reemplazo ? `mientras tanto lo atiende ${reemplazo}` : 'mientras tanto responde el equipo de Admisión'})`
+      asesor += ` (ausente hasta el ${fechaCorta(data.ausente_hasta)}; ${reemplazo ? `mientras tanto lo atiende ${reemplazo}` : 'mientras tanto responde el equipo de Admisión de la Universidad Peruana Unión'})`
     }
   }
   const interes = lead.programa === 'cepre' ? `CEPRE${lead.modalidad ? ` ${lead.modalidad}` : ''}` : lead.carrera_interes
@@ -1097,8 +1097,8 @@ function mensajeBienvenida(lead: Lead, actividad: string | null, asesor: string 
   const asesorNombre = asesor?.trim().split(/\s+/).slice(0, 2).join(' ')
   return [
     `¡Hola${primerNombre ? ' ' + primerNombre : ''}! 👋 Gracias por registrarte${actividad ? ` en *${actividad}*` : ''}.`,
-    'Soy Genesys, la asesora virtual de Admisión de la *Universidad Peruana Unión – campus Juliaca*.',
-    asesorNombre ? `Tu asesor(a) *${asesorNombre}* te escribirá pronto con toda la información.` : 'Un asesor te escribirá pronto con toda la información.',
+    'Soy Genesys, la asesora virtual de *Admisión de la Universidad Peruana Unión*, campus Juliaca 🎓',
+    asesorNombre ? `Tu asesor(a) *${asesorNombre}* te escribirá pronto con toda la información.` : 'Un asesor(a) te escribirá pronto con toda la información.',
     'Si tienes alguna pregunta, escríbeme por aquí 😊',
   ].join('\n')
 }

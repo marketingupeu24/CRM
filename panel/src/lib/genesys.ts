@@ -46,7 +46,7 @@ export function promptGenesys(fichas: FichaGenesys[], fecha: Date = new Date(), 
   const de = (parte: string) => activas.filter((f) => f.parte === parte)
   const texto = (f: FichaGenesys) => `### ${f.titulo}\n${campo(f, 'texto')}`
   const salida: string[] = [
-    '# Genesys – Asesora virtual de Admisión UPeU, campus Juliaca',
+    '# Genesys – Asesora virtual de Admisión de la Universidad Peruana Unión, campus Juliaca',
     `(Actualizado el ${hoy} desde el CRM de Admisión. Usa solo esta información; si un dato no está aquí, no lo inventes.)`,
   ]
   let n = 0

@@ -25,7 +25,7 @@ export function FormularioRegistro({ codigo, carreras, colegio, enviar, asesor }
           <>
             <p className="text-sm text-slate-600">
               {asesor
-                ? <>Tus datos ya quedaron registrados. Último paso: toca el botón y <b>envía el mensaje</b> para abrir tu chat con Admisión; <b>{asesor}</b> te sigue atendiendo.</>
+                ? <>Tus datos ya quedaron registrados. Último paso: toca el botón y <b>envía el mensaje</b> para abrir tu chat con Admisión de la Universidad Peruana Unión; <b>{asesor}</b> te sigue atendiendo.</>
                 : <>Último paso: toca el botón y <b>envía el mensaje</b>. Genesys, nuestra asesora virtual, te responde al instante con la información de <b>{r.tema}</b>.</>}
             </p>
             <a href={r.enlaceWhatsApp} className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-4 text-base font-bold text-white shadow-sm transition hover:brightness-105">

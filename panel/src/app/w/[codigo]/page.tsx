@@ -6,7 +6,7 @@ import { crearClienteServidor } from '@/lib/supabase/server'
 import { FormularioRegistro } from '@/app/r/[codigo]/Formulario'
 import { registrarseConAsesor } from './acciones'
 
-export const metadata: Metadata = { title: 'Déjanos tus datos · Admisión UPeU', robots: { index: false } }
+export const metadata: Metadata = { title: 'Déjanos tus datos · Admisión de la Universidad Peruana Unión', robots: { index: false } }
 
 /**
  * Enlace corto de los QR de atención presencial (sin iniciar sesión):
@@ -24,7 +24,7 @@ export default async function PaginaQrAsesor(props: PageProps<'/w/[codigo]'>) {
     const p = data as { codigo: string; persona: string; asesor: string; whatsapp: string | null } | null
     const numero = (p?.whatsapp ?? '').replace(/\D/g, '')
     if (p && numero) {
-      const texto = `Hola 👋 Soy ${p.persona}, me atendió ${p.asesor} en Admisión UPeU. (Cód. P-${p.codigo})`
+      const texto = `Hola 👋 Soy ${p.persona}, me atendió ${p.asesor} en Admisión de la Universidad Peruana Unión. (Cód. P-${p.codigo})`
       redirect(`https://wa.me/${numero}?text=${encodeURIComponent(texto)}`)
     }
     aviso = p ? 'El WhatsApp de Admisión aún no está configurado. Avísale a tu asesor(a).' : 'Este QR ya venció. Pide a tu asesor(a) que genere uno nuevo.'
@@ -48,7 +48,7 @@ export default async function PaginaQrAsesor(props: PageProps<'/w/[codigo]'>) {
           ) : (
             <>
               <h2 className="text-lg font-semibold text-slate-900">Déjanos tus datos</h2>
-              <p className="mt-1 mb-5 text-sm text-slate-500">Así quedas registrado(a) en Admisión y te enviamos por WhatsApp la información de carreras, costos y fechas.</p>
+              <p className="mt-1 mb-5 text-sm text-slate-500">Así quedas registrado(a) en Admisión de la Universidad Peruana Unión y te enviamos por WhatsApp la información de carreras, costos y fechas.</p>
               <FormularioRegistro codigo={codigo} carreras={listaCarreras} colegio={null} asesor={asesor} enviar={registrarseConAsesor.bind(null, codigo)} />
             </>
           )}
