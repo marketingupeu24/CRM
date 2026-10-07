@@ -30,7 +30,7 @@ export default async function PaginaGenesys(props: PageProps<'/genesys'>) {
   const nuevo = typeof sp.nuevo === 'string' ? sp.nuevo.slice(0, 160) : ''
   const deLaParte = fichas.filter((f) => f.parte === parte.clave)
 
-  const prompt = promptGenesys(fichas)
+  const prompt = promptGenesys(fichas, new Date(), feriados ?? [])
   // La fecha cambia cada día: se compara sin la línea "(Actualizado el …)"
   const sinFecha = (t: string) => t.replace(/^\(Actualizado el [^)]*\)$/m, '')
   const cambios = !version || sinFecha(version.texto) !== sinFecha(prompt)

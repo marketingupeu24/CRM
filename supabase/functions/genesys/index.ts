@@ -1146,9 +1146,9 @@ Deno.serve(async (req) => {
 
   if (!tokenValido(tokenRecibido)) {
     // Se registra el rechazo (sin el token) para detectar pasos de BuilderBot mal configurados
-    if (accion === 'registrar' || accion === 'webhook') {
+    if (accion !== 'ping') {
       EdgeRuntime.waitUntil(Promise.resolve(supabase.from('webhook_eventos').insert({
-        payload: { accion, token_ok: false, token_inicio: (tokenRecibido ?? '').slice(0, 4), user_agent: req.headers.get('user-agent') } as never,
+        payload: { accion, ruta: url.pathname, token_ok: false, token_inicio: (tokenRecibido ?? '').slice(0, 4), user_agent: req.headers.get('user-agent') } as never,
         procesado: `${accion}: rechazado (token inválido)`,
       })).then(() => undefined))
     }
@@ -1158,6 +1158,11 @@ Deno.serve(async (req) => {
   await cargarFeriados()
   const manejar = ACCIONES[accion]
   if (!manejar) {
+    // Dirección mal escrita (ej. BuilderBot con la URL cortada): queda registrada para revisarla
+    EdgeRuntime.waitUntil(Promise.resolve(supabase.from('webhook_eventos').insert({
+      payload: { accion, ruta: url.pathname, token_ok: true } as never,
+      procesado: `accion desconocida: ${accion}`,
+    })).then(() => undefined))
     return responder({ ok: false, error: 'accion_desconocida', acciones: Object.keys(ACCIONES) }, 404)
   }
 

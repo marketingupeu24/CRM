@@ -40,7 +40,7 @@ function fichaGenerica(f: FichaGenesys, etiquetas: Record<string, string>): stri
 }
 
 /** Prompt completo para pegar en el asistente INFORMACIÓN de BuilderBot. */
-export function promptGenesys(fichas: FichaGenesys[], fecha: Date = new Date()): string {
+export function promptGenesys(fichas: FichaGenesys[], fecha: Date = new Date(), feriados: { fecha: string; nombre: string }[] = []): string {
   const hoy = new Intl.DateTimeFormat('es-PE', { timeZone: 'America/Lima', day: '2-digit', month: '2-digit', year: 'numeric' }).format(fecha)
   const activas = fichas.filter((f) => f.activo).sort((a, b) => a.orden - b.orden || a.titulo.localeCompare(b.titulo))
   const de = (parte: string) => activas.filter((f) => f.parte === parte)
@@ -78,7 +78,13 @@ export function promptGenesys(fichas: FichaGenesys[], fecha: Date = new Date()):
   seccion('CEPRE (centro preuniversitario)', de('cepre').map((f) => fichaGenerica(f, { modalidad: 'Modalidad', costo: 'Costo', fechas: 'Fechas', horario: 'Horario', lugar: 'Lugar', areas: 'Áreas', incluye: 'Beneficios', notas: 'Nota' })))
   seccion('Exámenes y fechas', de('examenes').map((f) => fichaGenerica(f, { fecha: 'Fecha', costo: 'Costo', notas: 'Nota' })))
   seccion('Becas y descuentos', de('becas').map(texto))
-  seccion('Sede, contacto y horario', [...de('sede').map(texto), `### Horario de atención de los asesores\n${HORARIO_ATENCION}`])
+  const diaFeriado = (f: string) => new Intl.DateTimeFormat('es-PE', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${f}T00:00:00Z`))
+  const proximos = feriados.slice(0, 12).map((f) => `- ${diaFeriado(f.fecha)}: ${f.nombre}`)
+  seccion('Sede, contacto y horario', [
+    ...de('sede').map(texto),
+    `### Horario de atención de los asesores\n${HORARIO_ATENCION}`,
+    ...(proximos.length ? [`### Feriados: NO hay atención esos días (la atención sigue el siguiente día hábil)\n${proximos.join('\n')}`] : []),
+  ])
   seccion('Preguntas frecuentes', de('faq').map((f) => `### ${f.titulo}\n${campo(f, 'texto')}`))
   return sinPuntosEnHoras(salida.join('\n'))
 }
