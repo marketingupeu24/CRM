@@ -4,7 +4,8 @@
 //  con el número de Genesys (API de BuilderBot). La API key nunca llega al panel.
 //
 //  POST /functions/v1/chat   { lead_id, texto, adjunto_url? }
-//  adjunto_url: archivo del bucket público "proformas" (imagen o PDF de la proforma)
+//  adjunto_url: imagen o PDF de los buckets públicos "proformas" (la proforma) o
+//               "chat-envios" (lo que el asesor adjunta en el chat). Con adjunto, el texto es opcional.
 //  Header: Authorization: Bearer <sesión del usuario del panel>
 //
 //  Seguridad: la sesión del usuario se valida con Supabase Auth y el lead se lee
@@ -21,8 +22,8 @@ const admin = createClient<Database>(URL_SUPABASE, Deno.env.get('SUPABASE_SERVIC
 })
 
 const MAX_CARACTERES = 3000
-// Solo se adjuntan archivos subidos por el CRM al bucket de proformas
-const PREFIJO_ADJUNTOS = `${URL_SUPABASE}/storage/v1/object/public/proformas/`
+// Solo se adjuntan archivos subidos por el CRM a sus buckets públicos
+const PREFIJOS_ADJUNTOS = ['proformas', 'chat-envios'].map((b) => `${URL_SUPABASE}/storage/v1/object/public/${b}/`)
 // WhatsApp conectado por QR: limitar ráfagas para no arriesgar un bloqueo del número
 const MAX_MENSAJES_POR_MINUTO = 20
 
@@ -63,10 +64,10 @@ Deno.serve(async (req) => {
   const texto = typeof cuerpo.texto === 'string' ? cuerpo.texto.trim() : ''
   const adjunto = typeof cuerpo.adjunto_url === 'string' && cuerpo.adjunto_url ? cuerpo.adjunto_url : null
   if (!/^[0-9a-f-]{36}$/i.test(leadId)) return responder({ ok: false, error: 'Lead no válido' }, 400)
-  if (adjunto && (!adjunto.startsWith(PREFIJO_ADJUNTOS) || adjunto.includes('..'))) {
+  if (adjunto && (!PREFIJOS_ADJUNTOS.some((p) => adjunto.startsWith(p)) || adjunto.includes('..'))) {
     return responder({ ok: false, error: 'Adjunto no válido' }, 400)
   }
-  if (!texto) return responder({ ok: false, error: 'Escribe un mensaje' }, 400)
+  if (!texto && !adjunto) return responder({ ok: false, error: 'Escribe un mensaje' }, 400)
   if (texto.length > MAX_CARACTERES) {
     return responder({ ok: false, error: `El mensaje es muy largo (máximo ${MAX_CARACTERES} caracteres)` }, 400)
   }
@@ -91,7 +92,8 @@ Deno.serve(async (req) => {
   // 5. Envío por WhatsApp, firmado con el nombre del asesor
   const primerNombre = yo.nombre.split(' ')[0]
   // BuilderBot a veces responde 500 de forma pasajera: hasta 2 reintentos rápidos
-  const contenido = `*${primerNombre}:* ${texto}`
+  // Archivo sin texto: WhatsApp lo muestra con la firma del asesor como leyenda
+  const contenido = texto ? `*${primerNombre}:* ${texto}` : `*${primerNombre}*`
   let envio = await enviarWhatsApp(lead.telefono, contenido, adjunto ?? undefined)
   for (let intento = 1; !envio.ok && intento <= 2; intento++) {
     await new Promise((r) => setTimeout(r, intento * 2_000))
@@ -101,7 +103,7 @@ Deno.serve(async (req) => {
   const { data: mensaje, error } = await admin.from('lead_interacciones').insert({
     lead_id: lead.id,
     tipo: 'mensaje_asesor',
-    contenido: texto,
+    contenido: texto || (/\.pdf($|\?)/i.test(adjunto ?? '') ? '📄 Documento' : '🖼️ Imagen'),
     adjunto_url: adjunto,
     autor_id: yo.id,
     estado_envio: envio.ok ? 'enviado' : 'error',

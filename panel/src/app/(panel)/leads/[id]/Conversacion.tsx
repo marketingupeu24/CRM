@@ -10,6 +10,10 @@ import { Adjunto } from './Adjunto'
 
 export type MensajeChat = LeadInteraccion & { autor_nombre?: string | null }
 
+/** Lo que se puede adjuntar en el chat (igual que el bucket "chat-envios"). */
+const TIPOS_ADJUNTO = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
+const MAX_ADJUNTO = 10 * 1024 * 1024
+
 function hora(iso: string): string {
   return new Intl.DateTimeFormat('es-PE', {
     timeZone: 'America/Lima', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
@@ -51,6 +55,10 @@ export function Conversacion(
     setVerRespuestas(false)
   }
   const [enviando, setEnviando] = useState(false)
+  // Imagen o PDF para adjuntar (botón 📎 o pegar con Ctrl+V)
+  const [archivo, setArchivo] = useState<File | null>(null)
+  const [vistaPrevia, setVistaPrevia] = useState<string | null>(null)
+  const selector = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [enVivo, setEnVivo] = useState(false)
   const fondo = useRef<HTMLDivElement>(null)
@@ -152,19 +160,54 @@ export function Conversacion(
     fondo.current?.scrollTo({ top: fondo.current.scrollHeight, behavior: 'smooth' })
   }, [mensajes.length])
 
-  async function enviar(contenido: string) {
+  /** Valida y deja listo el archivo para enviar (imagen o PDF, máx. 10 MB). */
+  function elegirArchivo(f: File | null | undefined) {
+    if (!f) return
+    if (!TIPOS_ADJUNTO.includes(f.type)) { setError('Solo puedes adjuntar imágenes (JPG, PNG, WEBP) o PDF.'); return }
+    if (f.size > MAX_ADJUNTO) { setError('El archivo pesa más de 10 MB.'); return }
+    setError(null)
+    setArchivo(f)
+  }
+
+  // Miniatura de la imagen elegida
+  useEffect(() => {
+    if (!archivo || !archivo.type.startsWith('image/')) { setVistaPrevia(null); return }
+    const url = URL.createObjectURL(archivo)
+    setVistaPrevia(url)
+    return () => URL.revokeObjectURL(url)
+  }, [archivo])
+
+  function quitarArchivo() {
+    setArchivo(null)
+    if (selector.current) selector.current.value = ''
+  }
+
+  async function enviar(contenido: string, adjunto: File | null = null) {
     const limpio = contenido.trim()
-    if (!limpio || enviando) return
+    if ((!limpio && !adjunto) || enviando) return
     setEnviando(true)
     setError(null)
     const supabase = crearClienteNavegador()
-    const { data, error: fallo } = await supabase.functions.invoke('chat', { body: { lead_id: leadId, texto: limpio } })
+    // El archivo se sube a "chat-envios" (público: BuilderBot lo descarga para mandarlo por WhatsApp)
+    let adjuntoUrl: string | undefined
+    if (adjunto) {
+      const extension = adjunto.type === 'application/pdf' ? 'pdf' : adjunto.type.split('/')[1] === 'jpeg' ? 'jpg' : adjunto.type.split('/')[1]
+      const ruta = `${leadId}/${crypto.randomUUID()}.${extension}`
+      const subida = await supabase.storage.from('chat-envios').upload(ruta, adjunto, { contentType: adjunto.type })
+      if (subida.error) {
+        setError('No se pudo subir el archivo. Intenta de nuevo.')
+        setEnviando(false)
+        return
+      }
+      adjuntoUrl = supabase.storage.from('chat-envios').getPublicUrl(ruta).data.publicUrl
+    }
+    const { data, error: fallo } = await supabase.functions.invoke('chat', { body: { lead_id: leadId, texto: limpio, adjunto_url: adjuntoUrl } })
     let respuesta = data as { ok?: boolean; error?: string; mensaje?: MensajeChat } | null
     if (fallo && 'context' in fallo && fallo.context instanceof Response) {
       respuesta = await fallo.context.json().catch(() => null)
     }
     if (respuesta?.mensaje) agregar({ ...respuesta.mensaje, autor_nombre: miNombre })
-    if (respuesta?.ok) setTexto('')
+    if (respuesta?.ok) { setTexto(''); if (adjunto) quitarArchivo() }
     else setError(respuesta?.error ?? 'No se pudo enviar el mensaje. Revisa tu conexión.')
     setEnviando(false)
   }
@@ -249,10 +292,34 @@ export function Conversacion(
           ))}
         </div>
       )}
+      {archivo && (
+        <div className="flex items-center gap-3 border-t border-slate-200 bg-slate-50 px-3 py-2">
+          {vistaPrevia
+            // eslint-disable-next-line @next/next/no-img-element -- vista previa local (blob:)
+            ? <img src={vistaPrevia} alt="Imagen para enviar" className="h-14 w-14 rounded-md border border-slate-200 object-cover" />
+            : <span aria-hidden className="flex h-14 w-14 items-center justify-center rounded-md border border-slate-200 bg-superficie text-2xl">📄</span>}
+          <div className="min-w-0 flex-1 text-sm">
+            <p className="truncate font-medium text-slate-800">{archivo.name}</p>
+            <p className="text-xs text-slate-500">{(archivo.size / 1024 / 1024).toFixed(1)} MB · escribe un mensaje para acompañarlo (opcional)</p>
+          </div>
+          <button type="button" onClick={quitarArchivo} disabled={enviando} className="text-sm font-medium text-slate-500 hover:text-rose-600" aria-label="Quitar archivo">✕ Quitar</button>
+        </div>
+      )}
       <form
         className="flex items-end gap-2 border-t border-slate-200 bg-superficie p-3"
-        onSubmit={(e) => { e.preventDefault(); enviar(texto) }}
+        onSubmit={(e) => { e.preventDefault(); enviar(texto, archivo) }}
       >
+        <input
+          ref={selector} type="file" accept={TIPOS_ADJUNTO.join(',')} className="hidden"
+          onChange={(e) => elegirArchivo(e.target.files?.[0])}
+        />
+        <button
+          type="button" onClick={() => selector.current?.click()} disabled={enviando} title="Adjuntar imagen o PDF"
+          aria-label="Adjuntar imagen o PDF"
+          className="h-10 shrink-0 rounded-lg border border-slate-300 px-3 text-sm text-slate-600 hover:bg-slate-50"
+        >
+          📎
+        </button>
         <button
           type="button" onClick={() => setVerRespuestas((v) => !v)} title="Respuestas rápidas"
           className={`h-10 shrink-0 rounded-lg border px-3 text-sm ${verRespuestas ? 'border-marca-600 bg-marca-50 text-marca-700' : 'border-slate-300 text-slate-600 hover:bg-slate-50'}`}
@@ -264,15 +331,20 @@ export function Conversacion(
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(texto) }
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(texto, archivo) }
+          }}
+          onPaste={(e) => {
+            // Pegar una captura de pantalla (Ctrl+V) la deja lista para enviar
+            const imagen = Array.from(e.clipboardData.files).find((f) => f.type.startsWith('image/'))
+            if (imagen) { e.preventDefault(); elegirArchivo(imagen) }
           }}
           rows={2}
           maxLength={1500}
-          placeholder="Escribe un mensaje… (Enter para enviar, Shift+Enter para nueva línea)"
+          placeholder={archivo ? 'Mensaje para acompañar el archivo (opcional)…' : 'Escribe un mensaje… (Enter para enviar, Shift+Enter para nueva línea)'}
           className="campo resize-none"
           aria-label="Mensaje"
         />
-        <button className="boton h-10 shrink-0" disabled={enviando || !texto.trim()}>
+        <button className="boton h-10 shrink-0" disabled={enviando || (!texto.trim() && !archivo)}>
           {enviando ? 'Enviando…' : 'Enviar'}
         </button>
       </form>

@@ -44,7 +44,7 @@ export function Adjunto({ ruta, propio }: { ruta: string; propio: boolean }) {
     return (
       <a href={url} target="_blank" rel="noreferrer" className="mb-1.5 block">
         {/* eslint-disable-next-line @next/next/no-img-element -- archivo de Storage (URL pública o firmada) */}
-        <img src={url} alt={propio ? 'Proforma enviada' : 'Imagen enviada por el lead'} className="max-h-64 rounded-md border border-slate-200" loading="lazy" />
+        <img src={url} alt={propio ? 'Imagen enviada al lead' : 'Imagen enviada por el lead'} className="max-h-64 rounded-md border border-slate-200" loading="lazy" />
       </a>
     )
   }
@@ -52,7 +52,7 @@ export function Adjunto({ ruta, propio }: { ruta: string; propio: boolean }) {
   if (tipo === 'video') return <video controls preload="metadata" src={url} className="mb-1.5 max-h-64 rounded-md" />
   return (
     <a href={url} target="_blank" rel="noreferrer" className={enlace}>
-      {propio && tipo === 'pdf' ? '📄 Proforma (PDF)' : tipo === 'pdf' ? '📄 Abrir PDF' : '⬇️ Descargar archivo'}
+      {tipo === 'pdf' && ruta.includes('/proformas/') ? '📄 Proforma (PDF)' : tipo === 'pdf' ? '📄 Abrir PDF' : '⬇️ Descargar archivo'}
     </a>
   )
 }
