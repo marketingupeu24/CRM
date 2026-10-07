@@ -150,6 +150,56 @@ isOneToOne: false
       referencedColumns: ["asesor_id"]
     }
                   ]
+                },"genesys_fichas": {
+                  Row: {
+                    "activo": boolean,"actualizado_por": string | null,"campos": NonNullable<Json>,"created_at": string,"id": number,"orden": number,"parte": string,"titulo": string,"updated_at": string
+                  }
+                  Insert: {
+                    "activo"?: boolean,"actualizado_por"?: string | null,"campos"?: NonNullable<Json>,"created_at"?: string,"id"?: never,"orden"?: number,"parte": string,"titulo": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "activo"?: boolean,"actualizado_por"?: string | null,"campos"?: NonNullable<Json>,"created_at"?: string,"id"?: never,"orden"?: number,"parte"?: string,"titulo"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "genesys_fichas_actualizado_por_fkey"
+      columns: ["actualizado_por"]
+isOneToOne: false
+      referencedRelation: "asesores"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "genesys_fichas_actualizado_por_fkey"
+      columns: ["actualizado_por"]
+isOneToOne: false
+      referencedRelation: "vista_leads_por_asesor"
+      referencedColumns: ["asesor_id"]
+    }
+                  ]
+                },"genesys_versiones": {
+                  Row: {
+                    "caracteres": number,"creado_por": string | null,"created_at": string,"id": number,"nota": string,"texto": string
+                  }
+                  Insert: {
+                    "caracteres": number,"creado_por"?: string | null,"created_at"?: string,"id"?: never,"nota"?: string,"texto": string
+                  }
+                  Update: {
+                    "caracteres"?: number,"creado_por"?: string | null,"created_at"?: string,"id"?: never,"nota"?: string,"texto"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "genesys_versiones_creado_por_fkey"
+      columns: ["creado_por"]
+isOneToOne: false
+      referencedRelation: "asesores"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "genesys_versiones_creado_por_fkey"
+      columns: ["creado_por"]
+isOneToOne: false
+      referencedRelation: "vista_leads_por_asesor"
+      referencedColumns: ["asesor_id"]
+    }
+                  ]
                 },"lead_alias": {
                   Row: {
                     "alias": string,"created_at": string,"lead_id": string

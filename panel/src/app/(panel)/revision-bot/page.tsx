@@ -35,7 +35,7 @@ export default async function PaginaRevisionBot(props: PageProps<'/revision-bot'
           <h1 className="text-2xl font-semibold">Revisión del bot</h1>
           <p className="text-sm text-slate-500">
             Respuestas en las que Genesys no supo contestar ("no tengo información", "malentendido"…) con la pregunta del lead.
-            Agrega el dato a la <Link href="/conocimiento" className="font-medium text-marca-700 hover:underline">base de conocimiento</Link> y márcala como revisada.
+            Agrega la respuesta en <Link href="/genesys?parte=faq" className="font-medium text-marca-700 hover:underline">Prompt de Genesys → Preguntas frecuentes</Link> y márcala como revisada.
           </p>
         </div>
         {pendientes.length > 1 && !verTodas && (
@@ -72,7 +72,7 @@ export default async function PaginaRevisionBot(props: PageProps<'/revision-bot'
               </span>
               <span className="flex items-center gap-3">
                 <Link
-                  href={`/conocimiento?nuevo=${encodeURIComponent(p.pregunta ?? '')}` as `/conocimiento?${string}`}
+                  href={`/genesys?parte=faq&nuevo=${encodeURIComponent(p.pregunta ?? '')}` as `/genesys?${string}`}
                   className="text-xs font-medium text-marca-700 hover:underline"
                 >
                   + Agregar a la base

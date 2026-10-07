@@ -355,6 +355,26 @@ export function carreraParecida(texto: string | null | undefined, modalidad: Mod
   return mejor?.nombre ?? null
 }
 
+/**
+ * Costo del primer ciclo de una carrera en una línea, para su ficha en el prompt de Genesys.
+ * modalidad: 'Presencial' (filial Juliaca), 'A distancia' o 'Semipresencial' (sede Lima). null si no está en el tarifario.
+ */
+export function costoCarreraTexto(nombre: string, modalidad: string): string | null {
+  const m: Modalidad = /distancia/i.test(modalidad) ? 'EAD' : /semi/i.test(modalidad) ? 'SEMI' : 'PRES'
+  const campus: CampusId = 'JUL'
+  const encontrada = carreraParecida(nombre, m, campus)
+  const fila = encontrada ? carreras(m, campus).find((c) => c[0] === encontrada) : undefined
+  if (!fila) return null
+  const [, cr, costo, pct, cq] = fila
+  const mat = m === 'PRES' ? CAMPUS[campus].mat : MODALIDADES[m].mat!
+  const cuotas = cq || (m === 'PRES' ? CAMPUS[campus].cuotas : MODALIDADES[m].cuotas!)
+  const ens = cr * costo
+  const conPromo = pct ? t2(ens - t2(ens * pct / 100)) : ens
+  const promo = pct ? `; con la promoción del ${pct} %: *${soles0(conPromo)}*` : ''
+  const matricula = m === 'PRES' && /medicina humana/i.test(encontrada!) ? 'matrícula gratis en el primer ciclo (lanzamiento)' : `matrícula ${soles0(mat)}`
+  return `${matricula} · ${cr} créditos · ciclo I: *${soles0(ens)}*${promo} · ${cuotas} cuotas de *${soles2(r2(conPromo / cuotas))}*`
+}
+
 /** Resumen del tarifario de un campus para la base de conocimiento de Genesys. */
 export function tarifarioTexto(campus: CampusId): string {
   const cp = CAMPUS[campus]

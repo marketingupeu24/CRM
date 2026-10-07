@@ -29,7 +29,7 @@ const PAGINAS: Omit<Item, 'id' | 'grupo'>[] = [
   { titulo: 'Dashboard', icono: '◔', ir: '/dashboard', modulo: 'dashboard', detalle: 'Indicadores y gráficos' },
   { titulo: 'Campañas', icono: '📣', ir: '/campanas', modulo: 'campanas', detalle: 'Resultados y Excel por campaña' },
   { titulo: 'Leads sin responder', icono: '●', ir: '/chats?filtro=sin_responder', modulo: 'chats', detalle: 'Escribieron y esperan respuesta' },
-  { titulo: 'Base de conocimiento', icono: '📚', ir: '/conocimiento', detalle: 'Lo que sabe Genesys: carreras, costos, fechas' },
+  { titulo: 'Prompt de Genesys', icono: '📚', ir: '/genesys', detalle: 'Lo que sabe Genesys por partes: carreras, CEPRE, modalidades, registro' },
   { titulo: 'Revisión del bot', icono: '🤖', ir: '/revision-bot', detalle: 'Preguntas que Genesys no supo responder', modulo: 'conocimiento' },
   { titulo: 'Mi cuenta', icono: '⚙', ir: '/cuenta', detalle: 'Contraseña' },
 ]
