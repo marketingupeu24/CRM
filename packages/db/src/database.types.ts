@@ -125,6 +125,19 @@ isOneToOne: false
       referencedColumns: ["asesor_id"]
     }
                   ]
+                },"feriados": {
+                  Row: {
+                    "fecha": string,"nombre": string
+                  }
+                  Insert: {
+                    "fecha": string,"nombre": string
+                  }
+                  Update: {
+                    "fecha"?: string,"nombre"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"flujos_bot": {
                   Row: {
                     "actualizado_por": string | null,"created_at": string,"disparador": string,"id": number,"nombre": string,"notas": string,"orden": number,"palabras": (string)[],"prompt": string,"prompt_mejorado": string,"updated_at": string

@@ -4,7 +4,7 @@ import { useActionState, useEffect, useState, useTransition } from 'react'
 import type { FichaGenesys, ParteGenesys } from '@crm/db'
 import { useConfirmar } from '@/components/Confirmacion'
 import type { Aviso } from '@/lib/genesys'
-import { cambiarActivo, eliminarFicha, guardarFicha, registrarVersion, type Resultado } from './acciones'
+import { agregarFeriado, cambiarActivo, eliminarFeriado, eliminarFicha, guardarFicha, registrarVersion, type Resultado } from './acciones'
 
 function Mensaje({ r }: { r: Resultado }) {
   if (r.error) return <p role="alert" className="text-sm text-rose-600">{r.error}</p>
@@ -104,6 +104,52 @@ export function TarjetaFicha({ parte, ficha, editable }: { parte: ParteGenesys; 
         </div>
       )}
     </li>
+  )
+}
+
+/** Días sin atención: no hay reasignación ni resumen de apertura y Genesys sabe que la oficina está cerrada. */
+export function Feriados({ feriados, editable }: { feriados: { fecha: string; nombre: string }[]; editable: boolean }) {
+  const [r, accion, guardando] = useActionState<Resultado, FormData>(agregarFeriado, {})
+  const [rEliminar, setREliminar] = useState<Resultado>({})
+  const [pendiente, iniciar] = useTransition()
+  const confirmar = useConfirmar()
+  const fecha = (f: string) => new Intl.DateTimeFormat('es-PE', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(`${f}T00:00:00Z`))
+  return (
+    <section className="tarjeta space-y-3 p-4">
+      <div>
+        <h2 className="text-sm font-semibold">🗓️ Feriados (sin atención)</h2>
+        <p className="text-xs text-slate-500">Ese día no hay reasignación ni resumen de apertura, y Genesys sabe que la oficina está cerrada.</p>
+      </div>
+      <ul className="max-h-56 space-y-1 overflow-y-auto text-sm">
+        {feriados.map((f) => (
+          <li key={f.fecha} className="flex items-center justify-between gap-2">
+            <span><span className="font-medium">{fecha(f.fecha)}</span> <span className="text-slate-500">· {f.nombre}</span></span>
+            {editable && (
+              <button
+                disabled={pendiente} className="text-xs text-rose-600 hover:underline" aria-label={`Quitar ${f.nombre}`}
+                onClick={async () => {
+                  if (await confirmar({ titulo: `¿Quitar el feriado del ${fecha(f.fecha)}?`, mensaje: `"${f.nombre}" volverá a ser un día con atención normal.`, confirmar: 'Quitar', peligro: true })) {
+                    iniciar(async () => setREliminar(await eliminarFeriado(f.fecha)))
+                  }
+                }}
+              >
+                Quitar
+              </button>
+            )}
+          </li>
+        ))}
+        {!feriados.length && <li className="text-xs text-slate-500">No hay feriados próximos.</li>}
+      </ul>
+      <Mensaje r={rEliminar} />
+      {editable && (
+        <form action={accion} className="space-y-2 border-t border-slate-100 pt-3">
+          <input type="date" name="fecha" required className="campo" aria-label="Fecha del feriado" />
+          <input name="nombre" required placeholder="Ej.: Fiestas Patrias" className="campo" aria-label="Nombre del feriado" />
+          <button className="boton w-full" disabled={guardando}>{guardando ? 'Guardando…' : '+ Agregar feriado'}</button>
+          <Mensaje r={r} />
+        </form>
+      )}
+    </section>
   )
 }
 

@@ -64,3 +64,27 @@ export async function registrarVersion(texto: string, nota: string): Promise<Res
   revalidatePath('/genesys')
   return { ok: 'Listo: quedó registrado como la versión que tiene BuilderBot.' }
 }
+
+/** Feriados: días sin atención (horario, reasignación, recordatorios y Genesys los respetan). */
+export async function agregarFeriado(_previo: Resultado, formData: FormData): Promise<Resultado> {
+  await exigirPermiso('conocimiento')
+  const fecha = String(formData.get('fecha') ?? '')
+  const nombre = String(formData.get('nombre') ?? '').trim()
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return { error: 'Elige la fecha.' }
+  if (nombre.length < 2) return { error: 'Escribe el nombre del feriado.' }
+  const supabase = await crearClienteServidor()
+  const { error } = await supabase.from('feriados').insert({ fecha, nombre: nombre.slice(0, 80) })
+  if (error?.code === '23505') return { error: 'Esa fecha ya está como feriado.' }
+  if (error) return { error: mensajeError(error) }
+  revalidatePath('/genesys')
+  return { ok: 'Feriado guardado.' }
+}
+
+export async function eliminarFeriado(fecha: string): Promise<Resultado> {
+  await exigirPermiso('conocimiento')
+  const supabase = await crearClienteServidor()
+  const { error } = await supabase.from('feriados').delete().eq('fecha', fecha)
+  if (error) return { error: mensajeError(error) }
+  revalidatePath('/genesys')
+  return { ok: 'Feriado eliminado.' }
+}

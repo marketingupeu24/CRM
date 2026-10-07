@@ -265,7 +265,7 @@ async function registrar(cuerpo: Cuerpo): Promise<Respuesta> {
   // dejar al bot sin respuesta.
   if (cuerpo.solo_contexto === true || cuerpo.solo_contexto === 'true') {
     const candidato = Object.values(cuerpo).map((v) => (typeof v === 'string' || typeof v === 'number' ? normalizarTelefono(String(v)) : null)).find(Boolean)
-    if (!candidato) return { ok: true, registrado: false, bot_atiende: true, contexto: 'Alumno nuevo: todavía no ha dado sus datos.', aviso: 'No llegó un número válido' }
+    if (!candidato) return { ok: true, registrado: false, bot_atiende: true, contexto: `Alumno nuevo: todavía no ha dado sus datos. ${fechaYHorario()}`, aviso: 'No llegó un número válido' }
     return contextoSinRegistrar(candidato)
   }
   const telefono = telefonoDe(cuerpo)
@@ -295,7 +295,7 @@ async function registrar(cuerpo: Cuerpo): Promise<Respuesta> {
   if (mensaje && !porQr) EdgeRuntime.waitUntil(avisarMensajeNuevo(lead, mensaje))
 
   const botAtiende = botAtiendeLead(lead.estado, lead.bot_pausado_hasta)
-  const apertura = proximaAtencion()
+  const apertura = proximaAtencion(new Date(), FERIADOS)
   // Fuera de horario y el bot no responde (lead de un asesor): se le dice cuándo le responderán
   if (apertura && mensaje && !porQr && !botAtiende && lead.asesor_id && !pareceIdentificadorLid(telefono, cuerpo.es_lid === true)) {
     EdgeRuntime.waitUntil(avisarFueraDeHorario(lead, telefono))
@@ -317,13 +317,24 @@ async function registrar(cuerpo: Cuerpo): Promise<Respuesta> {
   }
 }
 
+/** "Hoy es miércoles 7 de octubre de 2026, 3:06 pm (hora de Perú). La oficina está abierta…" */
+function fechaYHorario(): string {
+  const ahora = new Date()
+  const hoy = new Intl.DateTimeFormat('es-PE', { timeZone: 'America/Lima', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(ahora)
+  const hora = new Intl.DateTimeFormat('es-PE', { timeZone: 'America/Lima', hour: 'numeric', minute: '2-digit', hour12: true }).format(ahora)
+    .replace(/\s*a\.?\s*m\.?/i, ' am').replace(/\s*p\.?\s*m\.?/i, ' pm')
+  const apertura = proximaAtencion(ahora, FERIADOS)
+  const oficina = apertura ? `La oficina está cerrada ahora; la próxima atención es ${textoProximaAtencion(apertura, ahora)}.` : 'La oficina está abierta ahora.'
+  return `Hoy es ${hoy}, ${hora} (hora de Perú). ${oficina}`
+}
+
 /** Solo lectura: contexto del alumno y si el bot debe responder, sin guardar nada. */
 async function contextoSinRegistrar(telefono: string): Promise<Respuesta> {
   const { data: leadId } = await supabase.rpc('lead_de_contacto', { p_contacto: telefono })
   const { data: lead } = leadId ? await supabase.from('leads').select('*').eq('id', leadId as string).maybeSingle() : { data: null }
-  const apertura = proximaAtencion()
+  const apertura = proximaAtencion(new Date(), FERIADOS)
   if (!lead) {
-    return { ok: true, registrado: false, bot_atiende: true, nombre: '', contexto: 'Alumno nuevo: todavía no ha dado sus datos.', fuera_de_horario: !!apertura }
+    return { ok: true, registrado: false, bot_atiende: true, nombre: '', contexto: `Alumno nuevo: todavía no ha dado sus datos. ${fechaYHorario()}`, fuera_de_horario: !!apertura }
   }
   return {
     ok: true,
@@ -331,7 +342,7 @@ async function contextoSinRegistrar(telefono: string): Promise<Respuesta> {
     registrado: leadRegistrado(lead),
     bot_atiende: botAtiendeLead(lead.estado, lead.bot_pausado_hasta),
     nombre: lead.nombre ?? '',
-    contexto: await contextoDelAlumno(lead),
+    contexto: `${await contextoDelAlumno(lead)} ${fechaYHorario()}`,
     fuera_de_horario: !!apertura,
     proxima_atencion: apertura ? textoProximaAtencion(apertura) : '',
   }
@@ -420,7 +431,7 @@ const INSTRUCCION_REGISTRADO = 'REGISTRO COMPLETADO. Confirma al alumno UNA sola
 
 /** Fuera de horario: lo que se agrega al mensaje y a la instrucción de Genesys tras registrar. */
 function notaHorario(): { cliente: string; instruccion: string } {
-  const apertura = proximaAtencion()
+  const apertura = proximaAtencion(new Date(), FERIADOS)
   if (!apertura) return { cliente: '', instruccion: '' }
   const cuando = textoProximaAtencion(apertura)
   return {
@@ -606,6 +617,15 @@ async function respuestaBot(cuerpo: Cuerpo): Promise<Respuesta> {
  * 1) Reintenta notificaciones pendientes o con error (máx. 3 intentos).
  * 2) Envía a cada asesor un resumen de sus leads asignados hace más de 12 h sin contactar.
  */
+/** Feriados (public.feriados, "AAAA-MM-DD"): se recargan como máximo cada 10 min. */
+let FERIADOS: ReadonlySet<string> = new Set()
+let feriadosCargados = 0
+async function cargarFeriados() {
+  if (Date.now() - feriadosCargados < 10 * 60_000) return
+  const { data } = await supabase.from('feriados').select('fecha')
+  if (data) { FERIADOS = new Set(data.map((f) => f.fecha)); feriadosCargados = Date.now() }
+}
+
 const SELECCION_CON_ASESOR = '*, asesor:asesores!leads_asesor_id_fkey(nombre, telefono)'
 
 /**
@@ -641,6 +661,11 @@ async function recordatorios(): Promise<Respuesta> {
 
   // 1) Reintentos de notificación
   const reenviadas = await reintentarAvisos()
+
+  // Feriado: sin resumen de apertura (la oficina no abre)
+  if (FERIADOS.has(new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date()))) {
+    return { ok: true, notificaciones_reenviadas: reenviadas, recordatorios_enviados: 0, omitido: 'Feriado' }
+  }
 
   // 2) Resumen de apertura por asesor (lunes a viernes 8:00):
   //    a) leads que llegaron con la oficina cerrada y aún no contacta
@@ -709,7 +734,7 @@ async function recordatorios(): Promise<Respuesta> {
  */
 async function recordarTareas(): Promise<Respuesta> {
   if (MODO !== 'activo') return { ok: true, omitido: 'Solo en modo activo' }
-  if (proximaAtencion()) return { ok: true, omitido: 'Fuera del horario de atención' }
+  if (proximaAtencion(new Date(), FERIADOS)) return { ok: true, omitido: 'Fuera del horario de atención' }
   const { data: tareas, error } = await supabase.from('tareas')
     .select('id, titulo, vence_at, asesor_id, lead:leads!tareas_lead_id_fkey(id, nombre, telefono, eliminado_at), asesor:asesores!tareas_asesor_id_fkey(nombre, telefono, eliminado_at)')
     .is('completada_at', null).is('recordatorio_enviado_at', null)
@@ -1111,6 +1136,7 @@ Deno.serve(async (req) => {
     }).select('id').single()
     if (!autorizado) return responder({ ok: false, error: 'no_autorizado' }, 401)
     try {
+      await cargarFeriados()
       return responder(await evento(cuerpo, registro?.id ?? null))
     } catch (e) {
       console.error('[genesys] Error en /evento:', e)
@@ -1119,9 +1145,17 @@ Deno.serve(async (req) => {
   }
 
   if (!tokenValido(tokenRecibido)) {
+    // Se registra el rechazo (sin el token) para detectar pasos de BuilderBot mal configurados
+    if (accion === 'registrar' || accion === 'webhook') {
+      EdgeRuntime.waitUntil(Promise.resolve(supabase.from('webhook_eventos').insert({
+        payload: { accion, token_ok: false, token_inicio: (tokenRecibido ?? '').slice(0, 4), user_agent: req.headers.get('user-agent') } as never,
+        procesado: `${accion}: rechazado (token inválido)`,
+      })).then(() => undefined))
+    }
     return responder({ ok: false, error: 'no_autorizado' }, 401)
   }
 
+  await cargarFeriados()
   const manejar = ACCIONES[accion]
   if (!manejar) {
     return responder({ ok: false, error: 'accion_desconocida', acciones: Object.keys(ACCIONES) }, 404)

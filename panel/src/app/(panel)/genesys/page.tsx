@@ -5,7 +5,7 @@ import { fechaHora } from '@/lib/formato'
 import { promptGenesys, revisarPrompt } from '@/lib/genesys'
 import { obtenerSesion } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
-import { FormularioFicha, PanelPrompt, TarjetaFicha } from './Fichas'
+import { Feriados, FormularioFicha, PanelPrompt, TarjetaFicha } from './Fichas'
 
 export const metadata: Metadata = { title: 'Prompt de Genesys' }
 
@@ -18,9 +18,11 @@ export default async function PaginaGenesys(props: PageProps<'/genesys'>) {
   const { puede } = await obtenerSesion()
   const editable = puede('conocimiento')
   const supabase = await crearClienteServidor()
-  const [{ data: filas, error }, { data: version }] = await Promise.all([
+  const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date())
+  const [{ data: filas, error }, { data: version }, { data: feriados }] = await Promise.all([
     supabase.from('genesys_fichas').select('id, parte, titulo, campos, activo, orden').order('orden').order('titulo'),
     supabase.from('genesys_versiones').select('texto, created_at').order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    supabase.from('feriados').select('fecha, nombre').gte('fecha', hoy).order('fecha').limit(30),
   ])
   const fichas = (filas ?? []) as FichaGenesys[]
   const pedida = typeof sp.parte === 'string' ? sp.parte : ''
@@ -45,7 +47,8 @@ export default async function PaginaGenesys(props: PageProps<'/genesys'>) {
       {error && <p className="rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-700">{error.message}</p>}
 
       <div className="grid gap-6 xl:grid-cols-[14rem_1fr_26rem]">
-        {/* Partes */}
+        {/* Partes y feriados */}
+        <div className="space-y-4">
         <nav aria-label="Partes del prompt" className="space-y-1">
           {PARTES_GENESYS.map((p) => {
             const lista = fichas.filter((f) => f.parte === p.clave)
@@ -65,6 +68,8 @@ export default async function PaginaGenesys(props: PageProps<'/genesys'>) {
             )
           })}
         </nav>
+        <Feriados feriados={feriados ?? []} editable={editable} />
+        </div>
 
         {/* Fichas de la parte */}
         <section className="min-w-0 space-y-4">
