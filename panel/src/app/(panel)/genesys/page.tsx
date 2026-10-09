@@ -38,7 +38,10 @@ export default async function PaginaGenesys(props: PageProps<'/genesys'>) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Prompt de Genesys</h1>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h1 className="text-2xl font-semibold">Prompt de Genesys</h1>
+          <Link href="/genesys/pruebas" className="boton-secundario">🧪 Pruebas del prompt</Link>
+        </div>
         <p className="max-w-3xl text-sm text-slate-500">
           Lo que sabe el bot, dividido en partes y fichas pequeñas: actualiza solo el dato que cambió (una carrera, un horario del CEPRE…).
           El CRM arma el prompt completo, con los costos del tarifario de proformas, y lo revisa antes de que lo pegues en BuilderBot.

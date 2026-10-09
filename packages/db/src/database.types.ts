@@ -213,6 +213,19 @@ isOneToOne: false
       referencedColumns: ["asesor_id"]
     }
                   ]
+                },"genesys_pruebas": {
+                  Row: {
+                    "activo": boolean,"created_at": string,"debe_incluir": (string)[],"id": number,"no_debe_incluir": (string)[],"orden": number,"pregunta": string,"probado_at": string | null,"ultima_respuesta": string | null,"ultimo_detalle": string | null,"ultimo_resultado": boolean | null
+                  }
+                  Insert: {
+                    "activo"?: boolean,"created_at"?: string,"debe_incluir"?: (string)[],"id"?: never,"no_debe_incluir"?: (string)[],"orden"?: number,"pregunta": string,"probado_at"?: string | null,"ultima_respuesta"?: string | null,"ultimo_detalle"?: string | null,"ultimo_resultado"?: boolean | null
+                  }
+                  Update: {
+                    "activo"?: boolean,"created_at"?: string,"debe_incluir"?: (string)[],"id"?: never,"no_debe_incluir"?: (string)[],"orden"?: number,"pregunta"?: string,"probado_at"?: string | null,"ultima_respuesta"?: string | null,"ultimo_detalle"?: string | null,"ultimo_resultado"?: boolean | null
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"genesys_versiones": {
                   Row: {
                     "caracteres": number,"creado_por": string | null,"created_at": string,"id": number,"nota": string,"texto": string
