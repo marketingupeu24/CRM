@@ -96,10 +96,32 @@ export interface Aviso {
   texto: string
 }
 
-/** Revisión antes de copiar: palabra clave del registro, horas con puntos, fichas incompletas, largo. */
-export function revisarPrompt(prompt: string, fichas: FichaGenesys[]): Aviso[] {
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+
+/**
+ * Fechas con año escritas en una ficha ("22 de noviembre de 2026") que ya pasaron.
+ * Las fechas sin año ("del 14 de septiembre al 6 de noviembre") no se revisan: serían ambiguas.
+ */
+export function fechasVencidas(f: FichaGenesys, hoy: Date): string[] {
+  const hoyLima = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(hoy)
+  const texto = Object.values(f.campos).join(' ').toLowerCase().replace('setiembre', 'septiembre')
+  const vencidas: string[] = []
+  for (const m of texto.matchAll(/\b(\d{1,2}) de (enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre) del? (\d{4})\b/g)) {
+    const iso = `${m[3]}-${String(MESES.indexOf(m[2]!) + 1).padStart(2, '0')}-${m[1]!.padStart(2, '0')}`
+    if (iso < hoyLima) vencidas.push(`${m[1]} de ${m[2]} de ${m[3]}`)
+  }
+  return [...new Set(vencidas)]
+}
+
+/** Revisión antes de copiar: palabra clave del registro, horas con puntos, fichas incompletas, fechas vencidas, largo. */
+export function revisarPrompt(prompt: string, fichas: FichaGenesys[], hoy = new Date()): Aviso[] {
   const avisos: Aviso[] = []
   const activas = fichas.filter((f) => f.activo)
+  // Fin de campaña: el bot no debe dar fechas que ya pasaron (error común: fechas del ciclo anterior)
+  const conFechasPasadas = activas.map((f) => ({ f, fechas: fechasVencidas(f, hoy) })).filter((x) => x.fechas.length)
+  if (conFechasPasadas.length) {
+    avisos.push({ nivel: 'aviso', texto: `Fechas que ya pasaron (Genesys las seguiría dando): ${conFechasPasadas.map((x) => `${x.f.titulo} (${x.fechas.join(', ')})`).join('; ')}. Actualízalas o desactiva la ficha.` })
+  }
   const fueraDeRegistro = activas.filter((f) => f.parte !== 'registro' && JSON.stringify(f.campos).includes('PEDIDO_CONFIRMADO'))
   if (fueraDeRegistro.length) {
     avisos.push({ nivel: 'error', texto: `PEDIDO_CONFIRMADO aparece fuera de "Registro de alumnos" (${fueraDeRegistro.map((f) => f.titulo).join(', ')}): puede registrar antes de tiempo o repetir el registro.` })

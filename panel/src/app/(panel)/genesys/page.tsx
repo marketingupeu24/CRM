@@ -69,6 +69,20 @@ export default async function PaginaGenesys(props: PageProps<'/genesys'>) {
           })}
         </nav>
         <Feriados feriados={feriados ?? []} editable={editable} />
+        <details className="tarjeta p-4 text-sm">
+          <summary className="cursor-pointer font-semibold">🗓️ Cierre de campaña</summary>
+          <p className="mt-2 text-xs text-slate-500">Al terminar una campaña (ej. 2027-1), antes de la siguiente:</p>
+          <ol className="mt-2 list-decimal space-y-1 pl-5 text-slate-700">
+            <li><Link href="/genesys?parte=examenes" className="text-marca-700 hover:underline">Exámenes y fechas</Link>: fechas de examen y de cierre de inscripciones.</li>
+            <li><Link href="/genesys?parte=cepre" className="text-marca-700 hover:underline">CEPRE</Link>: programas, costos y horarios; desactiva los que terminaron.</li>
+            <li><Link href="/genesys?parte=carreras" className="text-marca-700 hover:underline">Carreras</Link>: nuevas, próximamente y notas.</li>
+            <li>Tarifario de <Link href="/costos" className="text-marca-700 hover:underline">proformas</Link> (los costos del prompt salen de ahí).</li>
+            <li><Link href="/genesys?parte=becas" className="text-marca-700 hover:underline">Becas y promociones</Link> de la nueva campaña.</li>
+            <li>Feriados del año siguiente.</li>
+            <li>📋 Copiar prompt → pegar en BuilderBot → ✓ Ya lo pegué.</li>
+          </ol>
+          <p className="mt-2 text-xs text-slate-500">El revisor del prompt avisa cuando una ficha tiene fechas que ya pasaron.</p>
+        </details>
         </div>
 
         {/* Fichas de la parte */}
