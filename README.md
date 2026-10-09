@@ -21,18 +21,26 @@ WhatsApp ─► Genesys (BuilderBot Cloud) ─► Edge Function "genesys" ─►
 .
 ├── supabase/
 │   ├── migrations/          # Tablas, funciones, vistas y RLS (en orden)
-│   ├── functions/genesys/   # API que llama el bot (Edge Function, Deno)
-│   ├── functions/_shared/   # Reglas de normalización y tipos para la función
+│   ├── functions/genesys/   # API que llama el bot (Edge Function, Deno), dividida por tema:
+│   │                        #   index (servidor y acciones), registro, contexto, eventos, avisos, programadas, comun
+│   ├── functions/chat/      # Envío de mensajes del asesor por WhatsApp (Edge Function)
+│   ├── functions/_shared/   # Reglas del negocio (horario, costos), BuilderBot, contactos @lid y tipos
+│   ├── functions/tests/     # Pruebas de las funciones (deno test)
 │   ├── tests/               # Pruebas de la base de datos (npm run db:test)
 │   ├── demo/                # Leads de demostración (cargar / borrar)
 │   ├── seed.sql             # Asesores de EJEMPLO
 │   └── seed.local.sql       # Asesores REALES (no se sube a git)
 ├── panel/                   # Panel web (Next.js)
+│   ├── src/app/(panel)/     # Páginas con sesión (una carpeta por módulo)
+│   ├── src/app/r, src/app/w # Formularios públicos del QR (actividad y asesor)
+│   ├── src/lib/validacion.ts# Esquemas Zod de los formularios
+│   └── tests/e2e/           # Pruebas de pantallas (Playwright, solo lectura)
 ├── packages/db/             # Tipos de la base de datos y del dominio (compartidos)
-├── docs/
-│   ├── fase2-conectar-genesys.md   # Guía para conectar el bot
-│   └── apps-script/                # Código para el Apps Script (modo sombra)
-└── schema_leads.sql, leads.js, flujos_leads.js   # Archivos de referencia originales
+├── .github/workflows/       # Revisión + despliegue del panel y respaldo diario de la base
+└── docs/
+    ├── fase2-conectar-genesys.md   # Guía para conectar el bot
+    ├── apps-script/                # Código para el Apps Script (modo sombra)
+    └── referencia/                 # Archivos del sistema anterior (no se usan)
 ```
 
 ## Estados del lead
@@ -177,7 +185,7 @@ Se actualiza en vivo (Supabase Realtime).
   vez. Un usuario en la papelera no puede entrar al panel; para enviarlo no debe tener leads abiertos, y al
   restaurarlo vuelve inactivo.
 - **Proformas de costos 2027-1** (menú *Proformas*, módulo "Proformas de costos"): misma lógica que
-  `costos/Proformas_Admision_2027-1.html` (tarifario por campus y modalidad, promoción 25 % / 15 %, becas,
+  `docs/referencia/costos/Proformas_Admision_2027-1.html` (tarifario por campus y modalidad, promoción 25 % / 15 %, becas,
   descuentos institucionales en cascada, EXPLORE 2026, 5 % al contado), ahora en `packages/db/src/costos.ts`
   y verificada contra el HTML original en 1.406 combinaciones. Vista previa en vivo, descarga en PDF o
   imagen y, desde la ficha del lead (botón **💰 Proforma**), **envío por el chat** con la imagen o el PDF
@@ -210,7 +218,7 @@ Se actualiza en vivo (Supabase Realtime).
   iniciar sesión. El registro pasa por `registrar_lead_actividad()`: sin duplicados, asignación, aviso al
   asesor y, si se marcó, saludo de bienvenida de Genesys por WhatsApp. En Leads se filtra por actividad
   y el Excel incluye actividad, colegio y grado.
-- **Genesys (bot)**: *Base de conocimiento* (todos la leen; la edita quien tenga el módulo "Base de conocimiento y revisión") con las reglas de respuesta y los datos oficiales (carreras, costos, becas, fechas, CEPRE, horarios). El botón *Copiar texto para Genesys* arma el prompt para pegar en el asistente de BuilderBot; las secciones "Por completar" no se incluyen. *Revisión del bot* lista las respuestas en las que Genesys no supo contestar ("no tengo información", "malentendido"…) con la pregunta del lead, para agregar el dato y marcarlas como revisadas.
+- **Prompt de Genesys** (`/genesys`): lo que sabe el bot, dividido en 11 partes y fichas pequeñas (una carrera, un programa CEPRE, una plantilla…). El CRM arma un solo prompt (con los costos del tarifario), lo revisa y guarda las versiones; *📋 Copiar prompt* para pegarlo en el asistente INFORMACIÓN de BuilderBot. Ahí también se administran los **feriados**. *Flujos de BuilderBot* (`/flujos-bot`) guarda la configuración de cada flujo. *Revisión del bot* lista las respuestas en las que Genesys no supo contestar ("no tengo información", "malentendido"…) con la pregunta del lead, para agregar el dato y marcarlas como revisadas.
 - **Celulares de asesores**: siempre en la blacklist de BuilderBot y nunca se registran como leads (sus respuestas automáticas de WhatsApp a los avisos del CRM creaban leads falsos).
 - **Editar asesores y leads**: el admin cambia nombre y celular de los asesores (*Editar* en Asesores y
   usuarios) y el celular de un lead (*Editar datos* en la ficha; el chat del CRM escribe a ese número).
@@ -229,6 +237,24 @@ Se actualiza en vivo (Supabase Realtime).
   del dashboard. Desde Genesys llega si el webhook de BuilderBot envía el campo `Origen` (también acepta
   `ComoNosConocio`, `Campana` o `utm_source`): agrega en el flujo la pregunta "¿Cómo nos conociste?",
   guarda la respuesta en una variable y súmala al body como `"Origen": "{{variable}}"`.
+
+### Atención presencial, horario y ausencias
+
+- **QR del asesor** (*Mi QR*): tarjetas imprimibles con el QR personal de cada asesor. El interesado llena
+  el formulario `/w/<código>`, queda como lead de ese asesor (contactado) y envía un WhatsApp con "(Ref. …)".
+  También hay QR por persona (el asesor escribe los datos).
+- **El lead es de quien lo registró**: no se reasigna por QR, bot, inactividad ni CEPRE. Si un cliente de
+  otro asesor viene en persona, sigue siendo de su asesor (recibe "🏢 TU LEAD VINO A LA OFICINA") y quien
+  lo atendió queda como **asesor de apoyo**: ve su chat, le escribe y deja notas (*Leads → 🤝 Atendidos como apoyo*).
+- **Horario de atención** (lun–jue 8:00–12:30 y 14:00–18:00, vie 8:00–13:00, sin feriados): fuera de
+  horario el alumno recibe una vez el aviso de cuándo le responderán, no se reasigna y solo cuentan las
+  horas hábiles. Resumen de apertura a las 8:00 y recordatorio de "próxima acción" por WhatsApp.
+- **Ausencias** (*Mi cuenta* o, para el admin, *Usuarios*): por horas, días o fechas. Mientras dura no
+  recibe leads nuevos y quien lo cubre ve sus chats y recibe los avisos; al terminar todo vuelve como estaba.
+- **Memoria de Genesys**: el paso HTTP de BuilderBot consulta `/genesys/registrar` con `solo_contexto` y el
+  CRM devuelve lo que sabe del alumno (registrado, asesor, horario, feriados).
+- **Contactos con número oculto (@lid)**: BuilderBot les responde a una dirección que no existe; el CRM
+  reenvía la respuesta a `<id>@lid` (tarda ~2 min por parte, por BuilderBot).
 
 ### Dashboard
 
@@ -269,8 +295,53 @@ La **service_role key nunca sale de Supabase**: el bot usa un token propio y el 
 | `npm run build -w panel` | Compila el panel (verifica tipos) |
 | `npm run db:test` | Prueba migraciones, RLS, reparto y dashboard en un Postgres en memoria |
 | `npm run db:bundle` | Une las migraciones en un archivo para el SQL Editor |
-| `npm run fn:deploy` | Publica la Edge Function `genesys` (requiere `supabase login` y `link`) |
+| `npm run fn:deploy` | Publica las Edge Functions `genesys` y `chat` (requiere `supabase login`) |
+| `npm run fn:check` | Tipos, lint y pruebas de las funciones del bot (requiere Deno) |
 | `npm run typecheck` | Revisa los tipos de todos los paquetes |
+| `npm run lint` | ESLint del panel (configuración oficial de Next.js) |
+| `npm run test:e2e -w panel` | Pruebas de pantallas con Playwright (ver abajo) |
+
+## Revisión automática (GitHub Actions)
+
+En cada push a `main` (y en cada pull request) `.github/workflows/desplegar-vercel.yml` corre los tipos,
+ESLint, las pruebas de la base y las de las funciones; **el panel solo se despliega si todo pasa**.
+Las migraciones y las funciones del bot se publican a mano (`npx supabase db push …` y `npm run fn:deploy`).
+
+## Pruebas de pantallas (Playwright)
+
+Solo leen: navegan las páginas y revisan que carguen sin errores. Las credenciales van en variables de
+entorno (el repositorio es público: **nunca** las escribas en el código):
+
+```bash
+npx playwright install chromium     # la primera vez
+E2E_URL=https://crm-admision.vercel.app E2E_USUARIO=usuario E2E_CLAVE=clave npm run test:e2e -w panel
+```
+
+Sin `E2E_USUARIO`/`E2E_CLAVE` solo se prueban las páginas públicas.
+
+## Respaldos
+
+El plan actual de Supabase **no guarda backups**. `.github/workflows/respaldo-base.yml` hace cada noche
+(2:00 am) un respaldo de esquema, datos y roles, **cifrado con AES-256** (el repositorio es público) y lo
+guarda 30 días en *Actions → Respaldo de la base → Artifacts*. Para activarlo, agrega en
+*GitHub > Settings > Secrets and variables > Actions*:
+
+- `SUPABASE_DB_URL`: la cadena de conexión del pooler (la misma de `db push`).
+- `BACKUP_CLAVE`: una contraseña larga solo para los respaldos (guárdala aparte: sin ella no se abren).
+
+Restaurar en un proyecto nuevo de Supabase:
+
+```bash
+gpg --decrypt respaldo-AAAA-MM-DD.tar.gz.gpg > respaldo.tar.gz && tar xzf respaldo.tar.gz
+psql "<URL de la base nueva>" -f respaldo/roles.sql -f respaldo/esquema.sql -f respaldo/datos.sql
+```
+
+## Mantenimiento automático
+
+- `webhook_eventos` (registro de lo que envía BuilderBot) se limpia cada domingo: se borran los eventos de
+  más de 90 días, salvo los mensajes de contactos @lid (sirven para responderles a la dirección correcta).
+- **Alertas de error**: si una acción del bot falla, los super admin reciben "⚠️ ERROR EN EL CRM" por
+  WhatsApp (máximo una vez por hora por error); el historial queda en la tabla `alertas_sistema`.
 
 ## Solución de problemas
 

@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { mensajeError } from '@/lib/formato'
 import { obtenerSesion } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
+import { CAMPOS_AUSENCIA, camposDe, esquemaAusencia, primerError } from '@/lib/validacion'
 
 export interface ResultadoAusencia {
   error?: string
@@ -22,27 +23,26 @@ function fechaLima(valor: string): Date | null {
 
 export async function programarAusencia(asesorId: string, _previo: ResultadoAusencia, formData: FormData): Promise<ResultadoAusencia> {
   await obtenerSesion()
-  const duracion = String(formData.get('duracion') ?? '')
+  const validado = esquemaAusencia.safeParse({ asesorId, ...camposDe(formData, CAMPOS_AUSENCIA) })
+  if (!validado.success) return { error: primerError(validado.error) }
+  const { duracion, reemplazo, motivo } = validado.data
   const ahora = new Date()
   let desde: Date = ahora
   let hasta: Date | null
   if (duracion === 'fechas') {
-    desde = fechaLima(String(formData.get('desde') ?? '')) ?? ahora
-    hasta = fechaLima(String(formData.get('hasta') ?? ''))
+    desde = fechaLima(validado.data.desde) ?? ahora
+    hasta = fechaLima(validado.data.hasta)
     if (!hasta) return { error: 'Elige la fecha y hora de regreso.' }
   } else {
-    const horas = DURACIONES[duracion]
-    if (!horas) return { error: 'Elige cuánto tiempo estarás ausente.' }
-    hasta = new Date(ahora.getTime() + horas * 3_600_000)
+    hasta = new Date(ahora.getTime() + DURACIONES[duracion]! * 3_600_000)
   }
-  const reemplazo = String(formData.get('reemplazo') ?? '')
   const supabase = await crearClienteServidor()
   const { error } = await supabase.rpc('programar_ausencia', {
     p_asesor_id: asesorId,
     p_desde: desde.toISOString(),
     p_hasta: hasta.toISOString(),
-    p_reemplazo: /^[0-9a-f-]{36}$/i.test(reemplazo) ? reemplazo : undefined,
-    p_motivo: String(formData.get('motivo') ?? '').trim() || undefined,
+    p_reemplazo: reemplazo || undefined,
+    p_motivo: motivo || undefined,
   })
   if (error) return { error: mensajeError(error) }
   revalidatePath('/cuenta')

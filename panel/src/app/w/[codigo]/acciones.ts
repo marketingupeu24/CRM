@@ -5,6 +5,7 @@
 // Después la pantalla abre WhatsApp con un mensaje listo: el interesado escribe primero.
 import { crearClienteServidor } from '@/lib/supabase/server'
 import type { ResultadoRegistro } from '@/app/r/[codigo]/acciones'
+import { CAMPOS_REGISTRO_PUBLICO, camposDe, esquemaRegistroPublico, primerError, type RegistroPublico } from '@/lib/validacion'
 
 function temaDeInteres(carrera: string): string {
   if (!carrera || /^(aun|aún) no/i.test(carrera)) return 'las carreras y la admisión 2027'
@@ -13,9 +14,11 @@ function temaDeInteres(carrera: string): string {
 }
 
 export async function registrarseConAsesor(codigo: string, _previo: ResultadoRegistro, formData: FormData): Promise<ResultadoRegistro> {
-  const texto = (k: string) => String(formData.get(k) ?? '').trim()
-  if (texto('sitio_web')) return { ok: true }
+  if (String(formData.get('sitio_web') ?? '').trim()) return { ok: true }
   if (formData.get('acepto') !== 'on') return { error: 'Marca la casilla para que podamos contactarte por WhatsApp.' }
+  const validado = esquemaRegistroPublico.safeParse({ codigo, ...camposDe(formData, CAMPOS_REGISTRO_PUBLICO) })
+  if (!validado.success) return { error: primerError(validado.error) }
+  const texto = (k: keyof RegistroPublico) => validado.data[k]
 
   const supabase = await crearClienteServidor()
   const { data, error } = await supabase.rpc('registrar_lead_asesor', {

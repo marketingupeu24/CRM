@@ -34,7 +34,7 @@ export default async function PaginaRevisionBot(props: PageProps<'/revision-bot'
         <div>
           <h1 className="text-2xl font-semibold">Revisión del bot</h1>
           <p className="text-sm text-slate-500">
-            Respuestas en las que Genesys no supo contestar ("no tengo información", "malentendido"…) con la pregunta del lead.
+            Respuestas en las que Genesys no supo contestar (“no tengo información”, “malentendido”…) con la pregunta del lead.
             Agrega la respuesta en <Link href="/genesys?parte=faq" className="font-medium text-marca-700 hover:underline">Prompt de Genesys → Preguntas frecuentes</Link> y márcala como revisada.
           </p>
         </div>

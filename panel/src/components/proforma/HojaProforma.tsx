@@ -1,4 +1,4 @@
-// Hoja A4 de la proforma (mismo diseño que costos/Proformas_Admision_2027-1.html, con el logo oficial UPeU).
+// Hoja A4 de la proforma (mismo diseño que docs/referencia/costos/Proformas_Admision_2027-1.html, con el logo oficial UPeU).
 // Es "papel": colores fijos. Se usa para la vista previa y para generar la imagen/PDF.
 /* eslint-disable @next/next/no-img-element -- el logo debe ir como <img> para que salga en la imagen generada */
 import { forwardRef } from 'react'

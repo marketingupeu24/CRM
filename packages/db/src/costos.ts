@@ -1,6 +1,6 @@
 // =====================================================================
 //  Costos y proformas de Admisión 2027-1 (primer año).
-//  Lógica tomada de costos/Proformas_Admision_2027-1.html (tarifario 2027
+//  Lógica tomada de docs/referencia/costos/Proformas_Admision_2027-1.html (tarifario 2027
 //  corregido + promociones 2027-1). Mismos redondeos que el original.
 //  Sin dependencias: lo usan el panel, las pruebas y el texto para Genesys.
 // =====================================================================

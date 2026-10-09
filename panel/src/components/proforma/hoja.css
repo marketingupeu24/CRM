@@ -1,4 +1,4 @@
-/* Hoja de la proforma: estilos de costos/Proformas_Admision_2027-1.html con prefijo .pf-hoja.
+/* Hoja de la proforma: estilos de docs/referencia/costos/Proformas_Admision_2027-1.html con prefijo .pf-hoja.
    Colores fijos (es "papel"): no cambian con el tema del panel. */
 .pf-hoja{--sans:var(--font-pf-sans),system-ui,"Segoe UI",Arial,sans-serif;--serif:var(--font-pf-serif),Georgia,"Times New Roman",serif;line-height:1.45}
 .pf-hoja *{box-sizing:border-box}

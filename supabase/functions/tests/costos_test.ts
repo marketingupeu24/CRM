@@ -1,5 +1,5 @@
 // Pruebas del cálculo de proformas (packages/db/src/costos.ts).
-// Los montos esperados salen del HTML original costos/Proformas_Admision_2027-1.html.
+// Los montos esperados salen del HTML original docs/referencia/costos/Proformas_Admision_2027-1.html.
 import { calcularProforma, carreraParecida, textoWhatsApp } from '../../../packages/db/src/costos.ts'
 
 function igual<T>(real: T, esperado: T, msg = '') {

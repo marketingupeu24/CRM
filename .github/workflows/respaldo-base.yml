@@ -1,0 +1,65 @@
+# Respaldo diario de la base de datos (Supabase), cifrado.
+# El plan actual de Supabase no guarda backups: este respaldo es la copia de seguridad.
+# El repositorio es PÚBLICO: el respaldo se cifra (AES-256) antes de guardarlo y solo se abre con BACKUP_CLAVE.
+#
+# Secretos necesarios (GitHub > Settings > Secrets and variables > Actions):
+#   SUPABASE_DB_URL  cadena de conexión de la base (Supabase > Connect > Session pooler)
+#   BACKUP_CLAVE     contraseña larga para cifrar el respaldo (guárdala en un lugar seguro)
+# Sin los secretos, el respaldo se omite (no falla).
+#
+# Descargar: Actions > Respaldo de la base > (ejecución) > Artifacts. Se guarda 30 días.
+# Abrir:     gpg --decrypt respaldo-AAAA-MM-DD.tar.gz.gpg > respaldo.tar.gz && tar xzf respaldo.tar.gz
+# Restaurar: ver README (sección "Respaldos").
+name: Respaldo de la base
+
+on:
+  schedule:
+    - cron: '0 7 * * *' # 2:00 am hora de Perú
+  workflow_dispatch:
+
+jobs:
+  respaldar:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      BACKUP_CLAVE: ${{ secrets.BACKUP_CLAVE }}
+    steps:
+      - name: Verificar secretos
+        id: secretos
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ] || [ -z "$BACKUP_CLAVE" ]; then
+            echo "Faltan los secretos SUPABASE_DB_URL o BACKUP_CLAVE: se omite el respaldo."
+            echo "hay=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "hay=si" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: supabase/setup-cli@v1
+        if: steps.secretos.outputs.hay == 'si'
+        with:
+          version: latest
+
+      - name: Exportar esquema, datos y roles
+        if: steps.secretos.outputs.hay == 'si'
+        run: |
+          mkdir respaldo
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f respaldo/esquema.sql
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f respaldo/datos.sql --data-only --use-copy
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f respaldo/roles.sql --role-only
+
+      - name: Comprimir y cifrar
+        if: steps.secretos.outputs.hay == 'si'
+        run: |
+          FECHA=$(TZ=America/Lima date +%F)
+          tar czf "respaldo-$FECHA.tar.gz" respaldo
+          gpg --batch --yes --symmetric --cipher-algo AES256 --passphrase "$BACKUP_CLAVE" \
+            -o "respaldo-$FECHA.tar.gz.gpg" "respaldo-$FECHA.tar.gz"
+          rm -rf respaldo "respaldo-$FECHA.tar.gz"
+          echo "ARCHIVO=respaldo-$FECHA.tar.gz.gpg" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        if: steps.secretos.outputs.hay == 'si'
+        with:
+          name: ${{ env.ARCHIVO }}
+          path: ${{ env.ARCHIVO }}
+          retention-days: 30

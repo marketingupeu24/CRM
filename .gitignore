@@ -24,3 +24,7 @@ supabase/instalar_en_sql_editor.sql
 panel/next-env.d.ts
 
 .vercel
+
+# Resultados de Playwright
+panel/test-results/
+panel/playwright-report/

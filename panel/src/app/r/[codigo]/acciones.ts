@@ -4,6 +4,7 @@
 // La validación y el registro los hace registrar_lead_actividad(): sin duplicados, identificado por DNI si lo da o, si no, por celular.
 // Genesys no le escribe primero: la pantalla final abre WhatsApp con un mensaje listo y el alumno lo envía.
 import { crearClienteServidor } from '@/lib/supabase/server'
+import { CAMPOS_REGISTRO_PUBLICO, camposDe, esquemaRegistroPublico, primerError, type RegistroPublico } from '@/lib/validacion'
 
 export interface ResultadoRegistro {
   error?: string
@@ -22,10 +23,12 @@ function temaDeInteres(carrera: string): string {
 }
 
 export async function registrarseEnActividad(codigo: string, _previo: ResultadoRegistro, formData: FormData): Promise<ResultadoRegistro> {
-  const texto = (k: string) => String(formData.get(k) ?? '').trim()
   // Campo trampa: los bots lo llenan, las personas no lo ven
-  if (texto('sitio_web')) return { ok: true }
+  if (String(formData.get('sitio_web') ?? '').trim()) return { ok: true }
   if (formData.get('acepto') !== 'on') return { error: 'Marca la casilla para que podamos contactarte por WhatsApp.' }
+  const validado = esquemaRegistroPublico.safeParse({ codigo, ...camposDe(formData, CAMPOS_REGISTRO_PUBLICO) })
+  if (!validado.success) return { error: primerError(validado.error) }
+  const texto = (k: keyof RegistroPublico) => validado.data[k]
 
   const supabase = await crearClienteServidor()
   const { data, error } = await supabase.rpc('registrar_lead_actividad', {
