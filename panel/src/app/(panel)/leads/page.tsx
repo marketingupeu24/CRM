@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ESTADOS_LEAD, ETIQUETAS_ESTADO, ETIQUETAS_FUENTE, ORIGENES, type Fuente, type LeadEstado } from '@crm/db'
 import { InsigniaEstado } from '@/components/InsigniaEstado'
+import { PuntajeInteres } from '@/components/PuntajeInteres'
 import { fechaHora, haceCuanto } from '@/lib/formato'
 import { exigirPermiso } from '@/lib/sesion'
 import { fechaCorta, mesLima, nombreMes, rangoMes } from '@/lib/periodos'
@@ -31,6 +32,8 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
     actividad: /^\d+$/.test(parametro(sp.actividad)) ? parametro(sp.actividad) : '',
     desde: mes?.desde ?? parametro(sp.desde),
     hasta: mes?.hasta ?? parametro(sp.hasta),
+    // "interes": primero los más interesados (puntaje); por defecto, los que escribieron último
+    orden: parametro(sp.orden) === 'interes' ? 'interes' : '',
   }
   const pagina = Math.max(1, Number.parseInt(parametro(sp.pagina) || '1', 10) || 1)
 
@@ -45,7 +48,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
 
   let consulta = supabase
     .from('leads')
-    .select('id, nombre, telefono, dni, carrera_interes, modalidad, programa, convocatoria, estado, origen, origen_campana, reasignaciones, created_at, ultimo_contacto, reconsultas, sin_responder, asesor:asesores!leads_asesor_id_fkey(nombre)', { count: 'exact' })
+    .select('id, nombre, telefono, dni, carrera_interes, modalidad, programa, convocatoria, estado, origen, origen_campana, reasignaciones, created_at, ultimo_contacto, reconsultas, sin_responder, puntaje, puntaje_motivos, asesor:asesores!leads_asesor_id_fkey(nombre)', { count: 'exact' })
 
   if (filtros.q) {
     // Quita caracteres que alteran la sintaxis del filtro de PostgREST
@@ -73,7 +76,8 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
   const desde = (pagina - 1) * POR_PAGINA
   const [{ data: leads, count, error }, { data: carreras }, { data: convocatorias }, { data: asesores }, { data: deApoyo }] = await Promise.all([
     // Los que volvieron a escribir suben arriba
-    consulta.order('ultimo_contacto', { ascending: false }).range(desde, desde + POR_PAGINA - 1),
+    (filtros.orden === 'interes' ? consulta.order('puntaje', { ascending: false }).order('ultimo_contacto', { ascending: false }) : consulta.order('ultimo_contacto', { ascending: false }))
+      .range(desde, desde + POR_PAGINA - 1),
     supabase.from('vista_leads_por_carrera').select('carrera'),
     supabase.from('leads').select('convocatoria').not('convocatoria', 'is', null).limit(2000),
     esAdmin || puede('asignar')
@@ -215,6 +219,10 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
           {ORIGENES.map((o) => <option key={o} value={o}>{o}</option>)}
           <option value="Sin dato">Sin dato</option>
         </select>
+        <select name="orden" defaultValue={filtros.orden} className="campo" aria-label="Ordenar">
+          <option value="">Ordenar: escribieron último</option>
+          <option value="interes">Ordenar: 🔥 más interesados</option>
+        </select>
         <label className="flex items-center gap-2 text-sm text-slate-600">
           Registrado desde <input type="date" name="desde" defaultValue={filtros.desde} className="campo" />
         </label>
@@ -257,6 +265,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
                   <Link href={`/leads/${l.id}`} className="font-medium text-marca-700 hover:underline">
                     {l.nombre ?? 'Sin nombre'}
                   </Link>
+                  <span className="ml-2"><PuntajeInteres puntaje={l.puntaje} motivos={l.puntaje_motivos} /></span>
                   {l.sin_responder && (
                     <Link href={`/leads/${l.id}#chat`} className="ml-2 rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700">✉ Sin responder</Link>
                   )}

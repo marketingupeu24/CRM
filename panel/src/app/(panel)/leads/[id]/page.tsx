@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { carreraParecida, carreras, ETIQUETAS_FUENTE, type Fuente, type InteraccionTipo } from '@crm/db'
 import { InsigniaEstado } from '@/components/InsigniaEstado'
+import { PuntajeInteres } from '@/components/PuntajeInteres'
 import { fechaHora, haceCuanto } from '@/lib/formato'
 import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
@@ -120,6 +121,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold">{lead.nombre ?? 'Lead sin nombre'}</h1>
         <InsigniaEstado estado={lead.estado} />
+        <PuntajeInteres puntaje={lead.puntaje} motivos={lead.puntaje_motivos} detalle />
         {puede('papelera') && !apoyo && <span className="ml-auto"><BotonPapelera leadId={lead.id} nombre={lead.nombre ?? lead.telefono} /></span>}
       </div>
 
