@@ -837,6 +837,9 @@ isOneToOne: false
 "eliminar_asesor":
 { Args: { "p_id": string }; Returns: undefined
                            },
+"eliminar_enlace":
+{ Args: { "p_id": number }; Returns: undefined
+                           },
 "eliminar_leads":
 { Args: { "p_ids": (string)[] }; Returns: number
                            },

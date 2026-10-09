@@ -4,7 +4,7 @@ import { useActionState, useEffect, useState, useTransition } from 'react'
 import QRCode from 'qrcode'
 import { ORIGENES } from '@crm/db'
 import { useConfirmar } from '@/components/Confirmacion'
-import { cambiarActivoEnlace, crearEnlace, type Resultado } from './acciones'
+import { cambiarActivoEnlace, crearEnlace, eliminarEnlace, type Resultado } from './acciones'
 
 export interface Enlace {
   id: number
@@ -129,6 +129,20 @@ export function TarjetaEnlace({ enlace, base, resultado, editable }: { enlace: E
               iniciar(async () => setR(await cambiarActivoEnlace(enlace.id, !enlace.activo)))
             }}>{enlace.activo ? 'Desactivar' : 'Activar'}</button>
           )}
+          {editable && (resultado.leads === 0 ? (
+            <button type="button" disabled={pendiente} className="boton-secundario text-rose-600" onClick={async () => {
+              if (!(await confirmar({
+                titulo: '¿Borrar este enlace y su QR?',
+                mensaje: <>Se borra <b>{enlace.nombre}</b>. Si ya imprimiste o publicaste el QR, dejará de funcionar.</>,
+                confirmar: 'Borrar', peligro: true,
+              }))) return
+              iniciar(async () => setR(await eliminarEnlace(enlace.id)))
+            }}>🗑 Borrar</button>
+          ) : (
+            <span className="self-center text-xs text-slate-500" title="Se perdería de dónde vinieron esos leads">
+              Ya trajo {resultado.leads} lead(s): no se puede borrar, solo desactivar.
+            </span>
+          ))}
         </div>
         <Mensaje r={r} />
       </div>

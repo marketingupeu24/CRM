@@ -45,3 +45,13 @@ export async function cambiarActivoEnlace(id: number, activo: boolean): Promise<
   revalidatePath('/enlaces')
   return { ok: activo ? 'Activado.' : 'Desactivado: el enlace y el QR dejan de abrir WhatsApp.' }
 }
+
+/** Solo si ningún lead llegó por el enlace (eliminar_enlace lo revisa con todos los leads). */
+export async function eliminarEnlace(id: number): Promise<Resultado> {
+  await exigirPermiso('gestionar_campanas')
+  const supabase = await crearClienteServidor()
+  const { error } = await supabase.rpc('eliminar_enlace', { p_id: id })
+  if (error) return { error: mensajeError(error) }
+  revalidatePath('/enlaces')
+  return { ok: 'Enlace borrado.' }
+}
