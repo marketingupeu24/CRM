@@ -5,18 +5,30 @@ import { marcarEnviada, registrarProforma, type DatosProforma } from '@/app/(pan
 
 export type TipoAdjunto = 'imagen' | 'pdf' | 'texto'
 
-/** Captura la hoja (HojaProforma) como PNG o PDF A4. */
-export async function generarArchivoProforma(nodo: HTMLElement, tipo: 'png' | 'pdf'): Promise<Blob> {
+/** Ancho de la proforma que se sube y envía: el mismo al que WhatsApp deja las imágenes (se ve igual y pesa menos de la mitad). */
+const ANCHO_ENVIO = 1600
+const CALIDAD_ENVIO = 0.85
+
+/**
+ * Captura la hoja (HojaProforma) como imagen o PDF A4.
+ * - png: descarga en alta calidad (no se guarda en el sistema).
+ * - jpg: la que se sube y se envía por WhatsApp (1600 px, JPEG 85 %: ~300 KB en vez de ~750 KB).
+ * - pdf: A4 con la imagen en JPEG; con envio=true se arma a 1600 px para que pese menos al guardarse.
+ */
+export async function generarArchivoProforma(nodo: HTMLElement, tipo: 'png' | 'jpg' | 'pdf', envio = false): Promise<Blob> {
   const { toCanvas } = await import('html-to-image')
   await document.fonts?.ready
-  const lienzo = await toCanvas(nodo, { pixelRatio: 2.5, backgroundColor: '#ffffff', style: { transform: 'none', boxShadow: 'none' }, cacheBust: true })
+  const reducir = tipo === 'jpg' || envio
+  const pixelRatio = reducir ? Math.min(2.5, ANCHO_ENVIO / Math.max(1, nodo.offsetWidth)) : 2.5
+  const lienzo = await toCanvas(nodo, { pixelRatio, backgroundColor: '#ffffff', style: { transform: 'none', boxShadow: 'none' }, cacheBust: true })
   if (tipo === 'png') return await new Promise<Blob>((r) => lienzo.toBlob((b) => r(b!), 'image/png'))
+  if (tipo === 'jpg') return await new Promise<Blob>((r) => lienzo.toBlob((b) => r(b!), 'image/jpeg', CALIDAD_ENVIO))
   const { jsPDF } = await import('jspdf')
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true })
   const W = 210, H = 297
   let w = W, h = lienzo.height * W / lienzo.width
   if (h > H) { w = W * H / h; h = H }
-  pdf.addImage(lienzo.toDataURL('image/jpeg', 0.93), 'JPEG', (W - w) / 2, 0, w, h)
+  pdf.addImage(lienzo.toDataURL('image/jpeg', reducir ? CALIDAD_ENVIO : 0.93), 'JPEG', (W - w) / 2, 0, w, h)
   return pdf.output('blob')
 }
 
@@ -36,10 +48,10 @@ export async function enviarProformaPorChat(
   if (adjunto !== 'texto' && nodo) {
     try {
       alEstado('Subiendo el archivo…')
-      const tipo = adjunto === 'pdf' ? 'pdf' : 'png'
-      const blob = await generarArchivoProforma(nodo, tipo)
+      const tipo = adjunto === 'pdf' ? 'pdf' : 'jpg'
+      const blob = await generarArchivoProforma(nodo, tipo, true)
       const ruta = `${leadId}/${crypto.randomUUID()}.${tipo}`
-      const { error } = await supabase.storage.from('proformas').upload(ruta, blob, { contentType: tipo === 'pdf' ? 'application/pdf' : 'image/png' })
+      const { error } = await supabase.storage.from('proformas').upload(ruta, blob, { contentType: tipo === 'pdf' ? 'application/pdf' : 'image/jpeg' })
       if (error) throw error
       url = supabase.storage.from('proformas').getPublicUrl(ruta).data.publicUrl
     } catch {

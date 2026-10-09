@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { LeadInteraccion } from '@crm/db'
 import { esDelChat } from '@/lib/chat'
 import { crearClienteNavegador, prepararTiempoReal } from '@/lib/supabase/client'
+import { comprimirImagen } from '@/lib/imagen'
 import { Adjunto } from './Adjunto'
 
 export type MensajeChat = LeadInteraccion & { autor_nombre?: string | null }
@@ -191,7 +192,9 @@ export function Conversacion(
     // El archivo se sube a "chat-envios" (público: BuilderBot lo descarga para mandarlo por WhatsApp)
     let adjuntoUrl: string | undefined
     if (adjunto) {
-      const extension = adjunto.type === 'application/pdf' ? 'pdf' : adjunto.type.split('/')[1] === 'jpeg' ? 'jpg' : adjunto.type.split('/')[1]
+      // Fotos grandes: se reducen a la calidad de WhatsApp antes de subirlas (ocupan menos espacio)
+      adjunto = await comprimirImagen(adjunto)
+      const extension =adjunto.type === 'application/pdf' ? 'pdf' : adjunto.type.split('/')[1] === 'jpeg' ? 'jpg' : adjunto.type.split('/')[1]
       const ruta = `${leadId}/${crypto.randomUUID()}.${extension}`
       const subida = await supabase.storage.from('chat-envios').upload(ruta, adjunto, { contentType: adjunto.type })
       if (subida.error) {
