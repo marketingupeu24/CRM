@@ -274,6 +274,9 @@ Se actualiza en vivo (Supabase Realtime).
 - **Recordatorios a alumnos** (`/recordatorios`): avisos automáticos por WhatsApp (cierre de inscripciones, examen) a quienes
   ya escribieron y no se inscribieron; se crean apagados, se envían en horario de atención de a pocos y quien responde
   "NO" no recibe más. Ojo: el número de Genesys está conectado por QR (riesgo de bloqueo con envíos masivos).
+- **Enlaces y QR por medio** (`/enlaces`): un enlace `…/e/<código>` y su QR por cada medio (TikTok, Facebook, flyers…).
+  Abre WhatsApp con un mensaje que termina en "(Cód. O-<código>)"; el lead queda con ese origen y se ven visitas, leads,
+  inscritos y matriculados por enlace. **Puntaje de interés** explicado en `/puntaje`.
 - **Cierre de campaña**: el revisor del prompt avisa de fechas que ya pasaron y `/genesys` tiene los pasos para la campaña siguiente.
 
 ### Dashboard

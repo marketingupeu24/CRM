@@ -7,6 +7,7 @@ export function PuntajeInteres({ puntaje, motivos, detalle = false }: { puntaje:
     <span className="inline-flex flex-wrap items-center gap-2">
       <span title={titulo} className={`rounded-full px-2 py-0.5 text-xs font-semibold whitespace-nowrap ${estilo}`}>{icono} {puntaje}</span>
       {detalle && motivos.length > 0 && <span className="text-xs text-slate-500">{motivos.join(' · ')}</span>}
+      {detalle && <a href="/puntaje" className="text-xs text-marca-700 hover:underline">¿Cómo se calcula?</a>}
     </span>
   )
 }

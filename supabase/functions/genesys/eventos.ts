@@ -213,6 +213,10 @@ export async function evento(cuerpo: Cuerpo, registroId: number | null): Promise
   const archivo = archivoEntrante(cuerpo, texto)
   const r = await registrar({ telefono, mensaje: archivo?.texto ?? texto ?? undefined, es_lid: esLid })
   if (archivo?.url && typeof r.lead_id === 'string') EdgeRuntime.waitUntil(guardarArchivo(r.lead_id, archivo))
+  // Enlace o QR por medio (TikTok, flyer…): el mensaje trae "(Cód. O-XXXX)"
+  if (texto && typeof r.lead_id === 'string' && /c[oó]d\.?\s*o-/i.test(texto)) {
+    EdgeRuntime.waitUntil(Promise.resolve(supabase.rpc('aplicar_enlace_origen', { p_lead_id: r.lead_id, p_mensaje: texto })).then(() => undefined))
+  }
   // Respondió "NO" a un recordatorio automático: no recibe más
   if (texto && typeof r.lead_id === 'string' && texto.length < 30) {
     EdgeRuntime.waitUntil(Promise.resolve(supabase.rpc('baja_recordatorios', { p_lead_id: r.lead_id, p_texto: texto })).then(() => undefined))
