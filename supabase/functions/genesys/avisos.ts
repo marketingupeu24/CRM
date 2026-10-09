@@ -2,7 +2,11 @@
 import { ESTADOS_AVISO_MENSAJE, type Fuente, FUENTES, HORARIO_ATENCION_TEXTO, textoProximaAtencion } from '../_shared/dominio.ts'
 import { enviarWhatsApp } from '../_shared/builderbot.ts'
 import { destinoWhatsApp } from '../_shared/lid.ts'
+import { enviarPush } from '../_shared/push.ts'
 import { type Lead, type Cuerpo, type Respuesta, supabase, PANEL_URL, MINUTOS_ENTRE_AVISOS, telefonosAsesores, fechaCorta } from './comun.ts'
+
+// Runtime de Supabase Edge Functions: mantiene viva una tarea después de responder
+declare const EdgeRuntime: { waitUntil(promesa: Promise<unknown>): void }
 
 export const ENCABEZADO_POR_FUENTE: Record<Fuente, string> = {
   whatsapp_genesys: '*NUEVO PROSPECTO*',
@@ -44,6 +48,12 @@ export async function notificarAsesor(lead: Lead, telefonoAsesor: string, fuente
   // Lead en la papelera: no se molesta al asesor
   if (lead.eliminado_at) return false
   const texto = mensajeNuevoLead(lead, fuente, tipo, asignadoPor)
+  // También a la app del CRM (si el asesor activó las notificaciones en su celular o PC)
+  EdgeRuntime.waitUntil(enviarPush(supabase, lead.asesor_id, {
+    titulo: tipo === 'reasignado' ? '🔁 Lead reasignado a ti' : tipo === 'asignado' ? '📌 Lead asignado a ti' : tipo === 'reconsulta' ? '🔁 Volvió a consultar' : '🆕 Nuevo lead',
+    cuerpo: `${lead.nombre ?? lead.telefono} · ${lead.modalidad ?? lead.carrera_interes ?? 'Consulta general'}`,
+    url: `/leads/${lead.id}`, etiqueta: `lead-${lead.id}`,
+  }))
   let envio = await enviarWhatsApp(telefonoAsesor, texto)
   for (let intento = 1; !envio.ok && intento < 3; intento++) {
     await new Promise((r) => setTimeout(r, intento * 5_000))
@@ -94,6 +104,10 @@ export async function avisarMensajeNuevo(lead: Lead, mensaje: string) {
     '',
     `Responde desde el CRM: ${PANEL_URL}/leads/${lead.id}#chat`,
   ].filter((linea) => linea !== null).join('\n')
+  EdgeRuntime.waitUntil(enviarPush(supabase, reemplazo?.telefono ? asesor.ausente_reemplazo : lead.asesor_id, {
+    titulo: `💬 ${lead.nombre ?? lead.telefono}`,
+    cuerpo: mensaje, url: `/leads/${lead.id}#chat`, etiqueta: `chat-${lead.id}`,
+  }))
   const envio = await enviarWhatsApp(destino, texto)
   if (!envio.ok) console.error('[genesys] No se pudo avisar el mensaje nuevo al asesor:', envio.error)
 }

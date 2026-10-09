@@ -7,5 +7,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   // Todo menos archivos estáticos e imágenes
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)'],
+  // sw.js y manifest.webmanifest: la app instalable los pide sin pasar por el login
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|.*\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)'],
 }

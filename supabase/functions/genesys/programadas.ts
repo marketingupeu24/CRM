@@ -3,6 +3,7 @@ import { type Fuente, FUENTES, proximaAtencion, valorResuelto } from '../_shared
 import { cambiarBlacklist, enviarWhatsApp, problemasBuilderBot } from '../_shared/builderbot.ts'
 import { type Cuerpo, type Respuesta, supabase, MODO, MAX_INTENTOS_NOTIFICACION, USAR_BLACKLIST, PANEL_URL, registrarEvento, telefonosAsesores, FERIADOS, SELECCION_CON_ASESOR } from './comun.ts'
 import { notificarAsesor } from './avisos.ts'
+import { enviarPush } from '../_shared/push.ts'
 
 /**
  * Avisos al asesor que fallaron (p. ej. BuilderBot respondió "Bot endpoint timed out"):
@@ -137,6 +138,11 @@ export async function recordarTareas(): Promise<Respuesta> {
       ]),
       lista.length > 10 ? `… y ${lista.length - 10} más en ${PANEL_URL}/pendientes` : null,
     ].filter((l) => l !== null).join('\n')
+    await enviarPush(supabase, lista[0]!.asesor_id, {
+      titulo: `⏰ Próxima acción${lista.length > 1 ? ` (${lista.length})` : ''}`,
+      cuerpo: lista.slice(0, 3).map((t) => `${t.titulo} — ${t.lead!.nombre ?? t.lead!.telefono}`).join('\n'),
+      url: lista.length === 1 ? `/leads/${lista[0]!.lead!.id}` : '/pendientes', etiqueta: 'tareas',
+    })
     const envio = await enviarWhatsApp(asesor.telefono!, texto)
     if (!envio.ok) {
       console.error(`[genesys] Recordatorio de tareas a ${asesor.nombre} falló:`, envio.error)

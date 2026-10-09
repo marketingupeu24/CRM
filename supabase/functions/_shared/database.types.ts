@@ -449,6 +449,31 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"push_suscripciones": {
+                  Row: {
+                    "asesor_id": string,"auth": string,"created_at": string,"dispositivo": string | null,"endpoint": string,"id": number,"p256dh": string,"ultimo_envio_at": string | null
+                  }
+                  Insert: {
+                    "asesor_id": string,"auth": string,"created_at"?: string,"dispositivo"?: string | null,"endpoint": string,"id"?: never,"p256dh": string,"ultimo_envio_at"?: string | null
+                  }
+                  Update: {
+                    "asesor_id"?: string,"auth"?: string,"created_at"?: string,"dispositivo"?: string | null,"endpoint"?: string,"id"?: never,"p256dh"?: string,"ultimo_envio_at"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "push_suscripciones_asesor_id_fkey"
+      columns: ["asesor_id"]
+isOneToOne: false
+      referencedRelation: "asesores"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "push_suscripciones_asesor_id_fkey"
+      columns: ["asesor_id"]
+isOneToOne: false
+      referencedRelation: "vista_leads_por_asesor"
+      referencedColumns: ["asesor_id"]
+    }
+                  ]
                 },"respuestas_rapidas": {
                   Row: {
                     "activa": boolean,"contenido": string,"created_at": string,"id": number,"orden": number,"titulo": string
@@ -845,6 +870,9 @@ isOneToOne: false
                            },
 "registrar_lead_manual":
 { Args: { "p_asesor_id"?: string,"p_carrera"?: string,"p_convocatoria"?: string,"p_dni"?: string,"p_modalidad"?: string,"p_nombre": string,"p_observacion"?: string,"p_programa"?: string,"p_telefono"?: string }; Returns: Json
+                           },
+"registrar_push":
+{ Args: { "p_auth": string,"p_dispositivo"?: string,"p_endpoint": string,"p_p256dh": string }; Returns: undefined
                            },
 "reservar_aviso_horario":
 { Args: { "p_lead_id": string }; Returns: string

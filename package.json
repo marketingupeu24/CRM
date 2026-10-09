@@ -12,7 +12,7 @@
     "db:types": "supabase gen types typescript --linked --schema public > packages/db/src/database.types.ts && node -e \"require('fs').copyFileSync('packages/db/src/database.types.ts','supabase/functions/_shared/database.types.ts')\"",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint -w panel",
-    "fn:check": "cd supabase/functions && deno check genesys/index.ts chat/index.ts && deno lint genesys/ chat/ _shared/ && deno test -A tests/",
+    "fn:check": "cd supabase/functions && deno check --config genesys/deno.json genesys/index.ts && deno check --config chat/deno.json chat/index.ts && deno lint genesys/ chat/ _shared/ && deno test -A --config genesys/deno.json tests/",
     "db:test": "node supabase/tests/probar_migraciones.mjs",
     "fn:deploy": "supabase functions deploy genesys chat --no-verify-jwt --use-api --project-ref itmwdnttrfbbehoipzzp",
     "db:bundle": "node supabase/tests/empaquetar_sql_editor.mjs",

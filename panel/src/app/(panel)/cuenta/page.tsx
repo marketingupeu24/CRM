@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { MODULOS } from '@crm/db'
 import { Ausencia } from '@/components/Ausencia'
+import { NotificacionesPush } from '@/components/NotificacionesPush'
 import { etiquetaRol, obtenerSesion } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { FormularioClave } from './FormularioClave'
@@ -33,6 +34,14 @@ export default async function PaginaCuenta() {
           ))}
           {!sesion.permisos.length && <li className="text-sm text-slate-500">Ninguno por ahora.</li>}
         </ul>
+      </section>
+      <section className="tarjeta p-6">
+        <h2 className="mb-1 font-semibold">Notificaciones en este dispositivo</h2>
+        <p className="mb-4 text-xs text-slate-500">
+          Avisos del CRM en tu celular o PC aunque el CRM esté cerrado (además del WhatsApp). Actívalo en cada dispositivo que uses.
+          En el celular, instala el CRM como app: Chrome → menú ⋮ → <b>Instalar app</b>; iPhone → Safari → Compartir → <b>Agregar a inicio</b>.
+        </p>
+        <NotificacionesPush />
       </section>
       <section className="tarjeta p-6">
         <h2 className="mb-1 font-semibold">Ausencia (viaje, permiso)</h2>
