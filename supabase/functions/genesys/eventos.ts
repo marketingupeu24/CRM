@@ -135,6 +135,38 @@ export async function reenviarALid(numero: string, texto: string, media: string 
   }
 }
 
+/** Primer objeto "contextInfo" del mensaje (WhatsApp guarda ahí el origen del chat y el anuncio). */
+function buscarContexto(obj: unknown, profundidad = 0): Record<string, unknown> | null {
+  if (!obj || typeof obj !== 'object' || profundidad > 8) return null
+  const o = obj as Record<string, unknown>
+  const ci = o.contextInfo
+  if (ci && typeof ci === 'object' && ('entryPointConversionSource' in ci || 'externalAdReply' in ci)) return ci as Record<string, unknown>
+  for (const v of Object.values(o)) {
+    const r = buscarContexto(v, profundidad + 1)
+    if (r) return r
+  }
+  return null
+}
+
+/** Origen del chat (enlace, Facebook, búsqueda…) y anuncio de Facebook/Instagram, si los trae el mensaje. */
+function origenDelMensaje(cuerpo: Cuerpo): { fuente: string | null; app: string | null; anuncio: Record<string, string> | null } | null {
+  const ci = buscarContexto(cuerpo)
+  if (!ci) return null
+  const texto = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, 500) : null)
+  const ad = ci.externalAdReply as Record<string, unknown> | undefined
+  const anuncio = ad && typeof ad === 'object'
+    ? Object.fromEntries(Object.entries({
+        titulo: texto(ad.title), texto: texto(ad.body), url: texto(ad.sourceUrl), id: texto(ad.sourceId),
+        tipo: texto(ad.sourceType), app: texto(ad.sourceApp), ctwa_clid: texto(ad.ctwaClid),
+      }).filter(([, v]) => v !== null)) as Record<string, string>
+    : null
+  return {
+    fuente: texto(ci.entryPointConversionSource),
+    app: texto(ci.entryPointConversionApp),
+    anuncio: anuncio && Object.keys(anuncio).length ? anuncio : null,
+  }
+}
+
 export async function evento(cuerpo: Cuerpo, registroId: number | null): Promise<Respuesta> {
   const marcar = (procesado: string) =>
     registroId ? supabase.from('webhook_eventos').update({ procesado }).eq('id', registroId) : Promise.resolve()
@@ -181,6 +213,15 @@ export async function evento(cuerpo: Cuerpo, registroId: number | null): Promise
   const archivo = archivoEntrante(cuerpo, texto)
   const r = await registrar({ telefono, mensaje: archivo?.texto ?? texto ?? undefined, es_lid: esLid })
   if (archivo?.url && typeof r.lead_id === 'string') EdgeRuntime.waitUntil(guardarArchivo(r.lead_id, archivo))
+  // De dónde llegó (enlace, Facebook, anuncio): se guarda solo la primera vez
+  const origen = origenDelMensaje(cuerpo)
+  if (origen && typeof r.lead_id === 'string' && (origen.fuente || origen.anuncio)) {
+    EdgeRuntime.waitUntil(Promise.resolve(supabase.rpc('guardar_origen_contacto', {
+      // null = sin dato (la base lo acepta aunque el tipo generado no lo diga)
+      p_lead_id: r.lead_id,
+      p_fuente: origen.fuente as string, p_app: origen.app as string, p_anuncio: origen.anuncio as unknown as string,
+    })).then(({ error }) => { if (error) console.error('[genesys] No se pudo guardar el origen:', error.message) }))
+  }
   await marcar(archivo ? `archivo del lead guardado (${archivo.texto.split('\n')[0]})` : texto ? 'mensaje del lead guardado' : 'contacto registrado (sin texto)')
   return { ok: true, procesado: 'mensaje_lead', bot_atiende: r.bot_atiende }
 }

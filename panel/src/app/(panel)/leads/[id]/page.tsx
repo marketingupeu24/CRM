@@ -80,6 +80,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
     (historial ?? []).filter((h) => h.autor_id && h.autor?.nombre).map((h) => [h.autor_id!, h.autor!.nombre]),
   )
 
+  const anuncio = lead.anuncio as { titulo?: string; url?: string; red?: string } | null
   const datos: [string, React.ReactNode][] = [
     ['Celular', <a key="tel" href={`https://wa.me/${lead.telefono}`} target="_blank" rel="noreferrer" className="text-marca-700 hover:underline">{lead.telefono} ↗</a>],
     ['DNI', lead.dni],
@@ -90,6 +91,12 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
     ['Sede', lead.sede],
     ['Fuente', ETIQUETAS_FUENTE[lead.origen as Fuente] ?? lead.origen],
     ['Nos conoció por', lead.origen_campana],
+    ['Llegó por', lead.canal_entrada],
+    ['Anuncio', anuncio
+      ? (anuncio.url
+        ? <a key="ad" href={anuncio.url} target="_blank" rel="noreferrer" className="text-marca-700 hover:underline">📣 {anuncio.titulo ?? `Anuncio de ${anuncio.red ?? 'Facebook'}`} ↗</a>
+        : `📣 ${anuncio.titulo ?? `Anuncio de ${anuncio.red ?? 'Facebook'}`}`)
+      : null],
     ['Actividad (QR)', lead.actividad
       ? <Link key="act" href={`/leads?actividad=${lead.actividad.id}`} className="text-marca-700 hover:underline">{lead.actividad.nombre}</Link>
       : null],
