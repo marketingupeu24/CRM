@@ -6,6 +6,7 @@ import { crearClienteServidor } from '@/lib/supabase/server'
 import {
   BarrasHorizontales, BarrasPorAsesor, ColumnasPorPeriodo, Embudo, Tarjeta, type FilaAsesor,
 } from './Graficos'
+import { EmbudoPorOrigen } from './EmbudoPorOrigen'
 import { duracion, num, pct } from '@/lib/formato'
 
 export const metadata: Metadata = { title: 'Dashboard' }
@@ -59,21 +60,24 @@ export default async function PaginaDashboard(props: PageProps<'/dashboard'>) {
   const hasta = FECHA.test(texto(sp.hasta)) ? texto(sp.hasta) : ''
   const convocatoria = texto(sp.convocatoria)
   const asesor = texto(sp.asesor)
+  const embudoPor = texto(sp.embudo) === 'canal' ? 'canal' : 'origen'
 
   const { esAdmin } = await exigirPermiso('dashboard')
   const supabase = await crearClienteServidor()
 
-  const [{ data, error }, { data: convocatorias }, { data: asesores }] = await Promise.all([
-    supabase.rpc('resumen_dashboard', {
-      p_desde: desde || undefined,
-      p_hasta: hasta || undefined,
-      p_convocatoria: convocatoria || undefined,
-      p_asesor_id: esAdmin && /^[0-9a-f-]{36}$/i.test(asesor) ? asesor : undefined,
-    }),
+  const filtrosRpc = {
+    p_desde: desde || undefined,
+    p_hasta: hasta || undefined,
+    p_convocatoria: convocatoria || undefined,
+    p_asesor_id: esAdmin && /^[0-9a-f-]{36}$/i.test(asesor) ? asesor : undefined,
+  }
+  const [{ data, error }, { data: convocatorias }, { data: asesores }, { data: embudo }] = await Promise.all([
+    supabase.rpc('resumen_dashboard', filtrosRpc),
     supabase.from('leads').select('convocatoria').not('convocatoria', 'is', null).limit(2000),
     esAdmin
       ? supabase.from('asesores').select('id, nombre').or('rol.eq.asesor,activo.eq.true').is('eliminado_at', null).order('nombre')
       : Promise.resolve({ data: [] as { id: string; nombre: string }[] }),
+    supabase.rpc('embudo_por_origen', { ...filtrosRpc, p_por: embudoPor }),
   ])
 
   if (error || !data) {
@@ -217,6 +221,25 @@ export default async function PaginaDashboard(props: PageProps<'/dashboard'>) {
           />
         </Tarjeta>
       </div>
+
+      <Tarjeta
+        titulo="Embudo por origen"
+        descripcion={embudoPor === 'canal' ? 'Por dónde abrieron el chat (enlace, Facebook, anuncio…)' : 'Según "Nos conoció por"'}
+      >
+        <div className="mb-3 flex overflow-hidden rounded-lg border border-slate-300 text-sm w-fit">
+          {(['origen', 'canal'] as const).map((v) => {
+            const p = new URLSearchParams(Object.entries({ desde, hasta, convocatoria, asesor }).filter(([, x]) => x))
+            if (v === 'canal') p.set('embudo', 'canal')
+            return (
+              <Link key={v} href={`/dashboard?${p.toString()}` as `/dashboard?${string}`}
+                className={`border-r border-slate-300 px-3 py-1.5 last:border-r-0 ${embudoPor === v ? 'bg-marca-600 text-white' : 'bg-superficie text-slate-700 hover:bg-slate-50'}`}>
+                {v === 'origen' ? 'Nos conoció por' : 'Llegó por'}
+              </Link>
+            )
+          })}
+        </div>
+        <EmbudoPorOrigen filas={embudo ?? []} />
+      </Tarjeta>
 
       <Tarjeta titulo="Leads por asesor" descripcion={esAdmin ? 'Estado actual de los leads asignados a cada asesor' : 'Estado actual de tus leads'}>
         <BarrasPorAsesor filas={r.por_asesor} />

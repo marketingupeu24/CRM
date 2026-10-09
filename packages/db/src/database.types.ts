@@ -655,6 +655,11 @@ isOneToOne: false
 "email_de_usuario":
 { Args: { "p_usuario": string }; Returns: string
                            },
+"embudo_por_origen":
+{ Args: { "p_asesor_id"?: string,"p_convocatoria"?: string,"p_desde"?: string,"p_hasta"?: string,"p_por"?: string }; Returns: {
+              "contactados": number,"escribieron": number,"grupo": string,"inscritos": number,"matriculados": number,"registrados": number
+            }[]
+                           },
 "en_horario_atencion":
 { Args: { "p_momento"?: string }; Returns: boolean
                            },
