@@ -256,6 +256,26 @@ Se actualiza en vivo (Supabase Realtime).
 - **Contactos con número oculto (@lid)**: BuilderBot les responde a una dirección que no existe; el CRM
   reenvía la respuesta a `<id>@lid` (tarda ~2 min por parte, por BuilderBot).
 
+### Seguimiento y campañas (octubre 2026)
+
+- **Origen de cada lead**: el CRM guarda por dónde abrió el chat (enlace wa.me, Facebook/Messenger, búsqueda, número en
+  una web) y, si llegó desde un **anuncio de Facebook/Instagram**, el anuncio (título, enlace, ID y `ctwa_clid`); con
+  anuncio, "Nos conoció por" se llena solo. Se ve en la ficha, en el Excel y en el **embudo por origen** del Dashboard.
+- **📞 Llamé**: registra llamadas y WhatsApp del celular del asesor con su resultado; "contestó" cuenta como contacto y
+  "volver a llamar" agenda la tarea.
+- **Puntaje de interés (0–100)** por lead, con sus motivos (carrera, registrado, preguntó costos, volvió a escribir,
+  vino en persona…); se recalcula cada 10 min. La lista de leads se puede ordenar por "más interesados".
+- **Pruebas del prompt** (`/genesys/pruebas`): preguntas reales con lo que la respuesta debe incluir y lo que no debe decir.
+  La cobertura (¿el prompt tiene el dato?) se calcula siempre; con `OPENAI_API_KEY` o `ANTHROPIC_API_KEY` en Vercel,
+  el CRM también le hace las preguntas a la IA y revisa las respuestas.
+- **App instalable con notificaciones**: el CRM se instala en el celular (Chrome → Instalar app; iPhone → Compartir →
+  Agregar a inicio) y en *Mi cuenta* se activan las notificaciones del dispositivo (mensajes nuevos, leads asignados,
+  próximas acciones). Claves VAPID en los secretos de Supabase (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_CONTACTO`).
+- **Recordatorios a alumnos** (`/recordatorios`): avisos automáticos por WhatsApp (cierre de inscripciones, examen) a quienes
+  ya escribieron y no se inscribieron; se crean apagados, se envían en horario de atención de a pocos y quien responde
+  "NO" no recibe más. Ojo: el número de Genesys está conectado por QR (riesgo de bloqueo con envíos masivos).
+- **Cierre de campaña**: el revisor del prompt avisa de fechas que ya pasaron y `/genesys` tiene los pasos para la campaña siguiente.
+
 ### Dashboard
 
 Total de leads, leads por estado, por carrera y por asesor, leads nuevos por día y el embudo de

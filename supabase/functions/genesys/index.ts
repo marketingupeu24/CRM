@@ -29,7 +29,7 @@
 import { type Cuerpo, type Respuesta, supabase, responder, ErrorApi, tokenValido, cargarFeriados } from './comun.ts'
 import { notificarAsignacion, avisarVisita, avisarAusencia, alertarError } from './avisos.ts'
 import { registrar, webhook, noInteresado, respuestaBot } from './registro.ts'
-import { reintentar, recordatorios, recordarTareas, ping, sincronizarBot, reasignar } from './programadas.ts'
+import { reintentar, recordatorios, recordarTareas, recordarAlumnos, ping, sincronizarBot, reasignar } from './programadas.ts'
 import { evento } from './eventos.ts'
 
 // Runtime de Supabase Edge Functions: mantiene viva una tarea después de responder
@@ -45,6 +45,7 @@ const ACCIONES: Record<string, (cuerpo: Cuerpo) => Promise<Respuesta> | Respuest
   'reasignar': reasignar,
   'reintentar-avisos': reintentar,
   'recordar-tareas': recordarTareas,
+  'recordar-alumnos': recordarAlumnos,
   'notificar': notificarAsignacion,
   'visita': avisarVisita,
   'ausencia': avisarAusencia,

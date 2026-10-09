@@ -213,6 +213,10 @@ export async function evento(cuerpo: Cuerpo, registroId: number | null): Promise
   const archivo = archivoEntrante(cuerpo, texto)
   const r = await registrar({ telefono, mensaje: archivo?.texto ?? texto ?? undefined, es_lid: esLid })
   if (archivo?.url && typeof r.lead_id === 'string') EdgeRuntime.waitUntil(guardarArchivo(r.lead_id, archivo))
+  // Respondió "NO" a un recordatorio automático: no recibe más
+  if (texto && typeof r.lead_id === 'string' && texto.length < 30) {
+    EdgeRuntime.waitUntil(Promise.resolve(supabase.rpc('baja_recordatorios', { p_lead_id: r.lead_id, p_texto: texto })).then(() => undefined))
+  }
   // De dónde llegó (enlace, Facebook, anuncio): se guarda solo la primera vez
   const origen = origenDelMensaje(cuerpo)
   if (origen && typeof r.lead_id === 'string' && (origen.fuente || origen.anuncio)) {

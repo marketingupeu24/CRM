@@ -52,6 +52,7 @@ export function Navegacion(
         { href: '/genesys' as Route, texto: 'Prompt de Genesys', icono: '📚' },
         { href: '/revision-bot' as Route, texto: 'Revisión del bot', icono: '🤖', modulo: 'conocimiento', contador: { valor: revisionBot, estilo: 'bg-violet-500 text-white' } },
         { href: '/flujos-bot' as Route, texto: 'Flujos de BuilderBot', icono: '🧩', modulo: 'conocimiento' },
+        { href: '/recordatorios' as Route, texto: 'Recordatorios a alumnos', icono: '⏰', modulo: 'conocimiento' },
       ],
     },
     {

@@ -3,6 +3,7 @@ import { type Fuente, FUENTES, proximaAtencion, valorResuelto } from '../_shared
 import { cambiarBlacklist, enviarWhatsApp, problemasBuilderBot } from '../_shared/builderbot.ts'
 import { type Cuerpo, type Respuesta, supabase, MODO, MAX_INTENTOS_NOTIFICACION, USAR_BLACKLIST, PANEL_URL, registrarEvento, telefonosAsesores, FERIADOS, SELECCION_CON_ASESOR } from './comun.ts'
 import { notificarAsesor } from './avisos.ts'
+import { destinoWhatsApp } from '../_shared/lid.ts'
 import { enviarPush } from '../_shared/push.ts'
 
 /**
@@ -247,4 +248,29 @@ export async function reasignar(): Promise<Respuesta> {
     }
   }
   return { ok: true, reasignados: cambios.length }
+}
+
+/**
+ * Recordatorios automáticos a los alumnos (cron cada 10 minutos). reservar_recordatorios solo
+ * entrega un lote en horario de atención; se envían de a uno con pausas para cuidar el número.
+ */
+export async function recordarAlumnos(): Promise<Respuesta> {
+  const { data: lote, error } = await supabase.rpc('reservar_recordatorios', { p_limite: 10 })
+  if (error) throw error
+  let enviados = 0
+  for (const [i, r] of (lote ?? []).entries()) {
+    if (i > 0) await new Promise((ok) => setTimeout(ok, 6_000 + Math.random() * 4_000))
+    const primer = (t: string | null) => (t ?? '').trim().split(/\s+/)[0] ?? ''
+    const texto = r.mensaje
+      .replaceAll('{nombre}', primer(r.nombre) || '')
+      .replaceAll('{carrera}', r.carrera ?? 'tu carrera')
+      .replaceAll('{asesor}', primer(r.asesor) || '')
+      .replace(/¡Hola, !/g, '¡Hola!').replace(/ {2,}/g, ' ').replace(/ +([,.!?])/g, '$1')
+      + '\n\n(Si no deseas recibir estos avisos, responde NO)'
+    const envio = await enviarWhatsApp(await destinoWhatsApp(supabase, r.telefono), texto)
+    await supabase.rpc('marcar_recordatorio', { p_recordatorio_id: r.recordatorio_id, p_lead_id: r.lead_id, p_ok: envio.ok, p_error: envio.error })
+    if (envio.ok) enviados++
+    else console.error('[genesys] Recordatorio a alumno falló:', envio.error)
+  }
+  return { ok: true, enviados, lote: (lote ?? []).length }
 }
