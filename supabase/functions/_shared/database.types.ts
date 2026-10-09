@@ -43,6 +43,19 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"alertas_sistema": {
+                  Row: {
+                    "avisado_at": string | null,"clave": string,"conteo": number,"detalle": string | null,"primera_at": string,"ultima_at": string
+                  }
+                  Insert: {
+                    "avisado_at"?: string | null,"clave": string,"conteo"?: number,"detalle"?: string | null,"primera_at"?: string,"ultima_at"?: string
+                  }
+                  Update: {
+                    "avisado_at"?: string | null,"clave"?: string,"conteo"?: number,"detalle"?: string | null,"primera_at"?: string,"ultima_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"asesores": {
                   Row: {
                     "activo": boolean,"activo_antes": boolean | null,"ausencia_activa": boolean,"ausente_desde": string | null,"ausente_hasta": string | null,"ausente_motivo": string | null,"ausente_reemplazo": string | null,"carreras": (string)[],"codigo_qr": string,"created_at": string,"eliminado_at": string | null,"email": string | null,"en_blacklist": boolean,"id": string,"nombre": string,"permisos": (string)[],"rol": Database["public"]['Enums']["asesor_rol"],"superadmin": boolean,"telefono": string | null,"ultimo_lead_asignado": string | null,"user_id": string | null,"usuario": string | null
@@ -671,6 +684,9 @@ isOneToOne: false
 "lead_existente":
 { Args: { "p_dni"?: string,"p_telefono"?: string }; Returns: Json
                            },
+"limpiar_webhook_eventos":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
 "llamar_genesys":
 { Args: { "p_accion": string,"p_cuerpo"?: Json }; Returns: undefined
                            },
@@ -721,6 +737,9 @@ isOneToOne: false
                            },
 "reasignar_sin_contacto":
 { Args: { "p_horas"?: number,"p_maximo"?: number,"p_solo_horario"?: boolean }; Returns: Json
+                           },
+"registrar_error":
+{ Args: { "p_clave": string,"p_detalle": string }; Returns: boolean
                            },
 "registrar_lead":
 { Args: { "p_es_lid"?: boolean,"p_mensaje"?: string,"p_telefono": string }; Returns: {
