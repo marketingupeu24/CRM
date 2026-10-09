@@ -189,3 +189,27 @@ export async function pausarBot(leadId: string, pausar: boolean): Promise<Result
   refrescar(leadId)
   return { ok: true }
 }
+
+/** "📞 Llamé": llamada o WhatsApp personal del asesor, con el resultado (registrar_contacto_externo valida el acceso). */
+export async function registrarContacto(leadId: string, _previo: Resultado, formData: FormData): Promise<Resultado> {
+  const medio = String(formData.get('medio') ?? '')
+  const resultado = String(formData.get('resultado') ?? '')
+  const nota = String(formData.get('nota') ?? '').trim()
+  const volver = String(formData.get('volver') ?? '')
+  if (!['llamada', 'whatsapp'].includes(medio) || !['contesto', 'no_contesto', 'volver'].includes(resultado)) {
+    return { error: 'Elige el medio y el resultado.' }
+  }
+  if (nota.length > 1000) return { error: 'La nota es muy larga (máximo 1000 caracteres).' }
+  // "2026-10-10T16:30" del campo de fecha = hora de Perú
+  const volverAt = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(volver) ? new Date(`${volver}:00-05:00`).toISOString() : undefined
+  if (resultado === 'volver' && !volverAt) return { error: 'Elige cuándo volver a llamar.' }
+
+  const supabase = await crearClienteServidor()
+  const { error } = await supabase.rpc('registrar_contacto_externo', {
+    p_lead_id: leadId, p_medio: medio, p_resultado: resultado, p_nota: nota || undefined, p_volver_at: volverAt,
+  })
+  if (error) return { error: mensajeError(error) }
+  refrescar(leadId)
+  revalidatePath('/pendientes')
+  return { ok: true }
+}

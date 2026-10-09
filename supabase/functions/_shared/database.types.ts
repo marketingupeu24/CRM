@@ -744,6 +744,9 @@ isOneToOne: false
 "reasignar_sin_contacto":
 { Args: { "p_horas"?: number,"p_maximo"?: number,"p_solo_horario"?: boolean }; Returns: Json
                            },
+"registrar_contacto_externo":
+{ Args: { "p_lead_id": string,"p_medio": string,"p_nota"?: string,"p_resultado": string,"p_volver_at"?: string }; Returns: undefined
+                           },
 "registrar_error":
 { Args: { "p_clave": string,"p_detalle": string }; Returns: boolean
                            },
@@ -855,7 +858,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "asesor_rol": "asesor"|"admin","interaccion_tipo": "mensaje_lead"|"respuesta_bot"|"cambio_estado"|"nota_asesor"|"sistema"|"mensaje_asesor","lead_estado": "lead_nuevo"|"lead_en_conversacion"|"lead_no_interesado"|"lead_interesado"|"lead_asignado"|"lead_contactado"|"lead_atendido"|"lead_inscrito"|"lead_matriculado"|"lead_perdido"
+            "asesor_rol": "asesor"|"admin","interaccion_tipo": "mensaje_lead"|"respuesta_bot"|"cambio_estado"|"nota_asesor"|"sistema"|"mensaje_asesor"|"llamada","lead_estado": "lead_nuevo"|"lead_en_conversacion"|"lead_no_interesado"|"lead_interesado"|"lead_asignado"|"lead_contactado"|"lead_atendido"|"lead_inscrito"|"lead_matriculado"|"lead_perdido"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -971,7 +974,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "asesor_rol": ["asesor", "admin"],"interaccion_tipo": ["mensaje_lead", "respuesta_bot", "cambio_estado", "nota_asesor", "sistema", "mensaje_asesor"],"lead_estado": ["lead_nuevo", "lead_en_conversacion", "lead_no_interesado", "lead_interesado", "lead_asignado", "lead_contactado", "lead_atendido", "lead_inscrito", "lead_matriculado", "lead_perdido"]
+            "asesor_rol": ["asesor", "admin"],"interaccion_tipo": ["mensaje_lead", "respuesta_bot", "cambio_estado", "nota_asesor", "sistema", "mensaje_asesor", "llamada"],"lead_estado": ["lead_nuevo", "lead_en_conversacion", "lead_no_interesado", "lead_interesado", "lead_asignado", "lead_contactado", "lead_atendido", "lead_inscrito", "lead_matriculado", "lead_perdido"]
           }
         }
 } as const

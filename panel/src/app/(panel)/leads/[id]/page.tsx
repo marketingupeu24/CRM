@@ -10,6 +10,7 @@ import { BotonEliminarNota, BotonPapelera, EditarDatos, FormularioNota, Reasigna
 import { esDelChat } from '@/lib/chat'
 import { Conversacion, type MensajeChat } from './Conversacion'
 import { ControlesChat } from './ControlesChat'
+import { RegistrarContacto } from './RegistrarContacto'
 import { AccionesRapidas } from './AccionesRapidas'
 import { ProformaRapida } from './ProformaRapida'
 import { BotonesTarea, FormularioTarea } from '@/components/Tareas'
@@ -25,6 +26,7 @@ const TIPO_INTERACCION: Record<InteraccionTipo, { etiqueta: string; estilo: stri
   mensaje_asesor: { etiqueta: 'Mensaje del asesor', estilo: 'bg-green-100 text-green-700' },
   cambio_estado: { etiqueta: 'Cambio de estado', estilo: 'bg-amber-100 text-amber-700' },
   nota_asesor: { etiqueta: 'Nota', estilo: 'bg-emerald-100 text-emerald-700' },
+  llamada: { etiqueta: 'Contacto del asesor', estilo: 'bg-violet-100 text-violet-700' },
   sistema: { etiqueta: 'Sistema', estilo: 'bg-zinc-100 text-zinc-600' },
 }
 
@@ -205,6 +207,11 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
         </div>
 
         <div className="space-y-6">
+          <section className="tarjeta p-6">
+            <h2 className="mb-3 font-semibold">Contacto fuera del chat</h2>
+            <RegistrarContacto leadId={lead.id} />
+          </section>
+
           <section className="tarjeta p-6">
             <h2 className="mb-3 font-semibold">Estado</h2>
             {apoyo
