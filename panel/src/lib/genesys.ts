@@ -6,7 +6,7 @@ import { costoCarreraTexto, PARTES_GENESYS, type FichaGenesys } from '@crm/db'
 /** Igual que el horario de atención del CRM (public.franjas_atencion). */
 const HORARIO_ATENCION = 'Lunes a jueves de 8:00 am a 12:30 pm y de 2:00 pm a 6:00 pm; viernes de 8:00 am a 1:00 pm; sábado y domingo cerrado.'
 /** Máximo de caracteres que acepta el asistente de IA de BuilderBot */
-const LIMITE_PROMPT = 100_000
+const LIMITE_PROMPT = 150_000
 
 /** "8:00 a.m." parte el mensaje en BuilderBot: se escribe "8:00 am". */
 export function sinPuntosEnHoras(texto: string): string {
@@ -115,7 +115,7 @@ export function revisarPrompt(prompt: string, fichas: FichaGenesys[]): Aviso[] {
   if (sinCosto.length) avisos.push({ nivel: 'info', texto: `Sin costo en el tarifario de proformas (Genesys dirá que lo confirma el asesor): ${sinCosto.map((f) => f.titulo).join(', ')}.` })
   const pendientes = fichas.filter((f) => !f.activo)
   if (pendientes.length) avisos.push({ nivel: 'info', texto: `${pendientes.length} ficha(s) desactivada(s) o por completar no van en el prompt: ${pendientes.map((f) => `${f.titulo} (${nombres[f.parte] ?? f.parte})`).join(', ')}.` })
-  // BuilderBot acepta hasta 100 000 caracteres en el asistente: se avisa al acercarse al límite
+  // BuilderBot acepta hasta 150 000 caracteres en el asistente: se avisa al acercarse al límite
   if (prompt.length > LIMITE_PROMPT) avisos.push({ nivel: 'error', texto: `El prompt tiene ${prompt.length.toLocaleString('es-PE')} caracteres y BuilderBot acepta hasta ${LIMITE_PROMPT.toLocaleString('es-PE')}: desactiva fichas poco usadas antes de pegarlo.` })
   else if (prompt.length > LIMITE_PROMPT * 0.9) avisos.push({ nivel: 'aviso', texto: `El prompt tiene ${prompt.length.toLocaleString('es-PE')} caracteres: se acerca al límite de BuilderBot (${LIMITE_PROMPT.toLocaleString('es-PE')}).` })
   return avisos
