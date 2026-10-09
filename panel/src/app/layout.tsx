@@ -11,8 +11,8 @@ export const metadata: Metadata = {
   title: { default: 'CRM Admisión UPeU', template: '%s · CRM Admisión UPeU' },
   description: 'Panel de asesores de la oficina de admisión de la Universidad Peruana Unión, campus Juliaca',
   applicationName: 'CRM Admisión UPeU',
-  // App instalable (manifest en app/manifest.ts): ícono y modo app en iPhone
-  icons: { apple: '/iconos/apple-touch-icon.png' },
+  // App instalable (manifest en app/manifest.ts): modo app en iPhone. Los íconos de la pestaña y de
+  // iPhone salen de app/icon.png, app/apple-icon.png y app/favicon.ico (no se definen aquí: los reemplazaría)
   appleWebApp: { capable: true, title: 'CRM Admisión', statusBarStyle: 'default' },
 }
 
