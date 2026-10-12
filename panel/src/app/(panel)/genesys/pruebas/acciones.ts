@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import type { FichaGenesys } from '@crm/db'
 import { mensajeError } from '@/lib/formato'
 import { promptGenesys } from '@/lib/genesys'
-import { evaluar, proveedorIA, responderConIA, type Prueba } from '@/lib/pruebas-genesys'
+import { evaluar, MAXIMO_MENSAJES, proveedorIA, responderConIA, type Prueba } from '@/lib/pruebas-genesys'
 import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 
@@ -49,6 +49,7 @@ export async function probarPregunta(id: number): Promise<ResultadoPrueba> {
     const detalle = ev.ok ? 'Correcta' : [
       ev.faltan.length ? `Le faltó: ${ev.faltan.join(', ')}` : '',
       ev.prohibidas.length ? `Dijo lo que no debe: ${ev.prohibidas.join(', ')}` : '',
+      ev.mensajes > MAXIMO_MENSAJES ? `Saldría en ${ev.mensajes} mensajes seguidos (máximo ${MAXIMO_MENSAJES})` : '',
     ].filter(Boolean).join(' · ')
     await supabase.from('genesys_pruebas').update({
       ultima_respuesta: respuesta.slice(0, 4000), ultimo_resultado: ev.ok, ultimo_detalle: detalle, probado_at: new Date().toISOString(),

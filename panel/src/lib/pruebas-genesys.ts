@@ -24,13 +24,24 @@ export interface Evaluacion {
   ok: boolean
   faltan: string[]
   prohibidas: string[]
+  /** En cuántos mensajes de WhatsApp saldría (BuilderBot corta en cada punto final de oración) */
+  mensajes: number
+}
+
+/** Más de esto: el alumno recibe la respuesta partida en demasiados mensajes seguidos. */
+export const MAXIMO_MENSAJES = 3
+
+/** Mensajes en que BuilderBot partiría la respuesta: uno por cada punto final (no cuenta decimales como 997.50). */
+export function contarMensajes(respuesta: string): number {
+  return (respuesta.trim().match(/\.(?=\s|$)/g) ?? []).length + (/[^.\s]\s*$/.test(respuesta.trim()) ? 1 : 0)
 }
 
 export function evaluar(respuesta: string, p: Prueba): Evaluacion {
   const r = normalizar(respuesta)
   const faltan = p.debe_incluir.filter((x) => !r.includes(normalizar(x)))
   const prohibidas = [...p.no_debe_incluir, ...PROHIBIDAS_SIEMPRE].filter((x) => r.includes(normalizar(x)))
-  return { ok: !faltan.length && !prohibidas.length, faltan, prohibidas }
+  const mensajes = contarMensajes(respuesta)
+  return { ok: !faltan.length && !prohibidas.length && mensajes <= MAXIMO_MENSAJES, faltan, prohibidas, mensajes }
 }
 
 /** ¿El prompt tiene lo que la respuesta debe incluir? (lo prohibido solo se puede revisar con IA) */
