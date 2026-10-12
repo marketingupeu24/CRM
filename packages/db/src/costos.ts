@@ -357,7 +357,7 @@ export function carreraParecida(texto: string | null | undefined, modalidad: Mod
 }
 
 /** Costos de a distancia y semipresencial confirmados por Admisión (si es false, el prompt no los incluye). */
-const COSTOS_SEDE_LIMA_CONFIRMADOS = false
+const COSTOS_SEDE_LIMA_CONFIRMADOS = true
 
 /**
  * ¿Es la misma carrera? Al menos el 70 % de las palabras del nombre deben estar en el del tarifario.
