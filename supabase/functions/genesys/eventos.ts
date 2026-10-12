@@ -4,6 +4,10 @@ import { descargarArchivo, enviarWhatsApp } from '../_shared/builderbot.ts'
 import { esContactoLid } from '../_shared/lid.ts'
 import { type Cuerpo, type Respuesta, supabase, PANEL_URL } from './comun.ts'
 import { registrar } from './registro.ts'
+import { alertarError } from './avisos.ts'
+
+/** Freno contra bucles: más reenvíos que esto a un mismo contacto @lid en 10 minutos se bloquean y se avisa. */
+const MAXIMO_REENVIOS_10_MIN = 40
 
 // Runtime de Supabase Edge Functions: mantiene viva una tarea después de responder
 declare const EdgeRuntime: { waitUntil(promesa: Promise<unknown>): void }
@@ -119,6 +123,18 @@ export async function guardarArchivo(leadId: string, archivo: ArchivoEntrante): 
  * Las respuestas en varias partes llegan casi juntas: se espera según su orden para no desordenarlas.
  */
 export async function reenviarALid(numero: string, texto: string, media: string | undefined, registroId: number | null) {
+  // Freno de seguridad contra bucles: el mismo texto ya reenviado hace poco, o demasiados reenvíos seguidos
+  const reenviados = () => supabase.from('webhook_eventos').select('id', { count: 'exact', head: true })
+    .eq('payload->cuerpo->data->>from', numero).like('procesado', '%reenviada a @lid%')
+  const [{ count: mismoTexto }, { count: enDiezMin }] = await Promise.all([
+    reenviados().eq('payload->cuerpo->data->>answer', texto).gte('recibido_at', new Date(Date.now() - 5 * 60_000).toISOString()),
+    reenviados().gte('recibido_at', new Date(Date.now() - 10 * 60_000).toISOString()),
+  ])
+  if ((mismoTexto ?? 0) > 0 || (enDiezMin ?? 0) >= MAXIMO_REENVIOS_10_MIN) {
+    if (registroId) await supabase.from('webhook_eventos').update({ procesado: `reenvío a @lid bloqueado (${(mismoTexto ?? 0) > 0 ? 'texto repetido' : 'demasiados seguidos'})` }).eq('id', registroId)
+    if ((enDiezMin ?? 0) >= MAXIMO_REENVIOS_10_MIN) await alertarError('reenvio-lid', new Error(`Se frenaron los reenvíos a ${numero}@lid: más de ${MAXIMO_REENVIOS_10_MIN} en 10 minutos (posible bucle)`))
+    return
+  }
   const desde = new Date(Date.now() - 20_000).toISOString()
   const { count } = await supabase.from('webhook_eventos').select('id', { count: 'exact', head: true })
     .eq('payload->cuerpo->>eventName', 'message.outgoing').eq('payload->cuerpo->data->>from', numero)
@@ -190,7 +206,15 @@ export async function evento(cuerpo: Cuerpo, registroId: number | null): Promise
     }
     // BuilderBot respondió a un contacto con número oculto en "<id>@s.whatsapp.net": no le llega.
     // El CRM reenvía la respuesta a "<id>@lid", que sí se entrega.
-    const lid = texto && destinoJid.endsWith('@s.whatsapp.net') && !esAvisoParaAsesor(texto) ? await esContactoLid(supabase, telefono) : false
+    // OJO: solo si el destino es EXACTAMENTE "<id>@s.whatsapp.net". Desde el 9/10 BuilderBot avisa el
+    // eco de nuestro reenvío con otro destino (el número propio, ej. "51999027601:0@s.whatsapp.net"):
+    // tomarlo como respuesta nueva lo reenviaba otra vez y formaba un bucle infinito.
+    const esLidContacto = texto && destinoJid.endsWith('@s.whatsapp.net') ? await esContactoLid(supabase, telefono) : false
+    if (esLidContacto && destinoJid !== `${telefono}@s.whatsapp.net`) {
+      await marcar('saliente @lid (eco del reenvío del CRM)')
+      return { ok: true, procesado: 'eco del reenvío' }
+    }
+    const lid = esLidContacto && !esAvisoParaAsesor(texto!)
     console.log('[genesys] saliente', telefono, destinoJid, 'lid:', lid)
     if (lid && texto) {
       const media = ((datos.options as { media?: unknown } | undefined)?.media)
@@ -201,6 +225,14 @@ export async function evento(cuerpo: Cuerpo, registroId: number | null): Promise
       // Por celular o por alias (LID unido a un lead registrado)
       const { data: leadId } = await supabase.rpc('lead_de_contacto', { p_contacto: telefono })
       if (leadId) {
+        // El mismo texto del bot al mismo lead en los últimos 2 minutos es un eco repetido: no se guarda dos veces
+        const { count: repetido } = await supabase.from('lead_interacciones').select('id', { count: 'exact', head: true })
+          .eq('lead_id', leadId as string).eq('tipo', 'respuesta_bot').eq('contenido', texto.slice(0, 4000))
+          .gte('created_at', new Date(Date.now() - 120_000).toISOString())
+        if (repetido) {
+          await marcar('respuesta del bot repetida (no se guarda)')
+          return { ok: true, procesado: 'respuesta repetida' }
+        }
         await supabase.from('lead_interacciones').insert({ lead_id: leadId, tipo: 'respuesta_bot', contenido: texto.slice(0, 4000) })
         await marcar('respuesta del bot guardada')
         return { ok: true, procesado: 'respuesta_bot' }
