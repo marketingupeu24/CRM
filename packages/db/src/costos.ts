@@ -76,8 +76,9 @@ const CARRERAS: Record<CampusId, FilaCarrera[]> = {
     ['Medicina Humana', 26, 600, 0, 5],
     ['Nutrición Humana', 22, 185, 0],
     ['Psicología', 20, 190, 0],
-    ['Tecnología Médica, Especialidad de Laboratorio clínico y anatomía patológica', 21, 250, 0, 5],
-    ['Tecnología Médica, Especialidad de Terapia física y rehabilitación', 21, 250, 0, 5],
+    // En Juliaca solo Medicina Humana se paga en 5 cuotas; Tecnología Médica, en 4 como las demás
+    ['Tecnología Médica, Especialidad de Laboratorio clínico y anatomía patológica', 21, 250, 0],
+    ['Tecnología Médica, Especialidad de Terapia física y rehabilitación', 21, 250, 0],
     ['Arquitectura y Urbanismo', 21, 190, 0],
     ['Ingeniería Ambiental', 19, 170, 25],
     ['Ingeniería Civil', 21, 185, 0],
@@ -355,16 +356,33 @@ export function carreraParecida(texto: string | null | undefined, modalidad: Mod
   return mejor?.nombre ?? null
 }
 
+/** Costos de a distancia y semipresencial confirmados por Admisión (si es false, el prompt no los incluye). */
+const COSTOS_SEDE_LIMA_CONFIRMADOS = false
+
+/**
+ * ¿Es la misma carrera? Al menos el 70 % de las palabras del nombre deben estar en el del tarifario.
+ * Evita que "Educación, Ciencias Naturales y Tecnología" tome el costo de "Tecnología Médica" por una palabra.
+ */
+function mismaCarrera(nombre: string, delTarifario: string): boolean {
+  const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ')
+  const palabras = norm(nombre).split(/\s+/).filter((p) => p.length > 3 && !['especialidad', 'carrera'].includes(p))
+  const t = norm(delTarifario)
+  if (!palabras.length) return false
+  return palabras.filter((p) => t.includes(p)).length / palabras.length >= 0.7
+}
+
 /**
  * Costo del primer ciclo de una carrera en una línea, para su ficha en el prompt de Genesys.
  * modalidad: 'Presencial' (filial Juliaca), 'A distancia' o 'Semipresencial' (sede Lima). null si no está en el tarifario.
  */
 export function costoCarreraTexto(nombre: string, modalidad: string): string | null {
   const m: Modalidad = /distancia/i.test(modalidad) ? 'EAD' : /semi/i.test(modalidad) ? 'SEMI' : 'PRES'
+  // A distancia y semipresencial (sede Lima): costos en revisión con Admisión; mientras tanto Genesys no da montos
+  if (m !== 'PRES' && !COSTOS_SEDE_LIMA_CONFIRMADOS) return null
   const campus: CampusId = 'JUL'
   const encontrada = carreraParecida(nombre, m, campus)
   const fila = encontrada ? carreras(m, campus).find((c) => c[0] === encontrada) : undefined
-  if (!fila) return null
+  if (!fila || !mismaCarrera(nombre, encontrada!)) return null
   const [, cr, costo, pct, cq] = fila
   const mat = m === 'PRES' ? CAMPUS[campus].mat : MODALIDADES[m].mat!
   const cuotas = cq || (m === 'PRES' ? CAMPUS[campus].cuotas : MODALIDADES[m].cuotas!)
