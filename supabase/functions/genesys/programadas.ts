@@ -1,7 +1,7 @@
 // Genesys · Tareas que llama el cron: recordatorios, reintentos de avisos, tareas, reasignación, sincronización con BuilderBot y ping.
 import { type Fuente, FUENTES, proximaAtencion, valorResuelto } from '../_shared/dominio.ts'
 import { cambiarBlacklist, enviarWhatsApp, problemasBuilderBot } from '../_shared/builderbot.ts'
-import { type Cuerpo, type Respuesta, supabase, MODO, MAX_INTENTOS_NOTIFICACION, USAR_BLACKLIST, PANEL_URL, registrarEvento, telefonosAsesores, FERIADOS, SELECCION_CON_ASESOR } from './comun.ts'
+import { type Cuerpo, type Respuesta, supabase, MODO, MAX_INTENTOS_NOTIFICACION, USAR_BLACKLIST, PANEL_URL, registrarEvento, telefonosAsesores, FERIADOS, SELECCION_CON_ASESOR, oficinaAbierta } from './comun.ts'
 import { notificarAsesor } from './avisos.ts'
 import { destinoWhatsApp } from '../_shared/lid.ts'
 import { enviarPush } from '../_shared/push.ts'
@@ -11,6 +11,8 @@ import { enviarPush } from '../_shared/push.ts'
  * se reintentan cada 10 min (cron genesys-reintentar-avisos) hasta MAX_INTENTOS_NOTIFICACION.
  */
 export async function reintentarAvisos(): Promise<number> {
+  // Los reintentos tampoco se envían con la oficina cerrada
+  if (!oficinaAbierta()) return 0
   const seleccion = SELECCION_CON_ASESOR
   const pendientes = await supabase.from('leads').select(seleccion)
     .in('notificacion_estado', ['pendiente', 'error'])
@@ -45,48 +47,61 @@ export async function recordatorios(): Promise<Respuesta> {
     return { ok: true, notificaciones_reenviadas: reenviadas, recordatorios_enviados: 0, omitido: 'Feriado' }
   }
 
-  // 2) Resumen de apertura por asesor (lunes a viernes 8:00):
-  //    a) leads que llegaron con la oficina cerrada y aún no contacta
+  // 2) Resumen de apertura por asesor (lunes a viernes 8:00 y lunes a jueves 2:00 pm, tras el almuerzo):
+  //    a) leads que llegaron con la oficina cerrada (o cuyo aviso se guardó para la apertura) y aún no contacta
   //    b) leads sin contactar desde hace más de 12 h (una sola vez por lead)
+  //    c) leads que le escribieron con la oficina cerrada y siguen sin respuesta
   const { data: cierre } = await supabase.rpc('ultimo_cierre')
   const desdeCierre = cierre ? new Date(cierre as string).toISOString() : new Date(Date.now() - 16 * 3_600_000).toISOString()
-  const [llegaron, sinContactar] = await Promise.all([
-    supabase.from('leads').select(seleccion)
-      .eq('estado', 'lead_asignado').is('primer_contacto_asesor_at', null).is('eliminado_at', null)
-      .gte('fecha_asignado', desdeCierre).order('fecha_asignado'),
+  const [llegaron, sinContactar, escribieron] = await Promise.all([
+    supabase.from('leads').select(seleccion).is('eliminado_at', null)
+      .or(`notificacion_estado.eq.fuera_horario,and(estado.eq.lead_asignado,primer_contacto_asesor_at.is.null,fecha_asignado.gte.${desdeCierre})`)
+      .not('estado', 'in', '(lead_perdido,lead_no_interesado,lead_matriculado)')
+      .order('fecha_asignado'),
     supabase.from('leads').select(seleccion)
       .eq('estado', 'lead_asignado').is('recordatorio_enviado', null).is('eliminado_at', null)
       .lt('fecha_asignado', new Date(Date.now() - 12 * 3_600_000).toISOString()).order('fecha_asignado'),
+    supabase.from('leads').select(seleccion).is('eliminado_at', null).eq('sin_responder', true)
+      .gte('ultimo_mensaje_lead_at', desdeCierre).order('ultimo_mensaje_lead_at'),
   ])
   if (llegaron.error) throw llegaron.error
   if (sinContactar.error) throw sinContactar.error
+  if (escribieron.error) throw escribieron.error
 
   type LeadConAsesor = (typeof sinContactar.data)[number]
-  const porAsesor = new Map<string, { nuevos: LeadConAsesor[]; atrasados: LeadConAsesor[] }>()
+  const porAsesor = new Map<string, { nuevos: LeadConAsesor[]; atrasados: LeadConAsesor[]; mensajes: LeadConAsesor[] }>()
   const grupo = (l: LeadConAsesor) => {
-    const g = porAsesor.get(l.asesor_id!) ?? { nuevos: [], atrasados: [] }
+    const g = porAsesor.get(l.asesor_id!) ?? { nuevos: [], atrasados: [], mensajes: [] }
     porAsesor.set(l.asesor_id!, g)
     return g
   }
   for (const l of llegaron.data) if (l.asesor?.telefono && l.asesor_id) grupo(l).nuevos.push(l)
   const enNuevos = new Set(llegaron.data.map((l) => l.id))
   for (const l of sinContactar.data) if (l.asesor?.telefono && l.asesor_id && !enNuevos.has(l.id)) grupo(l).atrasados.push(l)
+  const enAtrasados = new Set(sinContactar.data.map((l) => l.id))
+  for (const l of escribieron.data) {
+    if (l.asesor?.telefono && l.asesor_id && !enNuevos.has(l.id) && !enAtrasados.has(l.id)) grupo(l).mensajes.push(l)
+  }
 
+  const tarde = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Lima', hour: 'numeric', hour12: false }).format(new Date())) >= 12
   let recordatoriosEnviados = 0
-  for (const { nuevos, atrasados } of porAsesor.values()) {
-    const leads = [...nuevos, ...atrasados]
+  for (const { nuevos, atrasados, mensajes } of porAsesor.values()) {
+    const leads = [...nuevos, ...atrasados, ...mensajes]
     const asesor = leads[0]!.asesor!
     const dias = (fecha: string | null) => Math.max(0, Math.floor((Date.now() - Date.parse(fecha ?? '')) / 86_400_000))
     const linea = (l: LeadConAsesor) =>
       `• ${l.nombre ?? 'Sin nombre'} – wa.me/${l.telefono} (${dias(l.fecha_asignado) === 0 ? 'hoy' : `hace ${dias(l.fecha_asignado)} d`})`
     const texto = [
-      `*☀️ BUENOS DÍAS, ${asesor.nombre.split(' ')[0].toUpperCase()}*`,
+      `*${tarde ? '🌤️ BUENAS TARDES' : '☀️ BUENOS DÍAS'}, ${asesor.nombre.split(' ')[0].toUpperCase()}*`,
       nuevos.length ? `\n*Llegaron con la oficina cerrada (${nuevos.length}):*` : null,
       ...nuevos.slice(0, 15).map(linea),
       nuevos.length > 15 ? `… y ${nuevos.length - 15} más.` : null,
       atrasados.length ? `\n*Siguen sin contactar (${atrasados.length}):*` : null,
       ...atrasados.slice(0, 15).map(linea),
       atrasados.length > 15 ? `… y ${atrasados.length - 15} más.` : null,
+      mensajes.length ? `\n*Te escribieron con la oficina cerrada (${mensajes.length}):*` : null,
+      ...mensajes.slice(0, 15).map((l) => `• ${l.nombre ?? l.telefono} – ${PANEL_URL}/leads/${l.id}#chat`),
+      mensajes.length > 15 ? `… y ${mensajes.length - 15} más.` : null,
       '',
       `Escríbeles desde el CRM: ${PANEL_URL}/pendientes`,
     ].filter((l) => l !== null).join('\n')
@@ -97,8 +112,10 @@ export async function recordatorios(): Promise<Respuesta> {
       continue
     }
     recordatoriosEnviados++
-    const ids = leads.map((l) => l.id)
+    // "Recordado" solo para los que no tenía contactados; los avisos guardados para la apertura quedan dados
+    const ids = [...nuevos, ...atrasados].map((l) => l.id)
     await supabase.from('leads').update({ recordatorio_enviado: new Date().toISOString() }).in('id', ids)
+    await supabase.from('leads').update({ notificacion_estado: 'notificado' }).in('id', nuevos.map((l) => l.id)).eq('notificacion_estado', 'fuera_horario')
     await Promise.all(ids.map((id) => registrarEvento(id, 'Recordatorio enviado al asesor')))
   }
 

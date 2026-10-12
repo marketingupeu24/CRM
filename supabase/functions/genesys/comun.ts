@@ -138,6 +138,11 @@ export let NOMBRES_FERIADOS: ReadonlyMap<string, string> = new Map()
 
 export let feriadosCargados = 0
 
+/** ¿La oficina está abierta ahora? (horario de atención, sin feriados). Fuera de horario no se avisa a los asesores. */
+export function oficinaAbierta(): boolean {
+  return !proximaAtencion(new Date(), FERIADOS)
+}
+
 export async function cargarFeriados() {
   if (Date.now() - feriadosCargados < 10 * 60_000) return
   const { data } = await supabase.from('feriados').select('fecha, nombre')

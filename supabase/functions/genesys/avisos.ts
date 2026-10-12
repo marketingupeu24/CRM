@@ -3,7 +3,7 @@ import { ESTADOS_AVISO_MENSAJE, type Fuente, FUENTES, HORARIO_ATENCION_TEXTO, te
 import { enviarWhatsApp } from '../_shared/builderbot.ts'
 import { destinoWhatsApp } from '../_shared/lid.ts'
 import { enviarPush } from '../_shared/push.ts'
-import { type Lead, type Cuerpo, type Respuesta, supabase, PANEL_URL, MINUTOS_ENTRE_AVISOS, telefonosAsesores, fechaCorta } from './comun.ts'
+import { type Lead, type Cuerpo, type Respuesta, supabase, PANEL_URL, MINUTOS_ENTRE_AVISOS, telefonosAsesores, fechaCorta, oficinaAbierta } from './comun.ts'
 
 // Runtime de Supabase Edge Functions: mantiene viva una tarea después de responder
 declare const EdgeRuntime: { waitUntil(promesa: Promise<unknown>): void }
@@ -47,6 +47,11 @@ export function mensajeNuevoLead(lead: Lead, fuente: Fuente, tipo: TipoAviso = '
 export async function notificarAsesor(lead: Lead, telefonoAsesor: string, fuente: Fuente, tipo: TipoAviso = 'nuevo', asignadoPor?: string | null) {
   // Lead en la papelera: no se molesta al asesor
   if (lead.eliminado_at) return false
+  // Oficina cerrada (noche, fin de semana, feriado, almuerzo): el aviso va en el resumen de apertura
+  if (!oficinaAbierta()) {
+    await supabase.rpc('diferir_notificacion', { p_lead_id: lead.id })
+    return false
+  }
   const texto = mensajeNuevoLead(lead, fuente, tipo, asignadoPor)
   // También a la app del CRM (si el asesor activó las notificaciones en su celular o PC)
   EdgeRuntime.waitUntil(enviarPush(supabase, lead.asesor_id, {
@@ -75,6 +80,8 @@ export async function notificarAsesor(lead: Lead, telefonoAsesor: string, fuente
  */
 export async function avisarMensajeNuevo(lead: Lead, mensaje: string) {
   if (!lead.asesor_id || lead.eliminado_at) return
+  // Oficina cerrada: no se avisa ahora; el resumen de apertura lista a quienes escribieron
+  if (!oficinaAbierta()) return
   const avisar = (ESTADOS_AVISO_MENSAJE as readonly string[]).includes(lead.estado) ||
     (!!lead.bot_pausado_hasta && Date.parse(lead.bot_pausado_hasta) > Date.now())
   if (!avisar) return

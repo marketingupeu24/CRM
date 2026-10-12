@@ -36,6 +36,7 @@ const NOTIFICACION: Record<string, string> = {
   notificado: 'Asesor avisado por WhatsApp',
   error: 'Error al avisar al asesor',
   omitida: 'Sin aviso automático (registro manual o asesor elegido a mano)',
+  fuera_horario: 'Llegó con la oficina cerrada: el asesor lo ve en el resumen de apertura',
 }
 
 /** "lead_nuevo -> lead_en_conversacion" en palabras */

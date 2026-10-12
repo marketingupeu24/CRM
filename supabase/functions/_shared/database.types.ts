@@ -831,6 +831,9 @@ isOneToOne: false
         isOneToOne: false
         isSetofReturn: true
       } },
+"diferir_notificacion":
+{ Args: { "p_lead_id": string }; Returns: undefined
+                           },
 "eliminar_actividad":
 { Args: { "p_id": number }; Returns: undefined
                            },
