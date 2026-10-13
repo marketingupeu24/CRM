@@ -221,7 +221,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
         </select>
         <select name="orden" defaultValue={filtros.orden} className="campo" aria-label="Ordenar">
           <option value="">Ordenar: escribieron último</option>
-          <option value="interes">Ordenar: 🔥 más interesados</option>
+          <option value="interes">Ordenar: más interesados primero</option>
         </select>
         <label className="flex items-center gap-2 text-sm text-slate-600">
           Registrado desde <input type="date" name="desde" defaultValue={filtros.desde} className="campo" />

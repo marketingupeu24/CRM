@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { NIVELES_INTERES, PuntajeInteres } from '@/components/PuntajeInteres'
+import { IconoNivel, NIVELES_INTERES, PuntajeInteres } from '@/components/PuntajeInteres'
 import { InsigniaEstado } from '@/components/InsigniaEstado'
 import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
@@ -33,17 +33,17 @@ export default async function PaginaPuntaje() {
   // Niveles de temperatura: frío → muy caliente (los mismos de la insignia)
   const grupos = NIVELES_INTERES.map((nivel, i) => {
     const hasta = i === 0 ? 100 : NIVELES_INTERES[i - 1]!.desde - 1
-    return { texto: `${nivel.icono} ${nivel.nombre} (${nivel.desde} a ${hasta})`, n: p.filter((x) => x >= nivel.desde && x <= hasta).length, estilo: nivel.estilo }
+    return { texto: `${nivel.nombre} (${nivel.desde} a ${hasta})`, forma: nivel.forma, n: p.filter((x) => x >= nivel.desde && x <= hasta).length, estilo: nivel.estilo }
   })
 
   return (
     <div className="max-w-5xl space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">🔥 Puntaje de interés</h1>
+        <h1 className="text-2xl font-semibold">Puntaje de interés</h1>
         <p className="text-sm text-slate-500">
           Un número de 0 a 100 que el CRM calcula solo para cada lead con lo que el alumno hizo, para que atiendas primero a los más interesados.
           Se actualiza cada 10 minutos. Lo ves junto al nombre en <Link href="/leads" className="text-marca-700 hover:underline">Leads</Link> (pasa el mouse para ver los motivos)
-          y en la ficha de cada lead; en Leads puedes ordenar por &quot;🔥 más interesados&quot;.
+          y en la ficha de cada lead; en Leads puedes ordenar por &quot;más interesados primero&quot;.
         </p>
       </div>
 
@@ -69,16 +69,22 @@ export default async function PaginaPuntaje() {
       <section className="grid gap-4 md:grid-cols-2">
         <div className="tarjeta space-y-2 p-4 text-sm">
           <h2 className="font-semibold">Cómo leerlo</h2>
-          <p>La insignia es una temperatura: 🧊 <b>Frío</b> (0 a 24) · 🌤️ <b>Tibio</b> (25 a 49) · ☀️ <b>Caliente</b> (50 a 69) · 🔥 <b>Muy caliente</b> (70 a 100).</p>
-          <p><b>Ejemplo:</b> un alumno registrado (+15) que preguntó costos (+20) y volvió a escribir otro día (+10) tiene <b>45</b>: 🌤️ tibio.</p>
-          <p>Si además vino a la oficina (+15) y le enviaste la proforma (+10), sube a <b>70</b>: 🔥 muy caliente, es de los primeros a llamar.</p>
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1">La insignia es una temperatura:
+            {[...NIVELES_INTERES].reverse().map((n, i, lista) => (
+              <span key={n.nombre} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${n.estilo}`}>
+                <IconoNivel forma={n.forma} /> {n.nombre} ({n.desde} a {i + 1 < lista.length ? lista[i + 1]!.desde - 1 : 100})
+              </span>
+            ))}
+          </p>
+          <p><b>Ejemplo:</b> un alumno registrado (+15) que preguntó costos (+20) y volvió a escribir otro día (+10) tiene <b>45</b>: tibio.</p>
+          <p>Si además vino a la oficina (+15) y le enviaste la proforma (+10), sube a <b>70</b>: muy caliente, es de los primeros a llamar.</p>
           <p>El máximo es 100 y el mínimo 0. Es una guía para ordenar el trabajo, no reemplaza tu criterio.</p>
         </div>
         <div className="tarjeta space-y-2 p-4 text-sm">
           <h2 className="font-semibold">Tus leads en seguimiento ahora</h2>
           {grupos.map((g) => (
             <p key={g.texto} className="flex items-center justify-between gap-2">
-              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${g.estilo}`}>{g.texto}</span>
+              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${g.estilo}`}><IconoNivel forma={g.forma} /> {g.texto}</span>
               <b>{g.n}</b>
             </p>
           ))}
@@ -94,7 +100,7 @@ export default async function PaginaPuntaje() {
               <Link href={`/leads/${l.id}`} className="font-medium text-marca-700 hover:underline">{l.nombre ?? l.telefono}</Link>
               <InsigniaEstado estado={l.estado} />
               <span className="text-xs text-slate-500">{l.carrera_interes ?? ''}</span>
-              <span className="ml-auto"><PuntajeInteres puntaje={l.puntaje} motivos={l.puntaje_motivos} detalle /></span>
+              <span className="ml-auto"><PuntajeInteres puntaje={l.puntaje} motivos={l.puntaje_motivos} detalle enlace={false} /></span>
             </li>
           ))}
           {!top?.length && <li className="py-2 text-slate-500">Sin leads en seguimiento.</li>}
