@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { PuntajeInteres } from '@/components/PuntajeInteres'
+import { NIVELES_INTERES, PuntajeInteres } from '@/components/PuntajeInteres'
 import { InsigniaEstado } from '@/components/InsigniaEstado'
 import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
@@ -30,11 +30,11 @@ export default async function PaginaPuntaje() {
       .order('puntaje', { ascending: false }).order('ultimo_contacto', { ascending: false }).limit(10),
   ])
   const p = (todos ?? []).map((x) => x.puntaje)
-  const grupos = [
-    { texto: '🔥 Muy interesados (70 o más)', n: p.filter((x) => x >= 70).length, estilo: 'bg-rose-100 text-rose-700' },
-    { texto: '⭐ Interesados (40 a 69)', n: p.filter((x) => x >= 40 && x < 70).length, estilo: 'bg-amber-100 text-amber-800' },
-    { texto: '· Poco interés (menos de 40)', n: p.filter((x) => x < 40).length, estilo: 'bg-slate-100 text-slate-600' },
-  ]
+  // Niveles de temperatura: frío → muy caliente (los mismos de la insignia)
+  const grupos = NIVELES_INTERES.map((nivel, i) => {
+    const hasta = i === 0 ? 100 : NIVELES_INTERES[i - 1]!.desde - 1
+    return { texto: `${nivel.icono} ${nivel.nombre} (${nivel.desde} a ${hasta})`, n: p.filter((x) => x >= nivel.desde && x <= hasta).length, estilo: nivel.estilo }
+  })
 
   return (
     <div className="max-w-5xl space-y-6">
@@ -69,8 +69,9 @@ export default async function PaginaPuntaje() {
       <section className="grid gap-4 md:grid-cols-2">
         <div className="tarjeta space-y-2 p-4 text-sm">
           <h2 className="font-semibold">Cómo leerlo</h2>
-          <p><b>Ejemplo:</b> un alumno registrado (+15) que preguntó costos (+20) y volvió a escribir otro día (+10) tiene <b>45</b> ⭐.</p>
-          <p>Si además vino a la oficina (+15) y le enviaste la proforma (+10), sube a <b>70</b> 🔥: es de los primeros a llamar.</p>
+          <p>La insignia es una temperatura: 🧊 <b>Frío</b> (0 a 24) · 🌤️ <b>Tibio</b> (25 a 49) · ☀️ <b>Caliente</b> (50 a 69) · 🔥 <b>Muy caliente</b> (70 a 100).</p>
+          <p><b>Ejemplo:</b> un alumno registrado (+15) que preguntó costos (+20) y volvió a escribir otro día (+10) tiene <b>45</b>: 🌤️ tibio.</p>
+          <p>Si además vino a la oficina (+15) y le enviaste la proforma (+10), sube a <b>70</b>: 🔥 muy caliente, es de los primeros a llamar.</p>
           <p>El máximo es 100 y el mínimo 0. Es una guía para ordenar el trabajo, no reemplaza tu criterio.</p>
         </div>
         <div className="tarjeta space-y-2 p-4 text-sm">

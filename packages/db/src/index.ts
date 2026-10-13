@@ -80,6 +80,7 @@ export const MODULOS = [
   { clave: 'qr_asesor', grupo: 'Trabajo diario', titulo: 'Mi QR (presencial)', descripcion: 'QR personal para que el interesado escriba por WhatsApp y quede como su lead', ruta: '/qr' },
   { clave: 'costos', grupo: 'Trabajo diario', titulo: 'Proformas de costos', descripcion: 'Calcular costos, descargar la proforma y enviarla por el chat', ruta: '/costos' },
   { clave: 'dashboard', grupo: 'Análisis', titulo: 'Dashboard', descripcion: 'Indicadores y gráficos', ruta: '/dashboard' },
+  { clave: 'dashboard_todos', grupo: 'Análisis', titulo: 'Dashboard de todo el equipo', descripcion: 'En el Dashboard ve los números de todos los asesores; sin esto, solo los suyos', ruta: null },
   { clave: 'campanas', grupo: 'Análisis', titulo: 'Campañas', descripcion: 'Ver campañas y sus resultados', ruta: '/campanas' },
   { clave: 'exportar', grupo: 'Análisis', titulo: 'Exportar Excel', descripcion: 'Descargar la lista de leads', ruta: null },
   { clave: 'ver_todos', grupo: 'Gestión de leads', titulo: 'Ver leads de todo el equipo', descripcion: 'Sin esto, solo ve sus propios leads', ruta: null },

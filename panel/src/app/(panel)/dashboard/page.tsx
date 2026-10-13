@@ -62,7 +62,9 @@ export default async function PaginaDashboard(props: PageProps<'/dashboard'>) {
   const asesor = texto(sp.asesor)
   const embudoPor = texto(sp.embudo) === 'canal' ? 'canal' : 'origen'
 
-  const { esAdmin } = await exigirPermiso('dashboard')
+  const { puede } = await exigirPermiso('dashboard')
+  // "Dashboard de todo el equipo": números de todos los asesores; sin él, solo los suyos
+  const esAdmin = puede('dashboard_todos')
   const supabase = await crearClienteServidor()
 
   const filtrosRpc = {
@@ -75,7 +77,7 @@ export default async function PaginaDashboard(props: PageProps<'/dashboard'>) {
     supabase.rpc('resumen_dashboard', filtrosRpc),
     supabase.from('leads').select('convocatoria').not('convocatoria', 'is', null).limit(2000),
     esAdmin
-      ? supabase.from('asesores').select('id, nombre').or('rol.eq.asesor,activo.eq.true').is('eliminado_at', null).order('nombre')
+      ? supabase.rpc('posibles_reemplazos')
       : Promise.resolve({ data: [] as { id: string; nombre: string }[] }),
     supabase.rpc('embudo_por_origen', { ...filtrosRpc, p_por: embudoPor }),
   ])

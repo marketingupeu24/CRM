@@ -19,7 +19,7 @@ const PLANTILLAS: { nombre: string; descripcion: string; permisos: readonly Modu
   {
     nombre: 'Supervisor',
     descripcion: 'Ve todo el equipo, sin administrar',
-    permisos: ['pendientes', 'chats', 'leads', 'kanban', 'dashboard', 'campanas', 'exportar', 'ver_todos'],
+    permisos: ['pendientes', 'chats', 'leads', 'kanban', 'dashboard', 'dashboard_todos', 'campanas', 'exportar', 'ver_todos'],
   },
   { nombre: 'Coordinador', descripcion: 'Todos los módulos', permisos: CLAVES_MODULOS },
   { nombre: 'Ninguno', descripcion: 'Sin acceso a módulos', permisos: [] },
