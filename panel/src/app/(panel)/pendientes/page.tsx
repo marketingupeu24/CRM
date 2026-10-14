@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { InsigniaEstado } from '@/components/InsigniaEstado'
 import { BotonesTarea } from '@/components/Tareas'
+import { YaRespondi } from '@/components/YaRespondi'
 import { fechaHora, haceCuanto } from '@/lib/formato'
 import { exigirPermiso } from '@/lib/sesion'
 import { DIAS_SIN_ACTIVIDAD, finDeHoyLima, HORAS_SIN_CONTACTAR, limitesAlertas } from '@/lib/pendientes'
@@ -18,8 +19,12 @@ interface FilaLead {
 }
 
 function ListaLeads(
-  { titulo, descripcion, leads, detalle, esAdmin, vacio }:
-  { titulo: string; descripcion: string; leads: FilaLead[]; detalle: (l: FilaLead) => string; esAdmin: boolean; vacio: string },
+  { titulo, descripcion, leads, detalle, esAdmin, vacio, accion }:
+  {
+    titulo: string; descripcion: string; leads: FilaLead[]; detalle: (l: FilaLead) => string; esAdmin: boolean; vacio: string
+    /** Botón al lado de cada lead (p. ej. "Ya le respondí") */
+    accion?: (l: FilaLead) => React.ReactNode
+  },
 ) {
   return (
     <section className="tarjeta">
@@ -34,8 +39,8 @@ function ListaLeads(
       </div>
       <ul className="divide-y divide-slate-100">
         {leads.map((l) => (
-          <li key={l.id}>
-            <Link href={`/leads/${l.id}#chat`} className="block px-5 py-2.5 text-sm hover:bg-slate-50">
+          <li key={l.id} className="flex items-center gap-2 pr-3 hover:bg-slate-50">
+            <Link href={`/leads/${l.id}#chat`} className="block min-w-0 flex-1 py-2.5 pl-5 text-sm">
               <div className="flex items-baseline justify-between gap-2">
                 <span className="min-w-0 truncate font-medium text-marca-700">{l.nombre ?? l.telefono}</span>
                 <span className="shrink-0 text-xs text-slate-500">{detalle(l)}</span>
@@ -45,6 +50,7 @@ function ListaLeads(
                 {esAdmin && <span className="truncate">{l.asesor?.nombre ?? 'Sin asesor'}</span>}
               </div>
             </Link>
+            {accion?.(l)}
           </li>
         ))}
         {!leads.length && <li className="px-5 py-6 text-center text-sm text-slate-400">{vacio}</li>}
@@ -61,7 +67,7 @@ export default async function PaginaPendientes() {
   const en7Dias = new Date(ahora + 7 * 86_400_000).toISOString()
   const camposLead = 'id, nombre, telefono, estado, asesor:asesores!leads_asesor_id_fkey(nombre)'
 
-  const [tareasR, sinContactarR, sinResponderR, inactivosR] = await Promise.all([
+  const [tareasR, sinContactarR, sinResponderR, inactivosR, futurasR] = await Promise.all([
     supabase.from('tareas')
       .select('id, titulo, vence_at, lead:leads(id, nombre, telefono, estado), asesor:asesores!tareas_asesor_id_fkey(nombre)')
       .is('completada_at', null).lte('vence_at', en7Dias).order('vence_at').limit(200),
@@ -73,14 +79,21 @@ export default async function PaginaPendientes() {
       .eq('estado', 'lead_contactado').lt('ultimo_contacto', limiteActividad).lt('updated_at', limiteActividad)
       .or(`ultima_respuesta_at.is.null,ultima_respuesta_at.lt.${limiteActividad}`)
       .order('ultimo_contacto').limit(100),
+    // Agendados más adelante (p. ej. "el próximo año, cuando esté en 5to"): no cuentan como "sin actividad"
+    supabase.from('tareas')
+      .select('id, titulo, vence_at, lead_id, lead:leads(id, nombre, telefono, estado), asesor:asesores!tareas_asesor_id_fkey(nombre)')
+      .is('completada_at', null).gt('vence_at', en7Dias).order('vence_at').limit(500),
   ])
+  const futuras = futurasR.data ?? []
 
   const tareas = tareasR.data ?? []
+  // Con una tarea por venir (esta semana o más adelante) el lead no está "sin actividad"
+  const conTareaFutura = new Set([...futuras.map((t) => t.lead_id), ...tareas.filter((t) => Date.parse(t.vence_at) > ahora).map((t) => t.lead?.id)])
   const finHoy = Date.parse(finDeHoyLima())
   const vencidas = tareas.filter((t) => Date.parse(t.vence_at) < ahora)
   const hoy = tareas.filter((t) => Date.parse(t.vence_at) >= ahora && Date.parse(t.vence_at) <= finHoy)
   const proximas = tareas.filter((t) => Date.parse(t.vence_at) > finHoy)
-  const error = tareasR.error ?? sinContactarR.error ?? sinResponderR.error ?? inactivosR.error
+  const error = tareasR.error ?? sinContactarR.error ?? sinResponderR.error ?? inactivosR.error ?? futurasR.error
 
   const GrupoTareas = ({ titulo, lista, estilo }: { titulo: string; lista: typeof tareas; estilo: string }) => (
     <div>
@@ -139,15 +152,43 @@ export default async function PaginaPendientes() {
           leads={(sinResponderR.data ?? []) as unknown as FilaLead[]}
           detalle={(l) => haceCuanto((l as FilaLead & { ultimo_mensaje_lead_at: string }).ultimo_mensaje_lead_at, ahora)}
           vacio="No hay mensajes sin responder."
+          accion={(l) => <YaRespondi leadId={l.id} />}
         />
         <ListaLeads
           titulo="Sin actividad" esAdmin={esAdmin}
           descripcion={`Contactados sin movimiento en ${DIAS_SIN_ACTIVIDAD} días`}
-          leads={(inactivosR.data ?? []) as unknown as FilaLead[]}
+          leads={((inactivosR.data ?? []) as unknown as FilaLead[]).filter((l) => !conTareaFutura.has(l.id))}
           detalle={(l) => haceCuanto((l as FilaLead & { ultimo_contacto: string }).ultimo_contacto, ahora)}
           vacio="Ningún lead contactado está detenido."
         />
       </div>
+
+      <details className="tarjeta">
+        <summary className="cursor-pointer px-5 py-3">
+          <span className="font-semibold">Agendados más adelante</span>
+          <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-sm font-semibold text-slate-600">{futuras.length}</span>
+          <span className="mt-0.5 block text-xs text-slate-500">
+            Tareas para después de 7 días (por ejemplo, alumnos de 4to para contactar cuando pasen a 5to). Aparecen arriba cuando se acerque la fecha
+            y mientras tanto no salen en «Sin actividad».
+          </span>
+        </summary>
+        <ul className="divide-y divide-slate-100 border-t border-slate-100">
+          {futuras.map((t) => (
+            <li key={t.id} className="flex items-center gap-3 px-5 py-2.5 text-sm">
+              <div className="min-w-0 flex-1">
+                <p className="font-medium">{t.titulo}</p>
+                <p className="truncate text-xs text-slate-500">
+                  <Link href={`/leads/${t.lead?.id}`} className="text-marca-700 hover:underline">{t.lead?.nombre ?? t.lead?.telefono}</Link>
+                  {' · '}{fechaHora(t.vence_at)}
+                  {esAdmin && t.asesor && ` · ${t.asesor.nombre}`}
+                </p>
+              </div>
+              {t.lead && <BotonesTarea tareaId={t.id} leadId={t.lead.id} />}
+            </li>
+          ))}
+          {!futuras.length && <li className="px-5 py-6 text-center text-sm text-slate-400">No hay tareas agendadas más adelante.</li>}
+        </ul>
+      </details>
     </div>
   )
 }

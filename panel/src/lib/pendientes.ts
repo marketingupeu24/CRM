@@ -22,12 +22,16 @@ export function finDeHoyLima(): string {
 /** Total para el contador del menú: tareas vencidas o de hoy + leads sin contactar + sin actividad. */
 export async function contarPendientes(supabase: SupabaseClient<Database>): Promise<number> {
   const { contacto, actividad } = limitesAlertas()
-  const [tareas, sinContactar, inactivos] = await Promise.all([
+  const [tareas, sinContactar, inactivos, futuras] = await Promise.all([
     supabase.from('tareas').select('id', { count: 'exact', head: true }).is('completada_at', null).lte('vence_at', finDeHoyLima()),
     supabase.from('leads').select('id', { count: 'exact', head: true }).eq('estado', 'lead_asignado').lt('fecha_asignado', contacto),
-    supabase.from('leads').select('id', { count: 'exact', head: true })
+    supabase.from('leads').select('id')
       .eq('estado', 'lead_contactado').lt('ultimo_contacto', actividad).lt('updated_at', actividad)
-      .or(`ultima_respuesta_at.is.null,ultima_respuesta_at.lt.${actividad}`),
+      .or(`ultima_respuesta_at.is.null,ultima_respuesta_at.lt.${actividad}`).limit(500),
+    // Los que tienen una tarea agendada más adelante no cuentan como "sin actividad"
+    supabase.from('tareas').select('lead_id').is('completada_at', null).gt('vence_at', new Date().toISOString()).limit(2000),
   ])
-  return (tareas.count ?? 0) + (sinContactar.count ?? 0) + (inactivos.count ?? 0)
+  const agendados = new Set((futuras.data ?? []).map((t) => t.lead_id))
+  const sinActividad = (inactivos.data ?? []).filter((l) => !agendados.has(l.id)).length
+  return (tareas.count ?? 0) + (sinContactar.count ?? 0) + sinActividad
 }

@@ -72,3 +72,13 @@ export async function eliminarTarea(tareaId: number, leadId: string): Promise<Re
   refrescar(leadId)
   return { ok: true }
 }
+
+/** "✓ Ya le respondí": quita el lead de "Sin responder" (lo atendió por llamada, por su WhatsApp o ya estaba resuelto). */
+export async function marcarAtendido(leadId: string): Promise<Resultado> {
+  const supabase = await crearClienteServidor()
+  const { error } = await supabase.rpc('marcar_atendido', { p_lead_id: leadId })
+  if (error) return { error: mensajeError(error) }
+  refrescar(leadId)
+  revalidatePath('/chats')
+  return { ok: true }
+}

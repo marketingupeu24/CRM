@@ -3,6 +3,7 @@
 // Encabezado de acciones del chat: estado del bot (pausa) y botones Atendido / Matriculado.
 import { useState, useTransition } from 'react'
 import { botAtiendeLead, type LeadEstado } from '@crm/db'
+import { YaRespondi } from '@/components/YaRespondi'
 import { cambiarEstado, pausarBot, type Resultado } from '../acciones'
 
 function horaLima(iso: string): string {
@@ -15,9 +16,11 @@ interface Props {
   botPausadoHasta: string | null
   tieneAsesor: boolean
   ahora: number
+  /** Está en "Sin responder": muestra "✓ Ya le respondí" */
+  sinResponder?: boolean
 }
 
-export function ControlesChat({ leadId, estado, botPausadoHasta, tieneAsesor, ahora }: Props) {
+export function ControlesChat({ leadId, estado, botPausadoHasta, tieneAsesor, ahora, sinResponder = false }: Props) {
   const [pendiente, iniciar] = useTransition()
   const [resultado, setResultado] = useState<Resultado>({})
   const ejecutar = (accion: () => Promise<Resultado>) => iniciar(async () => setResultado(await accion()))
@@ -49,6 +52,7 @@ export function ControlesChat({ leadId, estado, botPausadoHasta, tieneAsesor, ah
           Pausar bot 5 h
         </button>
       )}
+      {sinResponder && <YaRespondi leadId={leadId} className="rounded border border-current px-2 py-0.5 font-medium hover:bg-white/60" />}
       {estado !== 'lead_atendido' && estado !== 'lead_matriculado' && (
         <button
           disabled={pendiente} onClick={() => ejecutar(() => cambiarEstado(leadId, 'lead_atendido'))}

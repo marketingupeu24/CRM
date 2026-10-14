@@ -161,7 +161,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
             encabezado={apoyo ? undefined : (
               <ControlesChat
                 leadId={lead.id} estado={lead.estado} botPausadoHasta={lead.bot_pausado_hasta}
-                tieneAsesor={!!lead.asesor_id} ahora={Date.now()}
+                tieneAsesor={!!lead.asesor_id} ahora={Date.now()} sinResponder={!!lead.sin_responder}
               />
             )}
           />
