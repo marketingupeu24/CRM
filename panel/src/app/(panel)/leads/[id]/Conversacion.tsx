@@ -9,6 +9,27 @@ import { crearClienteNavegador, prepararTiempoReal } from '@/lib/supabase/client
 import { comprimirImagen } from '@/lib/imagen'
 import { Adjunto } from './Adjunto'
 
+/** Minúsculas y sin tildes, para buscar respuestas rápidas */
+function normalizar(t: string): string {
+  return t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+}
+
+/** Atajo "/texto" al inicio de la última línea del mensaje: devuelve dónde empieza y lo buscado */
+function atajoEscrito(texto: string): { desde: number; buscado: string } | null {
+  const m = /(?:^|\n)\/([^\n]{0,40})$/.exec(texto)
+  if (!m) return null
+  return { desde: texto.length - m[1]!.length - 1, buscado: m[1]! }
+}
+
+/** Respuestas que coinciden con lo buscado: primero las que lo tienen en el título */
+function buscarRespuestas<T extends { titulo: string; contenido: string }>(respuestas: T[], buscado: string): T[] {
+  const palabras = normalizar(buscado).split(/\s+/).filter(Boolean)
+  if (!palabras.length) return respuestas
+  const enTitulo = respuestas.filter((r) => palabras.every((p) => normalizar(r.titulo).includes(p)))
+  const enTexto = respuestas.filter((r) => !enTitulo.includes(r) && palabras.every((p) => normalizar(r.titulo + ' ' + r.contenido).includes(p)))
+  return [...enTitulo, ...enTexto]
+}
+
 export type MensajeChat = LeadInteraccion & { autor_nombre?: string | null }
 
 /** Lo que se puede adjuntar en el chat (igual que el bucket "chat-envios"). */
@@ -43,8 +64,15 @@ export function Conversacion(
   const [texto, setTexto] = useState('')
   const [verRespuestas, setVerRespuestas] = useState(false)
 
+  // Atajo: "/" al inicio de una línea abre las respuestas rápidas filtradas por lo que sigue ("/traslado")
+  const [atajoCerrado, setAtajoCerrado] = useState<string | null>(null)
+  const [elegida, setElegida] = useState(0)
+  const atajo = respuestas.length && atajoCerrado !== texto ? atajoEscrito(texto) : null
+  const sugeridas = atajo ? buscarRespuestas(respuestas, atajo.buscado).slice(0, 8) : []
+  const indice = Math.min(elegida, Math.max(sugeridas.length - 1, 0))
+
   /** Aplica una respuesta rápida: reemplaza las variables y la deja lista para editar */
-  function usarRespuesta(contenido: string) {
+  function usarRespuesta(contenido: string, desdeAtajo?: number) {
     const v = variables ?? { nombre: '', carrera: '', asesor: miNombre }
     const final = contenido
       .replaceAll('{nombre}', v.nombre)
@@ -52,8 +80,13 @@ export function Conversacion(
       .replaceAll('{asesor}', v.asesor)
       // "Hola , ..." cuando falta el nombre -> "Hola, ..."
       .replace(/\s+([,.!?])/g, '$1')
-    setTexto((actual) => (actual.trim() ? `${actual.trimEnd()}\n${final}` : final))
+    setTexto((actual) => {
+      // Con el atajo, la respuesta reemplaza el "/texto" escrito
+      const base = desdeAtajo !== undefined ? actual.slice(0, desdeAtajo) : actual
+      return base.trim() ? `${base.trimEnd()}\n${final}` : final
+    })
     setVerRespuestas(false)
+    setElegida(0)
   }
   const [enviando, setEnviando] = useState(false)
   // Imagen o PDF para adjuntar (botón 📎 o pegar con Ctrl+V)
@@ -279,7 +312,26 @@ export function Conversacion(
         })}
       </div>
 
-      {verRespuestas && (
+      {atajo && (
+        <div className="max-h-64 overflow-y-auto border-t border-slate-200 bg-slate-50 p-2" role="listbox" aria-label="Respuestas rápidas">
+          <p className="px-2 pb-1 text-xs text-slate-500">
+            Respuestas rápidas{atajo.buscado ? <> con «<b>{atajo.buscado}</b>»</> : ''} · ↑ ↓ para elegir, Enter o Tab para usarla, Esc para cerrar
+          </p>
+          {sugeridas.map((rr, i) => (
+            <button
+              key={rr.id} type="button" role="option" aria-selected={i === indice}
+              onMouseDown={(e) => { e.preventDefault(); usarRespuesta(rr.contenido, atajo.desde) }}
+              onMouseEnter={() => setElegida(i)}
+              className={`block w-full rounded-lg px-3 py-2 text-left ${i === indice ? 'bg-marca-50 ring-1 ring-marca-200' : 'hover:bg-superficie'}`}
+            >
+              <span className="text-sm font-medium text-slate-800">{rr.titulo}</span>
+              <span className="block truncate text-xs text-slate-500">{rr.contenido}</span>
+            </button>
+          ))}
+          {!sugeridas.length && <p className="px-2 py-3 text-center text-xs text-slate-500">Ninguna respuesta rápida coincide con «{atajo.buscado}».</p>}
+        </div>
+      )}
+      {verRespuestas && !atajo && (
         <div className="max-h-56 overflow-y-auto border-t border-slate-200 bg-slate-50 p-2">
           {respuestas.length === 0 && (
             <p className="px-2 py-3 text-center text-xs text-slate-500">No hay respuestas rápidas. El administrador las crea en «Respuestas rápidas».</p>
@@ -324,7 +376,7 @@ export function Conversacion(
           📎
         </button>
         <button
-          type="button" onClick={() => setVerRespuestas((v) => !v)} title="Respuestas rápidas"
+          type="button" onClick={() => setVerRespuestas((v) => !v)} title="Respuestas rápidas (atajo: escribe / en el mensaje)"
           className={`h-10 shrink-0 rounded-lg border px-3 text-sm ${verRespuestas ? 'border-marca-600 bg-marca-50 text-marca-700' : 'border-slate-300 text-slate-600 hover:bg-slate-50'}`}
         >
           ⚡
@@ -332,8 +384,16 @@ export function Conversacion(
         {acciones}
         <textarea
           value={texto}
-          onChange={(e) => setTexto(e.target.value)}
+          onChange={(e) => { setTexto(e.target.value); setElegida(0) }}
           onKeyDown={(e) => {
+            if (atajo) {
+              if (e.key === 'Escape') { e.preventDefault(); setAtajoCerrado(texto); return }
+              if (sugeridas.length) {
+                if (e.key === 'ArrowDown') { e.preventDefault(); setElegida((indice + 1) % sugeridas.length); return }
+                if (e.key === 'ArrowUp') { e.preventDefault(); setElegida((indice - 1 + sugeridas.length) % sugeridas.length); return }
+                if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab') { e.preventDefault(); usarRespuesta(sugeridas[indice]!.contenido, atajo.desde); return }
+              }
+            }
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(texto, archivo) }
           }}
           onPaste={(e) => {
@@ -343,7 +403,7 @@ export function Conversacion(
           }}
           rows={2}
           maxLength={1500}
-          placeholder={archivo ? 'Mensaje para acompañar el archivo (opcional)…' : 'Escribe un mensaje… (Enter para enviar, Shift+Enter para nueva línea)'}
+          placeholder={archivo ? 'Mensaje para acompañar el archivo (opcional)…' : 'Escribe un mensaje… (Enter para enviar, Shift+Enter nueva línea, / respuestas rápidas)'}
           className="campo resize-none"
           aria-label="Mensaje"
         />
