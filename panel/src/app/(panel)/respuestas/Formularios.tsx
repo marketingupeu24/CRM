@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState, useTransition } from 'react'
+import { useActionState, useOptimistic, useState, useTransition } from 'react'
 import type { RespuestaRapida } from '@crm/db'
 import { useConfirmar } from '@/components/Confirmacion'
 import { cambiarActiva, cambiarPara, cambiarUso, eliminarRespuesta, guardarRespuesta, type Resultado } from './acciones'
@@ -80,10 +80,12 @@ export function FilaRespuesta({ respuesta, usada, puedeEditar, admin, asesores, 
   const [pendiente, iniciar] = useTransition()
   const confirmar = useConfirmar()
   const ejecutar = (accion: () => Promise<Resultado>) => iniciar(async () => setR(await accion()))
+  // La casilla cambia al instante; si falla, vuelve sola al valor del servidor
+  const [usadaVista, setUsadaVista] = useOptimistic(usada)
   const deOtro = !!respuesta.asesor_id && respuesta.asesor_id !== miId
 
   return (
-    <li className={`px-5 py-4 ${respuesta.activa && (usada || deOtro) ? '' : 'bg-slate-50 opacity-70'}`}>
+    <li className={`px-5 py-4 ${respuesta.activa && (usadaVista || deOtro) ? '' : 'bg-slate-50 opacity-70'}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="font-medium">
@@ -97,8 +99,8 @@ export function FilaRespuesta({ respuesta, usada, puedeEditar, admin, asesores, 
           {!deOtro && respuesta.activa && (
             <label className="flex cursor-pointer items-center gap-1.5 text-slate-700" title="Si la desmarcas, no sale en tu chat (⚡ y /)">
               <input
-                type="checkbox" checked={usada} disabled={pendiente}
-                onChange={(e) => ejecutar(() => cambiarUso(respuesta.id, e.target.checked))}
+                type="checkbox" checked={usadaVista} disabled={pendiente}
+                onChange={(e) => { const usar = e.target.checked; iniciar(async () => { setUsadaVista(usar); setR(await cambiarUso(respuesta.id, usar)) }) }}
                 className="h-4 w-4 accent-marca-600"
               />
               La uso
