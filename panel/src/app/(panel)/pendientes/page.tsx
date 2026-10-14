@@ -101,7 +101,7 @@ export default async function PaginaPendientes(props: PageProps<'/pendientes'>) 
       .eq('estado', 'lead_contactado').lt('ultimo_contacto', limiteActividad).lt('updated_at', limiteActividad)
       .or(`ultima_respuesta_at.is.null,ultima_respuesta_at.lt.${limiteActividad}`)
       .order('ultimo_contacto').limit(100),
-    // Agendados más adelante (p. ej. "el próximo año, cuando esté en 5to"): no cuentan como "sin actividad"
+    // Agendados más adelante (p. ej. "próxima convocatoria" o "próximo año"): no cuentan como "sin actividad"
     consultaTareas('id, titulo, vence_at, lead_id, lead:leads(id, nombre, telefono, estado), asesor:asesores!tareas_asesor_id_fkey(nombre)')
       .gt('vence_at', en7Dias).order('vence_at').limit(500)
       .overrideTypes<(FilaTarea & { lead_id: string })[], { merge: false }>(),
@@ -202,7 +202,7 @@ export default async function PaginaPendientes(props: PageProps<'/pendientes'>) 
           <span className="font-semibold">Agendados más adelante</span>
           <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-sm font-semibold text-slate-600">{futuras.length}</span>
           <span className="mt-0.5 block text-xs text-slate-500">
-            Tareas para después de 7 días (por ejemplo, alumnos de 4to para contactar cuando pasen a 5to). Aparecen arriba cuando se acerque la fecha
+            Tareas para después de 7 días (por ejemplo, para la próxima convocatoria o el próximo año). Aparecen arriba cuando se acerque la fecha
             y mientras tanto no salen en «Sin actividad».
           </span>
         </summary>

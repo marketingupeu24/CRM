@@ -18,16 +18,26 @@ function manana9(): Date {
   return d
 }
 
-/** 1 de marzo del próximo año, 9 am: inicio del año escolar (el alumno de 4to ya está en 5to). */
+/** 1 de marzo del próximo año, 9 am: inicio del año escolar. */
 function marzoProximoAnio(): Date {
   return new Date(new Date().getFullYear() + 1, 2, 1, 9, 0, 0, 0)
+}
+
+/** Inicio de la campaña de la próxima convocatoria (semestre 2): el próximo 1 de mayo, 9 am. */
+const MES_PROXIMA_CONVOCATORIA = 4 // mayo (enero = 0)
+function proximaConvocatoria(): Date {
+  const hoy = new Date()
+  const d = new Date(hoy.getFullYear(), MES_PROXIMA_CONVOCATORIA, 1, 9, 0, 0, 0)
+  if (d <= hoy) d.setFullYear(d.getFullYear() + 1)
+  return d
 }
 
 const ATAJOS: { texto: string; calcular: () => Date; titulo?: string }[] = [
   { texto: 'En 2 h', calcular: () => new Date(Date.now() + 2 * 3_600_000) },
   { texto: 'Mañana 9 am', calcular: manana9 },
   { texto: 'En 3 días', calcular: () => { const d = manana9(); d.setDate(d.getDate() + 2); return d } },
-  { texto: 'Próximo año (ya en 5to)', calcular: marzoProximoAnio, titulo: 'Contactar: ya está en 5to de secundaria' },
+  { texto: 'Próxima convocatoria', calcular: proximaConvocatoria, titulo: 'Contactar para la próxima convocatoria' },
+  { texto: 'Próximo año', calcular: marzoProximoAnio, titulo: 'Contactar el próximo año' },
 ]
 
 export function FormularioTarea({ leadId }: { leadId: string }) {
@@ -57,7 +67,7 @@ export function FormularioTarea({ leadId }: { leadId: string }) {
           <button
             key={a.texto} type="button"
             onClick={() => { setCuando(aInputLocal(a.calcular())); if (a.titulo && !titulo.trim()) setTitulo(a.titulo) }}
-            title={a.titulo ? `${a.titulo} (1 de marzo, puedes cambiar la fecha)` : undefined}
+            title={a.titulo ? `${a.titulo} (puedes cambiar la fecha antes de agendar)` : undefined}
             className="rounded-full border border-slate-300 px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-50"
           >
             {a.texto}
