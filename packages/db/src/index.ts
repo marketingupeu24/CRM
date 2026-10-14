@@ -89,7 +89,7 @@ export const MODULOS = [
   { clave: 'editar_celular', grupo: 'Gestión de leads', titulo: 'Editar celular del lead', descripcion: 'Cambiar el número al que escribe el chat', ruta: null },
   { clave: 'papelera', grupo: 'Gestión de leads', titulo: 'Papelera', descripcion: 'Eliminar, restaurar y borrar leads', ruta: '/papelera' },
   { clave: 'usuarios', grupo: 'Administración', titulo: 'Asesores y usuarios', descripcion: 'Crear y editar asesores, contraseñas y papelera de usuarios', ruta: '/usuarios' },
-  { clave: 'respuestas', grupo: 'Administración', titulo: 'Respuestas rápidas', descripcion: 'Administrar las plantillas del chat', ruta: '/respuestas' },
+  { clave: 'respuestas', grupo: 'Administración', titulo: 'Respuestas rápidas', descripcion: 'Administrar las respuestas para todos y ver las personales de cada asesor', ruta: '/respuestas' },
   { clave: 'gestionar_campanas', grupo: 'Administración', titulo: 'Crear campañas', descripcion: 'Crear, editar y archivar campañas', ruta: null },
   { clave: 'conocimiento', grupo: 'Genesys (bot)', titulo: 'Base de conocimiento y revisión', descripcion: 'Editar lo que sabe Genesys y revisar lo que no supo responder', ruta: '/revision-bot' },
 ] as const

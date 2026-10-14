@@ -555,18 +555,61 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"respuestas_rapidas": {
+                },"respuestas_ocultas": {
                   Row: {
-                    "activa": boolean,"contenido": string,"created_at": string,"id": number,"orden": number,"titulo": string
+                    "asesor_id": string,"respuesta_id": number
                   }
                   Insert: {
-                    "activa"?: boolean,"contenido": string,"created_at"?: string,"id"?: never,"orden"?: number,"titulo": string
+                    "asesor_id": string,"respuesta_id": number
                   }
                   Update: {
-                    "activa"?: boolean,"contenido"?: string,"created_at"?: string,"id"?: never,"orden"?: number,"titulo"?: string
+                    "asesor_id"?: string,"respuesta_id"?: number
                   }
                   Relationships: [
-                    
+                    {
+      foreignKeyName: "respuestas_ocultas_asesor_id_fkey"
+      columns: ["asesor_id"]
+isOneToOne: false
+      referencedRelation: "asesores"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "respuestas_ocultas_asesor_id_fkey"
+      columns: ["asesor_id"]
+isOneToOne: false
+      referencedRelation: "vista_leads_por_asesor"
+      referencedColumns: ["asesor_id"]
+    },{
+      foreignKeyName: "respuestas_ocultas_respuesta_id_fkey"
+      columns: ["respuesta_id"]
+isOneToOne: false
+      referencedRelation: "respuestas_rapidas"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"respuestas_rapidas": {
+                  Row: {
+                    "activa": boolean,"asesor_id": string | null,"contenido": string,"created_at": string,"id": number,"orden": number,"titulo": string
+                  }
+                  Insert: {
+                    "activa"?: boolean,"asesor_id"?: string | null,"contenido": string,"created_at"?: string,"id"?: never,"orden"?: number,"titulo": string
+                  }
+                  Update: {
+                    "activa"?: boolean,"asesor_id"?: string | null,"contenido"?: string,"created_at"?: string,"id"?: never,"orden"?: number,"titulo"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "respuestas_rapidas_asesor_id_fkey"
+      columns: ["asesor_id"]
+isOneToOne: false
+      referencedRelation: "asesores"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "respuestas_rapidas_asesor_id_fkey"
+      columns: ["asesor_id"]
+isOneToOne: false
+      referencedRelation: "vista_leads_por_asesor"
+      referencedColumns: ["asesor_id"]
+    }
                   ]
                 },"revision_bot": {
                   Row: {

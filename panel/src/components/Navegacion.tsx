@@ -31,6 +31,7 @@ export function Navegacion(
       enlaces: [
         { href: '/pendientes', texto: 'Pendientes', icono: '☑', modulo: 'pendientes', contador: { valor: pendientes, estilo: 'bg-amber-500 text-white' } },
         { href: '/chats', texto: 'Chats', icono: '✉', modulo: 'chats', contador: { valor: sinResponder, estilo: 'bg-rose-500 text-white' } },
+        { href: '/respuestas', texto: 'Respuestas rápidas', icono: '⚡', modulo: 'chats' },
         { href: '/leads', texto: 'Leads', icono: '☰', modulo: 'leads' },
         { href: '/kanban', texto: 'Kanban', icono: '▦', modulo: 'kanban' },
         { href: '/leads/nuevo', texto: 'Registrar lead', icono: '+', modulo: 'registrar' },
@@ -62,7 +63,6 @@ export function Navegacion(
       enlaces: [
         { href: '/usuarios', texto: 'Asesores y usuarios', icono: '◉', modulo: 'usuarios' },
         { href: '/permisos' as Route, texto: 'Módulos y permisos', icono: '🔐', soloSuperadmin: true },
-        { href: '/respuestas', texto: 'Respuestas rápidas', icono: '⚡', modulo: 'respuestas' },
         { href: '/papelera', texto: 'Papelera', icono: '🗑', modulo: 'papelera' },
       ],
     },

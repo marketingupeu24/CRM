@@ -56,7 +56,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
   const { esAdmin, perfil, puede } = await exigirPermiso('leads')
   const supabase = await crearClienteServidor()
 
-  const [{ data: propio }, { data: historial }, { data: asesores }, { data: tareas }, { data: respuestas }] = await Promise.all([
+  const [{ data: propio }, { data: historial }, { data: asesores }, { data: tareas }, { data: todasRespuestas }, { data: ocultas }] = await Promise.all([
     supabase.from('leads').select('*, asesor:asesores!leads_asesor_id_fkey(id, nombre, telefono), actividad:actividades(id, nombre)').eq('id', id).maybeSingle(),
     supabase.from('lead_interacciones')
       .select('*, autor:asesores!lead_interacciones_autor_id_fkey(nombre)')
@@ -65,8 +65,16 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
       ? supabase.from('asesores').select('id, nombre, activo').or('rol.eq.asesor,activo.eq.true').is('eliminado_at', null).order('nombre')
       : Promise.resolve({ data: [] as { id: string; nombre: string; activo: boolean }[] }),
     supabase.from('tareas').select('id, titulo, vence_at').eq('lead_id', id).is('completada_at', null).order('vence_at'),
-    supabase.from('respuestas_rapidas').select('id, titulo, contenido').eq('activa', true).order('orden').order('titulo'),
+    // Respuestas rápidas del chat: las "para todos" y las personales mías, menos las que elegí no usar
+    supabase.from('respuestas_rapidas').select('id, titulo, contenido, asesor_id').eq('activa', true)
+      .or(`asesor_id.is.null,asesor_id.eq.${perfil.id}`).order('orden').order('titulo'),
+    supabase.from('respuestas_ocultas').select('respuesta_id').eq('asesor_id', perfil.id),
   ])
+  const noUsa = new Set((ocultas ?? []).map((o) => o.respuesta_id))
+  // Las personales primero
+  const respuestas = (todasRespuestas ?? []).filter((r) => !noUsa.has(r.id))
+    .map((r) => ({ id: r.id, titulo: r.titulo, contenido: r.contenido, personal: r.asesor_id !== null }))
+    .sort((a, b) => Number(b.personal) - Number(a.personal))
   // Asesor de apoyo (atendió en persona al lead de otro): ve la ficha y el chat, el lead sigue siendo del otro
   let lead = propio
   const apoyo = !lead
@@ -146,7 +154,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
           <Conversacion
             leadId={lead.id} telefono={lead.telefono} inicial={chat}
             miNombre={perfil.nombre} nombresAutores={nombresAutores}
-            respuestas={respuestas ?? []}
+            respuestas={respuestas}
             acciones={puede('costos') ? (
               <ProformaRapida datos={{
                 leadId: lead.id, nombre: lead.nombre, dni: lead.dni, asesor: perfil.nombre,

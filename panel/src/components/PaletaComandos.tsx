@@ -29,6 +29,7 @@ const PAGINAS: Omit<Item, 'id' | 'grupo'>[] = [
   { titulo: 'Dashboard', icono: '◔', ir: '/dashboard', modulo: 'dashboard', detalle: 'Indicadores y gráficos' },
   { titulo: 'Campañas', icono: '📣', ir: '/campanas', modulo: 'campanas', detalle: 'Resultados y Excel por campaña' },
   { titulo: 'Leads sin responder', icono: '●', ir: '/chats?filtro=sin_responder', modulo: 'chats', detalle: 'Escribieron y esperan respuesta' },
+  { titulo: 'Respuestas rápidas', icono: '⚡', ir: '/respuestas', modulo: 'chats', detalle: 'Mis respuestas personales y las de todos' },
   { titulo: 'Prompt de Genesys', icono: '📚', ir: '/genesys', detalle: 'Lo que sabe Genesys por partes: carreras, CEPRE, modalidades, registro' },
   { titulo: 'Revisión del bot', icono: '🤖', ir: '/revision-bot', detalle: 'Preguntas que Genesys no supo responder', modulo: 'conocimiento' },
   { titulo: 'Mi cuenta', icono: '⚙', ir: '/cuenta', detalle: 'Contraseña' },
@@ -36,7 +37,6 @@ const PAGINAS: Omit<Item, 'id' | 'grupo'>[] = [
 const PAGINAS_ADMIN: Omit<Item, 'id' | 'grupo'>[] = [
   { titulo: 'Asesores y usuarios', icono: '◉', ir: '/usuarios', modulo: 'usuarios' },
   { titulo: 'Módulos y permisos', icono: '🔐', ir: '/permisos', detalle: 'Qué puede ver cada usuario', soloSuperadmin: true },
-  { titulo: 'Respuestas rápidas', icono: '⚡', ir: '/respuestas', modulo: 'respuestas' },
   { titulo: 'Papelera', icono: '🗑', ir: '/papelera', detalle: 'Leads y usuarios eliminados', modulo: 'papelera' },
 ]
 

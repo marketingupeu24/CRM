@@ -49,7 +49,7 @@ interface Props {
   miNombre: string
   nombresAutores: Record<string, string>
   /** Plantillas del chat; {nombre}, {carrera} y {asesor} se reemplazan con `variables` */
-  respuestas?: { id: number; titulo: string; contenido: string }[]
+  respuestas?: { id: number; titulo: string; contenido: string; personal?: boolean }[]
   variables?: { nombre: string; carrera: string; asesor: string }
   /** Barra con el estado del bot y los botones Atendido / Matriculado */
   encabezado?: React.ReactNode
@@ -324,7 +324,7 @@ export function Conversacion(
               onMouseEnter={() => setElegida(i)}
               className={`block w-full rounded-lg px-3 py-2 text-left ${i === indice ? 'bg-marca-50 ring-1 ring-marca-200' : 'hover:bg-superficie'}`}
             >
-              <span className="text-sm font-medium text-slate-800">{rr.titulo}</span>
+              <span className="text-sm font-medium text-slate-800">{rr.titulo}{rr.personal && <span className="ml-1.5 rounded bg-violet-100 px-1 py-px text-[10px] font-medium text-violet-700">👤 personal</span>}</span>
               <span className="block truncate text-xs text-slate-500">{rr.contenido}</span>
             </button>
           ))}
@@ -341,7 +341,7 @@ export function Conversacion(
               key={rr.id} type="button" onClick={() => usarRespuesta(rr.contenido)}
               className="block w-full rounded-lg px-3 py-2 text-left hover:bg-superficie"
             >
-              <span className="text-sm font-medium text-slate-800">{rr.titulo}</span>
+              <span className="text-sm font-medium text-slate-800">{rr.titulo}{rr.personal && <span className="ml-1.5 rounded bg-violet-100 px-1 py-px text-[10px] font-medium text-violet-700">👤 personal</span>}</span>
               <span className="block truncate text-xs text-slate-500">{rr.contenido}</span>
             </button>
           ))}
