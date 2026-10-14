@@ -10,6 +10,14 @@ import { crearClienteServidor } from '@/lib/supabase/server'
 
 export const metadata: Metadata = { title: 'Pendientes' }
 
+interface FilaTarea {
+  id: number
+  titulo: string
+  vence_at: string
+  lead: { id: string; nombre: string | null; telefono: string; estado: string } | null
+  asesor: { nombre: string } | null
+}
+
 interface FilaLead {
   id: string
   nombre: string | null
@@ -59,30 +67,44 @@ function ListaLeads(
   )
 }
 
-export default async function PaginaPendientes() {
-  const { esAdmin } = await exigirPermiso('pendientes')
+export default async function PaginaPendientes(props: PageProps<'/pendientes'>) {
+  const sp = await props.searchParams
+  const { esAdmin: veTodos, perfil } = await exigirPermiso('pendientes')
+  // Quien ve los pendientes de todo el equipo puede quedarse solo con los suyos (?de=mios)
+  const soloMios = veTodos && sp.de === 'mios'
+  const esAdmin = veTodos && !soloMios
   const supabase = await crearClienteServidor()
+  // Mis tareas: las que me tocan (lead mío) o las que yo agendé
+  const misTareas = `asesor_id.eq.${perfil.id},creada_por.eq.${perfil.id}`
+  const consultaTareas = (campos: string) => {
+    const c = supabase.from('tareas').select(campos).is('completada_at', null)
+    return soloMios ? c.or(misTareas) : c
+  }
+  const consultaLeads = (campos: string) => {
+    const c = supabase.from('leads').select(campos)
+    return soloMios ? c.eq('asesor_id', perfil.id) : c
+  }
   const ahora = Date.now()
   const { contacto: limiteContacto, actividad: limiteActividad } = limitesAlertas(ahora)
   const en7Dias = new Date(ahora + 7 * 86_400_000).toISOString()
   const camposLead = 'id, nombre, telefono, estado, asesor:asesores!leads_asesor_id_fkey(nombre)'
 
   const [tareasR, sinContactarR, sinResponderR, inactivosR, futurasR] = await Promise.all([
-    supabase.from('tareas')
-      .select('id, titulo, vence_at, lead:leads(id, nombre, telefono, estado), asesor:asesores!tareas_asesor_id_fkey(nombre)')
-      .is('completada_at', null).lte('vence_at', en7Dias).order('vence_at').limit(200),
-    supabase.from('leads').select(camposLead + ', fecha_asignado')
+    consultaTareas('id, titulo, vence_at, lead:leads(id, nombre, telefono, estado), asesor:asesores!tareas_asesor_id_fkey(nombre)')
+      .lte('vence_at', en7Dias).order('vence_at').limit(200)
+      .overrideTypes<FilaTarea[], { merge: false }>(),
+    consultaLeads(camposLead + ', fecha_asignado')
       .eq('estado', 'lead_asignado').lt('fecha_asignado', limiteContacto).order('fecha_asignado').limit(100),
-    supabase.from('leads').select(camposLead + ', ultimo_mensaje_lead_at')
+    consultaLeads(camposLead + ', ultimo_mensaje_lead_at')
       .eq('sin_responder', true).order('ultimo_mensaje_lead_at').limit(100),
-    supabase.from('leads').select(camposLead + ', ultimo_contacto, ultima_respuesta_at')
+    consultaLeads(camposLead + ', ultimo_contacto, ultima_respuesta_at')
       .eq('estado', 'lead_contactado').lt('ultimo_contacto', limiteActividad).lt('updated_at', limiteActividad)
       .or(`ultima_respuesta_at.is.null,ultima_respuesta_at.lt.${limiteActividad}`)
       .order('ultimo_contacto').limit(100),
     // Agendados más adelante (p. ej. "el próximo año, cuando esté en 5to"): no cuentan como "sin actividad"
-    supabase.from('tareas')
-      .select('id, titulo, vence_at, lead_id, lead:leads(id, nombre, telefono, estado), asesor:asesores!tareas_asesor_id_fkey(nombre)')
-      .is('completada_at', null).gt('vence_at', en7Dias).order('vence_at').limit(500),
+    consultaTareas('id, titulo, vence_at, lead_id, lead:leads(id, nombre, telefono, estado), asesor:asesores!tareas_asesor_id_fkey(nombre)')
+      .gt('vence_at', en7Dias).order('vence_at').limit(500)
+      .overrideTypes<(FilaTarea & { lead_id: string })[], { merge: false }>(),
   ])
   const futuras = futurasR.data ?? []
 
@@ -91,8 +113,11 @@ export default async function PaginaPendientes() {
   const conTareaFutura = new Set([...futuras.map((t) => t.lead_id), ...tareas.filter((t) => Date.parse(t.vence_at) > ahora).map((t) => t.lead?.id)])
   const finHoy = Date.parse(finDeHoyLima())
   const vencidas = tareas.filter((t) => Date.parse(t.vence_at) < ahora)
+  const finManana = finHoy + 86_400_000
   const hoy = tareas.filter((t) => Date.parse(t.vence_at) >= ahora && Date.parse(t.vence_at) <= finHoy)
-  const proximas = tareas.filter((t) => Date.parse(t.vence_at) > finHoy)
+  const manana = tareas.filter((t) => Date.parse(t.vence_at) > finHoy && Date.parse(t.vence_at) <= finManana)
+  const proximas = tareas.filter((t) => Date.parse(t.vence_at) > finManana)
+  const enlaceDe = (de: string | null) => (de ? `/pendientes?de=${de}` : '/pendientes?') as `/pendientes?${string}`
   const error = tareasR.error ?? sinContactarR.error ?? sinResponderR.error ?? inactivosR.error ?? futurasR.error
 
   const GrupoTareas = ({ titulo, lista, estilo }: { titulo: string; lista: typeof tareas; estilo: string }) => (
@@ -118,11 +143,19 @@ export default async function PaginaPendientes() {
 
   return (
     <div className="max-w-5xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Pendientes</h1>
-        <p className="text-sm text-slate-500">
-          {esAdmin ? 'Pendientes de todo el equipo' : 'Lo que tienes que atender'}: tus tareas agendadas y las alertas automáticas.
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">Pendientes</h1>
+          <p className="text-sm text-slate-500">
+            {esAdmin ? 'Pendientes de todo el equipo' : 'Lo que tienes que atender'}: {soloMios ? 'tus tareas (las de tus leads y las que tú agendaste)' : 'tareas agendadas'} y las alertas automáticas.
+          </p>
+        </div>
+        {veTodos && (
+          <div className="flex overflow-hidden rounded-lg border border-slate-300 text-sm" role="group" aria-label="Pendientes de quién">
+            <Link href={enlaceDe(null)} className={`px-3 py-1.5 ${soloMios ? 'bg-superficie text-slate-700 hover:bg-slate-50' : 'bg-marca-600 text-white'}`}>De todos</Link>
+            <Link href={enlaceDe('mios')} className={`border-l border-slate-300 px-3 py-1.5 ${soloMios ? 'bg-marca-600 text-white' : 'bg-superficie text-slate-700 hover:bg-slate-50'}`}>Solo los míos</Link>
+          </div>
+        )}
       </div>
 
       {error && <p className="rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-700">{error.message}</p>}
@@ -135,6 +168,7 @@ export default async function PaginaPendientes() {
         {!tareas.length && <p className="px-5 py-6 text-center text-sm text-slate-400">No tienes tareas en los próximos 7 días.</p>}
         {!!vencidas.length && <GrupoTareas titulo="Vencidas" lista={vencidas} estilo="text-rose-600" />}
         {!!hoy.length && <GrupoTareas titulo="Hoy" lista={hoy} estilo="text-amber-600" />}
+        {!!manana.length && <GrupoTareas titulo="Mañana" lista={manana} estilo="text-sky-700" />}
         {!!proximas.length && <GrupoTareas titulo="Próximos 7 días" lista={proximas} estilo="text-slate-500" />}
       </section>
 
