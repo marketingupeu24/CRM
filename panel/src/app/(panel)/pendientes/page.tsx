@@ -125,8 +125,8 @@ export default async function PaginaPendientes(props: PageProps<'/pendientes'>) 
       <h3 className={`px-5 pt-3 pb-1 text-xs font-semibold tracking-wide uppercase ${estilo}`}>{titulo} · {lista.length}</h3>
       <ul className="divide-y divide-slate-100">
         {lista.map((t) => (
-          <li key={t.id} className="flex items-center gap-3 px-5 py-2.5 text-sm">
-            <div className="min-w-0 flex-1">
+          <li key={t.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-2.5 text-sm">
+            <div className="min-w-0 flex-1 max-sm:basis-full">
               <p className="font-medium">{t.titulo}</p>
               <p className="truncate text-xs text-slate-500">
                 <Link href={`/leads/${t.lead?.id}`} className="text-marca-700 hover:underline">{t.lead?.nombre ?? t.lead?.telefono}</Link>
@@ -172,7 +172,7 @@ export default async function PaginaPendientes(props: PageProps<'/pendientes'>) 
         {!!proximas.length && <GrupoTareas titulo="Próximos 7 días" lista={proximas} estilo="text-slate-500" />}
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3 [&>*]:min-w-0">
         <ListaLeads
           titulo="Sin contactar" esAdmin={esAdmin}
           descripcion={`Asignados hace más de ${HORAS_SIN_CONTACTAR} h y nadie les escribió`}
@@ -208,8 +208,8 @@ export default async function PaginaPendientes(props: PageProps<'/pendientes'>) 
         </summary>
         <ul className="divide-y divide-slate-100 border-t border-slate-100">
           {futuras.map((t) => (
-            <li key={t.id} className="flex items-center gap-3 px-5 py-2.5 text-sm">
-              <div className="min-w-0 flex-1">
+            <li key={t.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-2.5 text-sm">
+              <div className="min-w-0 flex-1 max-sm:basis-full">
                 <p className="font-medium">{t.titulo}</p>
                 <p className="truncate text-xs text-slate-500">
                   <Link href={`/leads/${t.lead?.id}`} className="text-marca-700 hover:underline">{t.lead?.nombre ?? t.lead?.telefono}</Link>

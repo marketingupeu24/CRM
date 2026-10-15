@@ -362,6 +362,8 @@ body {
 /* Campos de formulario del panel */
 @utility campo {
   @apply block w-full rounded-lg border border-slate-300 bg-superficie px-3.5 py-2.5 text-sm text-slate-900 shadow-theme-xs placeholder:text-slate-400 focus:border-marca-600 focus:ring-2 focus:ring-marca-100 focus:outline-none disabled:bg-slate-100;
+  /* En pantallas táctiles 16 px: con menos, el iPhone agranda la página al tocar el campo */
+  @media (pointer: coarse) { font-size: 16px; }
 }
 
 @utility boton {

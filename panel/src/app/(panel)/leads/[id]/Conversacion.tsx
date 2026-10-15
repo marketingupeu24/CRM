@@ -2,12 +2,20 @@
 
 // Chat de WhatsApp del lead: mensajes del lead, respuestas de Genesys y del asesor.
 // Se actualiza en tiempo real (Supabase Realtime respeta el RLS del usuario).
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { LeadInteraccion } from '@crm/db'
 import { esDelChat } from '@/lib/chat'
 import { crearClienteNavegador, prepararTiempoReal } from '@/lib/supabase/client'
 import { comprimirImagen } from '@/lib/imagen'
 import { Adjunto } from './Adjunto'
+
+/** Pantalla táctil (celular): Enter hace salto de línea y se envía con el botón */
+const TACTIL = '(pointer: coarse)'
+function suscribirTactil(cambio: () => void) {
+  const m = matchMedia(TACTIL)
+  m.addEventListener('change', cambio)
+  return () => m.removeEventListener('change', cambio)
+}
 
 /** Minúsculas y sin tildes, para buscar respuestas rápidas */
 function normalizar(t: string): string {
@@ -62,6 +70,7 @@ export function Conversacion(
 ) {
   const [mensajes, setMensajes] = useState<MensajeChat[]>(inicial)
   const [texto, setTexto] = useState('')
+  const tactil = useSyncExternalStore(suscribirTactil, () => matchMedia(TACTIL).matches, () => false)
   const [verRespuestas, setVerRespuestas] = useState(false)
 
   // Atajo: "/" al inicio de una línea abre las respuestas rápidas filtradas por lo que sigue ("/traslado")
@@ -265,7 +274,7 @@ export function Conversacion(
       </div>
 
       {encabezado}
-      <div ref={fondo} className="h-[28rem] space-y-2 overflow-y-auto bg-chat-fondo px-4 py-4">
+      <div ref={fondo} className="h-[55dvh] space-y-2 overflow-y-auto md:h-[28rem] bg-chat-fondo px-4 py-4">
         {mensajes.length === 0 && (
           <p className="mt-24 text-center text-sm text-slate-500">
             Aún no hay mensajes. Escribe abajo para iniciar la conversación.
@@ -361,7 +370,7 @@ export function Conversacion(
         </div>
       )}
       <form
-        className="flex items-end gap-2 border-t border-slate-200 bg-superficie p-3"
+        className="flex flex-wrap items-end gap-2 border-t border-slate-200 bg-superficie p-3 sm:flex-nowrap"
         onSubmit={(e) => { e.preventDefault(); enviar(texto, archivo) }}
       >
         <input
@@ -394,7 +403,8 @@ export function Conversacion(
                 if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab') { e.preventDefault(); usarRespuesta(sugeridas[indice]!.contenido, atajo.desde); return }
               }
             }
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(texto, archivo) }
+            // En el celular (pantalla táctil) Enter hace salto de línea, como en WhatsApp: se envía con el botón
+            if (e.key === 'Enter' && !e.shiftKey && !tactil) { e.preventDefault(); enviar(texto, archivo) }
           }}
           onPaste={(e) => {
             // Pegar una captura de pantalla (Ctrl+V) la deja lista para enviar
@@ -403,11 +413,11 @@ export function Conversacion(
           }}
           rows={2}
           maxLength={1500}
-          placeholder={archivo ? 'Mensaje para acompañar el archivo (opcional)…' : 'Escribe un mensaje… (Enter para enviar, Shift+Enter nueva línea, / respuestas rápidas)'}
-          className="campo resize-none"
+          placeholder={archivo ? 'Mensaje para acompañar el archivo (opcional)…' : tactil ? 'Escribe un mensaje… ( / respuestas rápidas)' : 'Escribe un mensaje… (Enter para enviar, Shift+Enter nueva línea, / respuestas rápidas)'}
+          className="campo resize-none max-sm:order-first max-sm:basis-full"
           aria-label="Mensaje"
         />
-        <button className="boton h-10 shrink-0" disabled={enviando || (!texto.trim() && !archivo)}>
+        <button className="boton h-10 shrink-0 max-sm:ml-auto" disabled={enviando || (!texto.trim() && !archivo)}>
           {enviando ? 'Enviando…' : 'Enviar'}
         </button>
       </form>

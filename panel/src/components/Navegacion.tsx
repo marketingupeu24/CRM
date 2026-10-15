@@ -81,10 +81,10 @@ export function Navegacion(
     .sort((a, b) => b.href.length - a.href.length)[0]?.href
 
   return (
-    <nav className="flex gap-1 overflow-x-auto md:flex-col md:gap-5" aria-label="Menú principal">
+    <nav className="flex flex-col gap-5" aria-label="Menú principal">
       {grupos.map((g) => (
-        <div key={g.titulo} className="flex gap-1 md:flex-col md:gap-0.5">
-          <p className="hidden px-3 pb-1 text-xs font-medium tracking-wide text-lateral-suave uppercase md:block">{g.titulo}</p>
+        <div key={g.titulo} className="flex flex-col gap-0.5">
+          <p className="px-3 pb-1 text-xs font-medium tracking-wide text-lateral-suave uppercase">{g.titulo}</p>
           {g.enlaces.map((e) => {
             const esActivo = activo === e.href
             return (

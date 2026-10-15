@@ -6,6 +6,7 @@ import { PuntajeInteres } from '@/components/PuntajeInteres'
 import { fechaHora, haceCuanto } from '@/lib/formato'
 import { exigirPermiso } from '@/lib/sesion'
 import { fechaCorta, mesLima, nombreMes, rangoMes } from '@/lib/periodos'
+import { Plegable } from '@/components/Plegable'
 import { BarraMasiva } from './BarraMasiva'
 import { crearClienteServidor } from '@/lib/supabase/server'
 
@@ -153,16 +154,19 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
       )}
 
       <form className="tarjeta grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Celular: el buscador arriba y los demás filtros detrás de un botón */}
+        <input name="q" defaultValue={filtros.q} placeholder="Buscar nombre, celular o DNI" className="campo max-md:order-first sm:col-span-2" />
+        <Plegable texto={hayFiltros ? 'Filtros (activos)' : 'Filtros'} botonClassName="max-md:order-first">
         {/* Periodo rápido: mes o campaña */}
-        <div className="flex flex-wrap items-center gap-2 sm:col-span-2 lg:col-span-4">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 sm:col-span-2 lg:col-span-4">
           <span className="text-sm text-slate-500">Periodo:</span>
-          <div className="flex overflow-hidden rounded-lg border border-slate-300 text-sm">
+          <div className="flex max-w-full overflow-x-auto rounded-lg border border-slate-300 text-sm">
             {periodos.map((q) => {
               const activo = !filtros.campana && q.desde === filtros.desde && q.hasta === filtros.hasta
               return (
                 <Link
                   key={q.texto} href={enlacePeriodo(q.desde, q.hasta)}
-                  className={`border-r border-slate-300 px-3 py-1.5 first-letter:uppercase last:border-r-0 ${activo ? 'bg-marca-600 text-white' : 'bg-superficie text-slate-700 hover:bg-slate-50'}`}
+                  className={`shrink-0 border-r border-slate-300 px-3 py-1.5 whitespace-nowrap first-letter:uppercase last:border-r-0 ${activo ? 'bg-marca-600 text-white' : 'bg-superficie text-slate-700 hover:bg-slate-50'}`}
                 >
                   {q.texto}
                 </Link>
@@ -173,7 +177,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
             o elige un mes <input type="month" name="mes" aria-label="Mes" className="campo w-auto py-1.5" />
           </label>
           {(campanas ?? []).length > 0 && (
-            <select name="campana" defaultValue={filtros.campana} className="campo w-auto py-1.5" aria-label="Campaña">
+            <select name="campana" defaultValue={filtros.campana} className="campo w-auto max-w-full py-1.5" aria-label="Campaña">
               <option value="">Todas las campañas</option>
               {(campanas ?? []).map((c) => (
                 <option key={c.id} value={c.id}>{c.nombre} ({fechaCorta(c.inicio)} – {fechaCorta(c.fin)})</option>
@@ -194,7 +198,6 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
             <Link href="/leads" className="font-medium underline">Quitar</Link>
           </p>
         )}
-        <input name="q" defaultValue={filtros.q} placeholder="Buscar nombre, celular o DNI" className="campo sm:col-span-2" />
         <select name="estado" defaultValue={filtros.estado} className="campo" aria-label="Estado">
           <option value="">Todos los estados</option>
           {ESTADOS_LEAD.map((e) => <option key={e} value={e}>{ETIQUETAS_ESTADO[e]}</option>)}
@@ -229,6 +232,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
         <label className="flex items-center gap-2 text-sm text-slate-600">
           hasta <input type="date" name="hasta" defaultValue={filtros.hasta} className="campo" />
         </label>
+        </Plegable>
         <div className="flex gap-2 sm:col-span-2 lg:col-span-4 lg:justify-end">
           {hayFiltros && <Link href="/leads" className="boton-secundario">Limpiar</Link>}
           <button className="boton">Filtrar</button>
@@ -247,11 +251,11 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
                 <input type="checkbox" data-lead-todos aria-label="Seleccionar todos los de esta página" className="h-4 w-4 accent-marca-600" />
               </th>
               <th className="px-4 py-3">Lead</th>
-              <th className="px-4 py-3">Interés</th>
-              <th className="px-4 py-3">Convocatoria</th>
-              <th className="px-4 py-3">Estado</th>
-              {esAdmin && <th className="px-4 py-3">Asesor</th>}
-              <th className="px-4 py-3">Fuente</th>
+              <th className="hidden px-4 py-3 md:table-cell">Interés</th>
+              <th className="hidden px-4 py-3 md:table-cell">Convocatoria</th>
+              <th className="hidden px-4 py-3 md:table-cell">Estado</th>
+              {esAdmin && <th className="hidden px-4 py-3 md:table-cell">Asesor</th>}
+              <th className="hidden px-4 py-3 md:table-cell">Fuente</th>
               <th className="px-4 py-3">Último contacto</th>
             </tr>
           </thead>
@@ -272,19 +276,25 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
                   <p className="text-xs text-slate-500">
                     {l.telefono}{l.dni ? ` · DNI ${l.dni}` : ''}
                   </p>
+                  {/* Celular: estado, carrera y asesor debajo del nombre (las columnas se esconden) */}
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 md:hidden">
+                    <InsigniaEstado estado={l.estado} />
+                    {(l.carrera_interes ?? l.modalidad) && <span>{l.programa === 'cepre' ? 'CePre · ' : ''}{l.carrera_interes ?? l.modalidad}</span>}
+                    {esAdmin && <span>· {l.asesor?.nombre ?? 'Sin asesor'}</span>}
+                  </div>
                 </td>
-                <td className="px-4 py-3">
+                <td className="hidden px-4 py-3 md:table-cell">
                   {l.programa === 'cepre' && <span className="mr-1 rounded bg-violet-100 px-1.5 py-0.5 text-xs font-medium text-violet-700">CePre</span>}
                   {l.carrera_interes ?? l.modalidad ?? <span className="text-slate-400">—</span>}
                 </td>
-                <td className="px-4 py-3">{l.convocatoria ?? <span className="text-slate-400">—</span>}</td>
-                <td className="px-4 py-3"><InsigniaEstado estado={l.estado} /></td>
-                {esAdmin && <td className="px-4 py-3">{l.asesor?.nombre ?? <span className="text-slate-400">Sin asesor</span>}</td>}
-                <td className="px-4 py-3 text-slate-600">
+                <td className="hidden px-4 py-3 md:table-cell">{l.convocatoria ?? <span className="text-slate-400">—</span>}</td>
+                <td className="hidden px-4 py-3 md:table-cell"><InsigniaEstado estado={l.estado} /></td>
+                {esAdmin && <td className="hidden px-4 py-3 md:table-cell">{l.asesor?.nombre ?? <span className="text-slate-400">Sin asesor</span>}</td>}
+                <td className="hidden px-4 py-3 text-slate-600 md:table-cell">
                   {ETIQUETAS_FUENTE[l.origen as Fuente] ?? l.origen}
                   {l.origen_campana && <p className="text-xs text-slate-500">📣 {l.origen_campana}</p>}
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap" title={`Último contacto: ${fechaHora(l.ultimo_contacto)} · Registrado: ${fechaHora(l.created_at)}`}>
+                <td className="px-4 py-3 text-xs whitespace-nowrap md:text-sm" title={`Último contacto: ${fechaHora(l.ultimo_contacto)} · Registrado: ${fechaHora(l.created_at)}`}>
                   {haceCuanto(l.ultimo_contacto)}
                   {l.reconsultas > 0 && (
                     <span className="ml-1 text-xs text-slate-500" title="Veces que volvió a consultar">🔁 {l.reconsultas}</span>

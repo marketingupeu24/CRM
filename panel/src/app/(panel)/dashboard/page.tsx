@@ -45,9 +45,9 @@ function hoyLima(desplazarDias = 0): string {
 
 function Indicador({ titulo, valor, detalle }: { titulo: string; valor: string; detalle?: string }) {
   return (
-    <div className="tarjeta p-5">
-      <p className="text-sm text-slate-500">{titulo}</p>
-      <p className="mt-1 text-3xl font-semibold tracking-tight tabular-nums">{valor}</p>
+    <div className="tarjeta min-w-0 p-4 sm:p-5">
+      <p className="text-xs text-slate-500 sm:text-sm">{titulo}</p>
+      <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl">{valor}</p>
       {detalle && <p className="mt-1 text-xs text-slate-500">{detalle}</p>}
     </div>
   )
@@ -160,7 +160,7 @@ export default async function PaginaDashboard(props: PageProps<'/dashboard'>) {
         </form>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5 max-xl:[&>*:last-child]:col-span-2">
         <Indicador titulo="Total de leads" valor={num(r.total)} detalle={`${num(r.no_interesados)} no interesados`} />
         <Indicador titulo="Leads interesados" valor={num(r.interesados)} detalle={`${pct(r.interesados, r.total)} del total`} />
         <Indicador titulo="Matriculados" valor={num(r.matriculados)} detalle={`${pct(r.matriculados, r.interesados)} de los interesados`} />
