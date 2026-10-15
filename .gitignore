@@ -28,3 +28,7 @@ panel/next-env.d.ts
 # Resultados de Playwright
 panel/test-results/
 panel/playwright-report/
+
+# Archivos que genera `next dev` para asistentes de IA
+panel/AGENTS.md
+panel/CLAUDE.md
