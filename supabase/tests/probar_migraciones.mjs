@@ -860,6 +860,24 @@ seccion('horario de atención')
   await q(`delete from tareas where id = $1`, [tarea])
 }
 
+seccion('prompt de Genesys: fichas con vencimiento')
+await reset()
+const hoyLima = (await uno(`select (now() at time zone 'America/Lima')::date::text d`)).d
+const fv = (await uno(`insert into genesys_fichas (parte, titulo, campos, vence_el) values ('examenes', 'Examen viejo', '{}', $1::date - 1) returning id`, [hoyLima])).id
+const fh = (await uno(`insert into genesys_fichas (parte, titulo, campos, vence_el) values ('examenes', 'Examen de hoy', '{}', $1::date) returning id`, [hoyLima])).id
+await q(`insert into genesys_versiones (texto, caracteres, created_at) values ('prompt viejo', 12, now() - interval '1 hour')`)
+ok((await uno('select vencer_fichas_genesys() n')).n === 1, 'solo se desactiva la ficha cuya fecha ya pasó (la de hoy sigue)')
+ok((await uno('select activo from genesys_fichas where id = $1', [fv])).activo === false && (await uno('select activo from genesys_fichas where id = $1', [fh])).activo === true, 'la vencida sale del prompt; la que vence hoy sigue')
+let est = (await uno('select estado_prompt_genesys() e')).e
+ok(est.vencidas.length === 1 && est.vencidas[0].id === fv, 'alerta: BuilderBot aún tiene la ficha vencida')
+ok(est.por_vencer.some((x) => x.id === fh && x.dias === 0), 'la que vence hoy aparece como "por vencer"')
+await q(`insert into genesys_versiones (texto, caracteres, created_at) values ('prompt nuevo', 12, now() + interval '1 second')`)
+est = (await uno('select estado_prompt_genesys() e')).e
+ok(est.vencidas.length === 0, 'al pegar el prompt nuevo en BuilderBot se termina la alerta')
+await comoUsuario('a@test.pe')
+await falla('select vencer_fichas_genesys()', 'un usuario no puede ejecutar el vencimiento')
+await reset()
+
 seccion('anon')
 await db.exec(`reset role; set request.jwt.claim.sub = ''; set role anon`)
 await falla(`select * from tareas`, 'anon no puede ver tareas')

@@ -215,13 +215,13 @@ isOneToOne: false
                   ]
                 },"genesys_fichas": {
                   Row: {
-                    "activo": boolean,"actualizado_por": string | null,"campos": NonNullable<Json>,"created_at": string,"id": number,"orden": number,"parte": string,"titulo": string,"updated_at": string
+                    "activo": boolean,"actualizado_por": string | null,"campos": NonNullable<Json>,"created_at": string,"id": number,"orden": number,"parte": string,"titulo": string,"updated_at": string,"vence_el": string | null,"vencida_at": string | null
                   }
                   Insert: {
-                    "activo"?: boolean,"actualizado_por"?: string | null,"campos"?: NonNullable<Json>,"created_at"?: string,"id"?: never,"orden"?: number,"parte": string,"titulo": string,"updated_at"?: string
+                    "activo"?: boolean,"actualizado_por"?: string | null,"campos"?: NonNullable<Json>,"created_at"?: string,"id"?: never,"orden"?: number,"parte": string,"titulo": string,"updated_at"?: string,"vence_el"?: string | null,"vencida_at"?: string | null
                   }
                   Update: {
-                    "activo"?: boolean,"actualizado_por"?: string | null,"campos"?: NonNullable<Json>,"created_at"?: string,"id"?: never,"orden"?: number,"parte"?: string,"titulo"?: string,"updated_at"?: string
+                    "activo"?: boolean,"actualizado_por"?: string | null,"campos"?: NonNullable<Json>,"created_at"?: string,"id"?: never,"orden"?: number,"parte"?: string,"titulo"?: string,"updated_at"?: string,"vence_el"?: string | null,"vencida_at"?: string | null
                   }
                   Relationships: [
                     {
@@ -916,6 +916,9 @@ isOneToOne: false
 "es_superadmin":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"estado_prompt_genesys":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
 "franjas_atencion":
 { Args: { "p_dia": string }; Returns: {
               "fin": string,"inicio": string
@@ -1139,6 +1142,9 @@ isOneToOne: false
                            },
 "usar_prerregistro":
 { Args: { "p_codigo": string,"p_lead_id": string }; Returns: Json
+                           },
+"vencer_fichas_genesys":
+{ Args: Record<PropertyKey, never>; Returns: number
                            },
 "visitar_enlace":
 { Args: { "p_codigo": string }; Returns: Json

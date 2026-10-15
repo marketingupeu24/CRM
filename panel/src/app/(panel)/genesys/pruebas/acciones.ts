@@ -22,7 +22,7 @@ type Cliente = Awaited<ReturnType<typeof crearClienteServidor>>
 async function armarPrompt(supabase: Cliente): Promise<string> {
   const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date())
   const [{ data: fichas }, { data: feriados }] = await Promise.all([
-    supabase.from('genesys_fichas').select('id, parte, titulo, campos, activo, orden').order('orden').order('titulo'),
+    supabase.from('genesys_fichas').select('id, parte, titulo, campos, activo, orden, vence_el').order('orden').order('titulo'),
     supabase.from('feriados').select('fecha, nombre').gte('fecha', hoy).order('fecha').limit(30),
   ])
   return promptGenesys((fichas ?? []) as FichaGenesys[], new Date(), feriados ?? [])

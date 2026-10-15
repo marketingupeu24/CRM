@@ -291,3 +291,58 @@ export async function recordarAlumnos(): Promise<Respuesta> {
   }
   return { ok: true, enviados, lote: (lote ?? []).length }
 }
+
+/**
+ * Prompt de Genesys con fichas vencidas (cron genesys-revisar-prompt, 8:05 en días de atención).
+ * Las fichas cuya fecha "Vence el" pasó salen solas del prompt del CRM, pero BuilderBot sigue con el
+ * texto anterior hasta que se pegue el nuevo: se avisa cada día a quien administra el prompt hasta que
+ * se registre "✓ Ya lo pegué". También avisa 7, 3 y 1 día antes y el mismo día del vencimiento.
+ */
+export async function revisarPrompt(): Promise<Respuesta> {
+  if (proximaAtencion(new Date(), FERIADOS)) return { ok: true, omitido: 'Fuera del horario de atención' }
+  await supabase.rpc('vencer_fichas_genesys')
+  const { data, error } = await supabase.rpc('estado_prompt_genesys')
+  if (error) throw error
+  type Ficha = { id: number; titulo: string; parte: string; vence_el: string; dias?: number }
+  const estado = data as { vencidas: Ficha[]; por_vencer: Ficha[] }
+  const vencidas = estado.vencidas ?? []
+  const avisarPronto = (estado.por_vencer ?? []).filter((f) => [7, 3, 1, 0].includes(f.dias ?? -1))
+  if (!vencidas.length && !avisarPronto.length) return { ok: true, avisados: 0 }
+
+  const dia = (f: string) => new Intl.DateTimeFormat('es-PE', { timeZone: 'UTC', day: '2-digit', month: '2-digit' }).format(new Date(`${f}T00:00:00Z`))
+  const cuando = (d: number) => (d === 0 ? 'vence hoy' : d === 1 ? 'vence mañana' : `vence en ${d} días`)
+  const texto = [
+    vencidas.length ? '*⏰ PROMPT DE GENESYS DESACTUALIZADO*' : '*⏰ FICHAS DEL PROMPT POR VENCER*',
+    ...(vencidas.length ? [
+      '',
+      'Esta información ya venció y salió del prompt del CRM, pero *BuilderBot todavía la tiene*:',
+      ...vencidas.slice(0, 10).map((f) => `• ${f.titulo} (venció el ${dia(f.vence_el)})`),
+      '',
+      `👉 Copia el prompt en ${PANEL_URL}/genesys, pégalo en BuilderBot y marca "✓ Ya lo pegué". Te avisaré cada día hasta entonces.`,
+    ] : []),
+    ...(avisarPronto.length ? [
+      '',
+      'Por vencer (actualízalas antes para que Genesys no se quede sin la información):',
+      ...avisarPronto.map((f) => `• ${f.titulo} (${cuando(f.dias ?? 0)}, ${dia(f.vence_el)})`),
+      `${PANEL_URL}/genesys?parte=${avisarPronto[0]!.parte}`,
+    ] : []),
+  ].join('\n')
+
+  // Quien administra el prompt: super admin o con el módulo "conocimiento"
+  const { data: admins } = await supabase.from('asesores').select('id, nombre, telefono, superadmin, permisos')
+    .eq('activo', true).is('eliminado_at', null)
+  let avisados = 0
+  for (const a of (admins ?? []).filter((x) => x.superadmin || x.permisos.includes('conocimiento'))) {
+    await enviarPush(supabase, a.id, {
+      titulo: vencidas.length ? '⏰ Prompt de Genesys desactualizado' : '⏰ Fichas del prompt por vencer',
+      cuerpo: vencidas.length ? `Pega el prompt nuevo en BuilderBot: ${vencidas.map((f) => f.titulo).slice(0, 3).join(', ')} ya venció.` : avisarPronto.map((f) => `${f.titulo}: ${cuando(f.dias ?? 0)}`).slice(0, 3).join('\n'),
+      url: '/genesys', etiqueta: 'prompt-genesys',
+    })
+    if (a.telefono) {
+      const envio = await enviarWhatsApp(a.telefono, texto)
+      if (!envio.ok) { console.error(`[genesys] Aviso del prompt a ${a.nombre} falló:`, envio.error); continue }
+    }
+    avisados++
+  }
+  return { ok: true, avisados, vencidas: vencidas.length, por_vencer: avisarPronto.length }
+}

@@ -20,17 +20,20 @@ export default async function LayoutPanel({ children }: { children: React.ReactN
   const sesion = await obtenerSesion()
   const { perfil, permisos, superadmin, debeCambiarClave } = sesion
   const supabase = await crearClienteServidor()
-  const [{ count: sinResponder }, pendientes, { data: revision }] = await Promise.all([
+  const [{ count: sinResponder }, pendientes, { data: revision }, { data: estadoPrompt }] = await Promise.all([
     supabase.from('leads').select('id', { count: 'exact', head: true }).eq('sin_responder', true),
     contarPendientes(supabase),
     // Respuestas del bot sin revisar (solo para quien administra la base de conocimiento)
     sesion.puede('conocimiento') ? supabase.rpc('preguntas_sin_respuesta', { p_dias: 30 }) : Promise.resolve({ data: [] }),
+    // Fichas vencidas que BuilderBot aún tiene (hay que pegar el prompt nuevo)
+    sesion.puede('conocimiento') ? supabase.rpc('estado_prompt_genesys') : Promise.resolve({ data: null }),
   ])
+  const promptVencido = ((estadoPrompt as { vencidas?: unknown[] } | null)?.vencidas ?? []).length
   const revisionBot = (revision ?? []).filter((p: { revisada: boolean }) => !p.revisada).length
   const temaGuardado = ((await cookies()).get(COOKIE_TEMA)?.value ?? TEMA_POR_DEFECTO) as Tema
   const iniciales = perfil.nombre.split(' ').slice(0, 2).map((p) => p[0]).join('').toUpperCase()
   const navegacion = !debeCambiarClave && (
-    <Navegacion permisos={permisos} superadmin={superadmin} sinResponder={sinResponder ?? 0} pendientes={pendientes} revisionBot={revisionBot} />
+    <Navegacion permisos={permisos} superadmin={superadmin} sinResponder={sinResponder ?? 0} pendientes={pendientes} revisionBot={revisionBot} promptVencido={promptVencido} />
   )
   const avatar = (
     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-marca-50 text-sm font-semibold text-marca-600">

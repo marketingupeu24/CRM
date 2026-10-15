@@ -26,8 +26,17 @@ export async function guardarFicha(id: number | null, parte: string, _previo: Re
     campos[c.clave] = valor
   }
   const orden = Number.parseInt(String(formData.get('orden') ?? ''), 10)
+  const venceEl = String(formData.get('vence_el') ?? '').trim()
+  if (venceEl && !/^\d{4}-\d{2}-\d{2}$/.test(venceEl)) return { error: 'Fecha de vencimiento no válida.' }
   const supabase = await crearClienteServidor()
-  const datos = { parte, titulo: titulo.slice(0, 160), campos, ...(Number.isFinite(orden) ? { orden } : {}) }
+  const datos: { parte: string; titulo: string; campos: Record<string, string>; orden?: number; vence_el: string | null; activo?: boolean; vencida_at?: null } = {
+    parte, titulo: titulo.slice(0, 160), campos, ...(Number.isFinite(orden) ? { orden } : {}), vence_el: venceEl || null,
+  }
+  // Una ficha que se desactivó por vencer vuelve al prompt si le pones una fecha nueva (o la quitas)
+  if (id && (!venceEl || venceEl >= hoyLima())) {
+    const { data: actual } = await supabase.from('genesys_fichas').select('vencida_at').eq('id', id).maybeSingle()
+    if (actual?.vencida_at) Object.assign(datos, { activo: true, vencida_at: null })
+  }
   const { error } = id
     ? await supabase.from('genesys_fichas').update(datos).eq('id', id)
     : await supabase.from('genesys_fichas').insert({ ...datos, activo: true })
@@ -36,10 +45,18 @@ export async function guardarFicha(id: number | null, parte: string, _previo: Re
   return { ok: id ? 'Guardado.' : 'Ficha agregada.' }
 }
 
+function hoyLima(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date())
+}
+
 export async function cambiarActivo(id: number, activo: boolean): Promise<Resultado> {
   await exigirPermiso('conocimiento')
   const supabase = await crearClienteServidor()
-  const { error } = await supabase.from('genesys_fichas').update({ activo }).eq('id', id)
+  if (activo) {
+    const { data: ficha } = await supabase.from('genesys_fichas').select('vence_el').eq('id', id).maybeSingle()
+    if (ficha?.vence_el && ficha.vence_el < hoyLima()) return { error: 'Esta ficha ya venció: edítala, actualiza la información y cambia (o borra) la fecha "Vence el".' }
+  }
+  const { error } = await supabase.from('genesys_fichas').update(activo ? { activo, vencida_at: null } : { activo }).eq('id', id)
   if (error) return { error: mensajeError(error) }
   revalidatePath('/genesys')
   return { ok: activo ? 'Incluida en el prompt.' : 'Ya no va en el prompt.' }

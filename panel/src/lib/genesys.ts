@@ -44,7 +44,10 @@ function fichaGenerica(f: FichaGenesys, etiquetas: Record<string, string>): stri
 /** Prompt completo para pegar en el asistente INFORMACIÓN de BuilderBot. */
 export function promptGenesys(fichas: FichaGenesys[], fecha: Date = new Date(), feriados: { fecha: string; nombre: string }[] = []): string {
   const hoy = new Intl.DateTimeFormat('es-PE', { timeZone: 'America/Lima', day: '2-digit', month: '2-digit', year: 'numeric' }).format(fecha)
-  const activas = fichas.filter((f) => f.activo).sort((a, b) => a.orden - b.orden || a.titulo.localeCompare(b.titulo))
+  // Las vencidas no van aunque el cron de medianoche aún no las haya desactivado
+  const hoyIso = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(fecha)
+  const activas = fichas.filter((f) => f.activo && !(f.vence_el && f.vence_el < hoyIso))
+    .sort((a, b) => a.orden - b.orden || a.titulo.localeCompare(b.titulo))
   const de = (parte: string) => activas.filter((f) => f.parte === parte)
   const texto = (f: FichaGenesys) => `### ${f.titulo}\n${campo(f, 'texto')}`
   const salida: string[] = [

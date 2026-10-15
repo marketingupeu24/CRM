@@ -19,11 +19,15 @@ export default async function PaginaGenesys(props: PageProps<'/genesys'>) {
   const editable = puede('conocimiento')
   const supabase = await crearClienteServidor()
   const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date())
-  const [{ data: filas, error }, { data: version }, { data: feriados }] = await Promise.all([
-    supabase.from('genesys_fichas').select('id, parte, titulo, campos, activo, orden').order('orden').order('titulo'),
+  const [{ data: filas, error }, { data: version }, { data: feriados }, { data: estadoR }] = await Promise.all([
+    supabase.from('genesys_fichas').select('id, parte, titulo, campos, activo, orden, vence_el, vencida_at').order('orden').order('titulo'),
     supabase.from('genesys_versiones').select('texto, created_at').order('created_at', { ascending: false }).limit(1).maybeSingle(),
     supabase.from('feriados').select('fecha, nombre').gte('fecha', hoy).order('fecha').limit(30),
+    supabase.rpc('estado_prompt_genesys'),
   ])
+  type FichaEstado = { id: number; titulo: string; parte: string; vence_el: string; dias?: number }
+  const estado = (estadoR ?? { vencidas: [], por_vencer: [] }) as { vencidas: FichaEstado[]; por_vencer: FichaEstado[] }
+  const diaMes = (f: string) => new Intl.DateTimeFormat('es-PE', { timeZone: 'UTC', day: '2-digit', month: '2-digit' }).format(new Date(`${f}T00:00:00Z`))
   const fichas = (filas ?? []) as FichaGenesys[]
   const pedida = typeof sp.parte === 'string' ? sp.parte : ''
   const parte = PARTES_GENESYS.find((p) => p.clave === pedida) ?? PARTES_GENESYS[0]!
@@ -48,6 +52,25 @@ export default async function PaginaGenesys(props: PageProps<'/genesys'>) {
         </p>
       </div>
       {error && <p className="rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-700">{error.message}</p>}
+      {estado.vencidas.length > 0 && (
+        <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+          <p className="font-semibold">⏰ BuilderBot tiene información vencida</p>
+          <p className="mt-1">
+            {estado.vencidas.map((f) => `${f.titulo} (venció el ${diaMes(f.vence_el)})`).join(' · ')}. Ya salió del prompt del CRM:
+            copia el prompt, pégalo en BuilderBot y marca <b>✓ Ya lo pegué</b>. Hasta entonces te llega un aviso cada día.
+          </p>
+        </div>
+      )}
+      {estado.por_vencer.length > 0 && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <p className="font-semibold">Por vencer en los próximos 7 días</p>
+          <p className="mt-1">
+            {estado.por_vencer.map((f, i) => (
+              <span key={f.id}>{i > 0 && ' · '}<Link href={`/genesys?parte=${f.parte}`} className="underline">{f.titulo}</Link> ({f.dias === 0 ? 'vence hoy' : `vence el ${diaMes(f.vence_el)}`})</span>
+            ))}. Actualiza la ficha (y su fecha) antes de que venza.
+          </p>
+        </div>
+      )}
 
       <div className="grid gap-6 xl:grid-cols-[14rem_1fr_26rem]">
         {/* Partes y feriados */}

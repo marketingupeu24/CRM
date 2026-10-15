@@ -12,7 +12,7 @@
 //    respuesta-bot  { telefono, texto }
 //    recordatorios  {}                            -> lo llama el cron diario de las 8am
 //    evento         webhook de BuilderBot (mensajes entrantes y salientes)
-//    notificar, visita, ausencia, reasignar, reintentar-avisos, recordar-tareas, sincronizar-bot
+//    notificar, visita, ausencia, reasignar, reintentar-avisos, recordar-tareas, sincronizar-bot, revisar-prompt
 //                   -> los llama la base de datos (triggers y cron)
 //    ping           (GET) estado de la configuración
 //
@@ -29,7 +29,7 @@
 import { type Cuerpo, type Respuesta, supabase, responder, ErrorApi, tokenValido, cargarFeriados } from './comun.ts'
 import { notificarAsignacion, avisarVisita, avisarAusencia, alertarError } from './avisos.ts'
 import { registrar, webhook, noInteresado, respuestaBot } from './registro.ts'
-import { reintentar, recordatorios, recordarTareas, recordarAlumnos, ping, sincronizarBot, reasignar } from './programadas.ts'
+import { reintentar, recordatorios, recordarTareas, recordarAlumnos, revisarPrompt, ping, sincronizarBot, reasignar } from './programadas.ts'
 import { evento } from './eventos.ts'
 
 // Runtime de Supabase Edge Functions: mantiene viva una tarea después de responder
@@ -46,6 +46,7 @@ const ACCIONES: Record<string, (cuerpo: Cuerpo) => Promise<Respuesta> | Respuest
   'reintentar-avisos': reintentar,
   'recordar-tareas': recordarTareas,
   'recordar-alumnos': recordarAlumnos,
+  'revisar-prompt': revisarPrompt,
   'notificar': notificarAsignacion,
   'visita': avisarVisita,
   'ausencia': avisarAusencia,

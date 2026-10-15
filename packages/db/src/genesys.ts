@@ -122,4 +122,8 @@ export interface FichaGenesys {
   campos: Record<string, string>
   activo: boolean
   orden: number
+  /** Último día en que la ficha vale (AAAA-MM-DD); al día siguiente sale sola del prompt */
+  vence_el?: string | null
+  /** Cuándo se desactivó por vencer */
+  vencida_at?: string | null
 }

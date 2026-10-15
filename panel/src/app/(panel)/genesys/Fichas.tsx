@@ -41,6 +41,10 @@ export function FormularioFicha({ parte, ficha, alGuardar }: { parte: ParteGenes
           )}
         </label>
       ))}
+      <label className="text-sm text-slate-600 sm:col-span-2">⏰ Vence el
+        <span className="text-xs text-slate-400"> · opcional: último día en que esta información vale (ej. la fecha del examen). Al día siguiente sale sola del prompt y te aviso hasta que lo actualices en BuilderBot</span>
+        <input type="date" name="vence_el" defaultValue={ficha?.vence_el ?? ''} className="campo mt-1 sm:max-w-56" />
+      </label>
       <div className="flex items-center gap-3 sm:col-span-2">
         <button className="boton" disabled={guardando}>{guardando ? 'Guardando…' : 'Guardar'}</button>
         <Mensaje r={r} />
@@ -61,6 +65,10 @@ export function TarjetaFicha({ parte, ficha, editable }: { parte: ParteGenesys; 
   const [pendiente, iniciar] = useTransition()
   const confirmar = useConfirmar()
   const texto = resumen(parte, ficha)
+  const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date())
+  const diaMes = (f: string) => new Intl.DateTimeFormat('es-PE', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(`${f}T00:00:00Z`))
+  const vencida = !!ficha.vence_el && ficha.vence_el < hoy
+  const pronto = !!ficha.vence_el && !vencida && Date.parse(`${ficha.vence_el}T00:00:00Z`) - Date.parse(`${hoy}T00:00:00Z`) <= 7 * 86_400_000
 
   return (
     <li className={`rounded-xl border p-4 ${ficha.activo ? 'border-slate-200 bg-superficie' : 'border-dashed border-amber-300 bg-amber-50/40'}`}>
@@ -69,6 +77,11 @@ export function TarjetaFicha({ parte, ficha, editable }: { parte: ParteGenesys; 
           <p className="font-medium text-slate-900">
             {ficha.titulo}
             {!ficha.activo && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">No va en el prompt</span>}
+            {ficha.vence_el && (
+              <span className={`ml-2 rounded-full px-2 py-0.5 text-xs font-medium ${vencida ? 'bg-rose-100 text-rose-700' : pronto ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}`}>
+                ⏰ {vencida ? `Venció el ${diaMes(ficha.vence_el)}` : `Vence el ${diaMes(ficha.vence_el)}`}
+              </span>
+            )}
           </p>
           {texto && <p className="mt-0.5 truncate text-xs text-slate-500">{texto}</p>}
         </button>
