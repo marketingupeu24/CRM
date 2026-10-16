@@ -197,23 +197,37 @@ export function EditarDatos({ lead, puedeCelular = false, carreras = [] }: { lea
 }
 
 /** Solo admin: manda el lead a la papelera y vuelve a la lista. */
-export function BotonPapelera({ leadId, nombre }: { leadId: string; nombre: string }) {
+/** "riel": como ícono de la columna de acciones (pantallas grandes); el error sale en el aviso del sistema. */
+export function BotonPapelera({ leadId, nombre, variante = 'enlace' }: { leadId: string; nombre: string; variante?: 'enlace' | 'riel' }) {
   const router = useRouter()
   const [error, setError] = useState('')
   const [pendiente, iniciar] = useTransition()
   const confirmar = useConfirmar()
+  const avisar = useAviso()
+  const enviar = async () => {
+    if (!(await confirmar({ titulo: `¿Enviar a "${nombre}" a la papelera?`, mensaje: 'Desaparece del panel. Puedes restaurarlo desde la Papelera.', confirmar: 'Enviar a la papelera', peligro: true }))) return
+    iniciar(async () => {
+      const r = await enviarAPapelera([leadId])
+      if (r.error) { if (variante === 'riel') void avisar(r.error); else setError(r.error) }
+      else router.push('/leads')
+    })
+  }
+  if (variante === 'riel') {
+    return (
+      <button
+        type="button" disabled={pendiente} onClick={enviar} title="Enviar a la papelera"
+        className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-sm font-medium whitespace-nowrap text-rose-600 transition hover:bg-rose-50"
+      >
+        <span aria-hidden className="w-7 shrink-0 text-center text-lg leading-none">🗑</span>
+        <span>{pendiente ? 'Enviando…' : 'Enviar a la papelera'}</span>
+      </button>
+    )
+  }
   return (
     <span className="inline-flex items-center gap-2">
       <button
         disabled={pendiente} className="text-sm font-medium text-rose-600 hover:underline"
-        onClick={async () => {
-          if (!(await confirmar({ titulo: `¿Enviar a "${nombre}" a la papelera?`, mensaje: 'Desaparece del panel. Puedes restaurarlo desde la Papelera.', confirmar: 'Enviar a la papelera', peligro: true }))) return
-          iniciar(async () => {
-            const r = await enviarAPapelera([leadId])
-            if (r.error) setError(r.error)
-            else router.push('/leads')
-          })
-        }}
+        onClick={enviar}
       >
         {pendiente ? 'Eliminando…' : '🗑 Enviar a la papelera'}
       </button>

@@ -23,7 +23,11 @@ interface Accion {
   separar?: boolean
 }
 
-export function AccionesRapidas({ telefono, proformaHref, variante = 'barra' }: { telefono: string; proformaHref?: string; variante?: 'barra' | 'riel' }) {
+export function AccionesRapidas({ telefono, proformaHref, variante = 'barra', alFinal }: {
+  telefono: string; proformaHref?: string; variante?: 'barra' | 'riel'
+  /** Solo en el riel: acción al final, separada (ej. enviar a la papelera) */
+  alFinal?: React.ReactNode
+}) {
   const [copiado, setCopiado] = useState(false)
   const acciones: Accion[] = [
     { icono: <span className="text-emerald-600">●</span>, texto: 'WhatsApp', titulo: 'Abrir en WhatsApp', href: `https://wa.me/${telefono}`, externo: true },
@@ -46,7 +50,7 @@ export function AccionesRapidas({ telefono, proformaHref, variante = 'barra' }: 
       <div className="relative w-14">
         <nav
           aria-label="Acciones rápidas"
-          className="absolute top-0 left-0 z-20 flex w-14 flex-col gap-0.5 overflow-hidden rounded-2xl border border-slate-200 bg-superficie p-1.5 shadow-theme-xs transition-[width,box-shadow] duration-150 hover:w-48 hover:shadow-lg focus-within:w-48 focus-within:shadow-lg"
+          className="absolute top-0 left-0 z-20 flex w-14 flex-col gap-0.5 overflow-hidden rounded-2xl border border-slate-200 bg-superficie p-1.5 shadow-theme-xs transition-[width,box-shadow] duration-150 hover:w-56 hover:shadow-lg focus-within:w-56 focus-within:shadow-lg"
         >
           {acciones.map((a) => {
             const contenido = <><span aria-hidden className="w-7 shrink-0 text-center text-lg leading-none">{a.icono}</span><span>{a.texto}</span></>
@@ -62,6 +66,7 @@ export function AccionesRapidas({ telefono, proformaHref, variante = 'barra' }: 
               </div>
             )
           })}
+          {alFinal && <div className="mt-1 border-t border-slate-100 pt-1">{alFinal}</div>}
         </nav>
       </div>
     )

@@ -131,7 +131,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
         <InsigniaEstado estado={lead.estado} />
         <span className="max-sm:hidden"><PuntajeInteres puntaje={lead.puntaje} motivos={lead.puntaje_motivos} detalle /></span>
         <span className="sm:hidden"><PuntajeInteres puntaje={lead.puntaje} motivos={lead.puntaje_motivos} /></span>
-        {puede('papelera') && !apoyo && <span className="ml-auto max-sm:hidden"><BotonPapelera leadId={lead.id} nombre={lead.nombre ?? lead.telefono} /></span>}
+        {puede('papelera') && !apoyo && <span className="ml-auto max-sm:hidden xl:hidden"><BotonPapelera leadId={lead.id} nombre={lead.nombre ?? lead.telefono} /></span>}
       </div>
 
       {apoyo && (
@@ -149,7 +149,10 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
       <div className="grid gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-[3.5rem_minmax(0,1fr)_24rem] xl:grid-rows-[minmax(0,1fr)]">
         {/* Pantallas grandes: acciones rápidas en íconos a la izquierda (se despliegan al pasar el mouse) */}
         <div className="relative hidden xl:z-20 xl:block">
-          <AccionesRapidas variante="riel" telefono={lead.telefono} proformaHref={puede('costos') ? `/costos?lead=${lead.id}` : undefined} />
+          <AccionesRapidas
+            variante="riel" telefono={lead.telefono} proformaHref={puede('costos') ? `/costos?lead=${lead.id}` : undefined}
+            alFinal={puede('papelera') && !apoyo ? <BotonPapelera key="papelera" variante="riel" leadId={lead.id} nombre={lead.nombre ?? lead.telefono} /> : undefined}
+          />
         </div>
         <div className="space-y-4 xl:flex xl:min-h-0 xl:flex-col xl:gap-4 xl:space-y-0">
           {lead.origen === 'actividad' && !lead.ultimo_mensaje_lead_at && (
