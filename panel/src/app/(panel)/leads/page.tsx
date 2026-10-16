@@ -6,7 +6,7 @@ import { PuntajeInteres } from '@/components/PuntajeInteres'
 import { fechaHora, haceCuanto } from '@/lib/formato'
 import { exigirPermiso } from '@/lib/sesion'
 import { fechaCorta, mesLima, nombreMes, rangoMes } from '@/lib/periodos'
-import { Plegable } from '@/components/Plegable'
+import { FiltrosAvanzados } from '@/components/FiltrosAvanzados'
 import { BarraMasiva } from './BarraMasiva'
 import { crearClienteServidor } from '@/lib/supabase/server'
 
@@ -112,6 +112,28 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
     return { texto: n === 0 ? 'Este mes' : n === -1 ? 'Mes pasado' : nombreMes(m), ...r }
   })
 
+  // Filtros del panel "Filtros" que están aplicados: se muestran como etiquetas que se quitan con ✕
+  const periodoActual = periodos.find((q) => !filtros.campana && q.desde === filtros.desde && q.hasta === filtros.hasta)
+  const fechaFiltro = (iso: string) => (/^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : iso)
+  const nombreAsesor = filtros.asesor === 'sin_asesor' ? 'Sin asesor' : (asesores ?? []).find((a) => a.id === filtros.asesor)?.nombre ?? 'Elegido'
+  const aplicados: { clave: string; texto: string }[] = [
+    campana ? { clave: 'campana', texto: campana.nombre } : null,
+    periodoActual ? { clave: 'periodo', texto: `Periodo: ${periodoActual.texto}` } : null,
+    !periodoActual && filtros.desde ? { clave: 'desde', texto: `Desde ${fechaFiltro(filtros.desde)}` } : null,
+    !periodoActual && filtros.hasta ? { clave: 'hasta', texto: `Hasta ${fechaFiltro(filtros.hasta)}` } : null,
+    filtros.carrera ? { clave: 'carrera', texto: `Carrera: ${filtros.carrera}` } : null,
+    filtros.convocatoria ? { clave: 'convocatoria', texto: `Convocatoria: ${filtros.convocatoria}` } : null,
+    esAdmin && filtros.asesor ? { clave: 'asesor', texto: `Asesor: ${nombreAsesor}` } : null,
+    filtros.origen ? { clave: 'origen', texto: `Nos conoció por: ${filtros.origen}` } : null,
+    filtros.orden ? { clave: 'orden', texto: 'Más interesados primero' } : null,
+  ].filter((a) => a !== null)
+  /** La misma lista sin un filtro ("periodo" quita desde y hasta). */
+  const sinFiltro = (clave: string) => {
+    const quitar = clave === 'periodo' ? ['desde', 'hasta'] : [clave]
+    const p = new URLSearchParams(Object.entries(filtros).filter(([k, v]) => v && !quitar.includes(k)))
+    return `/leads?${p.toString()}` as `/leads?${string}`
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -153,90 +175,106 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
         </details>
       )}
 
-      <form className="tarjeta grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Celular: el buscador arriba y los demás filtros detrás de un botón */}
-        <input name="q" defaultValue={filtros.q} placeholder="Buscar nombre, celular o DNI" className="campo max-md:order-first sm:col-span-2" />
-        <Plegable texto={hayFiltros ? 'Filtros (activos)' : 'Filtros'} botonClassName="max-md:order-first">
-        {/* Periodo rápido: mes o campaña */}
-        <div className="flex min-w-0 flex-wrap items-center gap-2 sm:col-span-2 lg:col-span-4">
-          <span className="text-sm text-slate-500">Periodo:</span>
-          <div className="flex max-w-full overflow-x-auto rounded-lg border border-slate-300 text-sm">
-            {periodos.map((q) => {
-              const activo = !filtros.campana && q.desde === filtros.desde && q.hasta === filtros.hasta
-              return (
-                <Link
-                  key={q.texto} href={enlacePeriodo(q.desde, q.hasta)}
-                  className={`shrink-0 border-r border-slate-300 px-3 py-1.5 whitespace-nowrap first-letter:uppercase last:border-r-0 ${activo ? 'bg-marca-600 text-white' : 'bg-superficie text-slate-700 hover:bg-slate-50'}`}
-                >
-                  {q.texto}
-                </Link>
-              )
-            })}
+      <form className="tarjeta p-3 sm:p-4">
+        <FiltrosAvanzados
+          activos={aplicados.length}
+          barra={<>
+            <input name="q" defaultValue={filtros.q} placeholder="⌕ Buscar nombre, celular o DNI" className="campo min-w-0 flex-1 basis-56 py-2" aria-label="Buscar" />
+            <select name="estado" defaultValue={filtros.estado} className="campo w-auto py-2" aria-label="Estado">
+              <option value="">Todos los estados</option>
+              {ESTADOS_LEAD.map((e) => <option key={e} value={e}>{ETIQUETAS_ESTADO[e]}</option>)}
+            </select>
+          </>}
+          acciones={<button className="boton">Buscar</button>}
+        >
+          {/* Periodo rápido: mes o campaña */}
+          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:col-span-2 lg:col-span-4">
+            <span className="text-sm text-slate-500">Periodo:</span>
+            <div className="flex max-w-full overflow-x-auto rounded-lg border border-slate-300 text-sm">
+              {periodos.map((q) => {
+                const activo = !filtros.campana && q.desde === filtros.desde && q.hasta === filtros.hasta
+                return (
+                  <Link
+                    key={q.texto} href={enlacePeriodo(q.desde, q.hasta)}
+                    className={`shrink-0 border-r border-slate-300 px-3 py-1.5 whitespace-nowrap first-letter:uppercase last:border-r-0 ${activo ? 'bg-marca-600 text-white' : 'bg-superficie text-slate-700 hover:bg-slate-50'}`}
+                  >
+                    {q.texto}
+                  </Link>
+                )
+              })}
+            </div>
+            <label className="flex items-center gap-2 text-sm text-slate-600">
+              o elige un mes <input type="month" name="mes" aria-label="Mes" className="campo w-auto py-1.5" />
+            </label>
+            {(campanas ?? []).length > 0 && (
+              <select name="campana" defaultValue={filtros.campana} className="campo w-auto max-w-full py-1.5" aria-label="Campaña">
+                <option value="">Todas las campañas</option>
+                {(campanas ?? []).map((c) => (
+                  <option key={c.id} value={c.id}>{c.nombre} ({fechaCorta(c.inicio)} – {fechaCorta(c.fin)})</option>
+                ))}
+              </select>
+            )}
           </div>
-          <label className="flex items-center gap-2 text-sm text-slate-600">
-            o elige un mes <input type="month" name="mes" aria-label="Mes" className="campo w-auto py-1.5" />
-          </label>
-          {(campanas ?? []).length > 0 && (
-            <select name="campana" defaultValue={filtros.campana} className="campo w-auto max-w-full py-1.5" aria-label="Campaña">
-              <option value="">Todas las campañas</option>
-              {(campanas ?? []).map((c) => (
-                <option key={c.id} value={c.id}>{c.nombre} ({fechaCorta(c.inicio)} – {fechaCorta(c.fin)})</option>
-              ))}
+          <select name="carrera" defaultValue={filtros.carrera} className="campo" aria-label="Carrera">
+            <option value="">Todas las carreras</option>
+            {(carreras ?? []).map((c) => <option key={c.carrera} value={c.carrera!}>{c.carrera}</option>)}
+          </select>
+          <select name="convocatoria" defaultValue={filtros.convocatoria} className="campo" aria-label="Convocatoria">
+            <option value="">Todas las convocatorias</option>
+            {listaConvocatorias.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+          {esAdmin && (
+            <select name="asesor" defaultValue={filtros.asesor} className="campo" aria-label="Asesor">
+              <option value="">Todos los asesores</option>
+              <option value="sin_asesor">Sin asesor</option>
+              {(asesores ?? []).map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
             </select>
           )}
-        </div>
-        {campana && (
-          <p className="rounded-lg bg-marca-50 px-3 py-2 text-sm text-marca-700 sm:col-span-2 lg:col-span-4">
-            Campaña <strong>{campana.nombre}</strong>: leads registrados del {fechaCorta(campana.inicio)} al {fechaCorta(campana.fin)}
-            {campana.origen ? <> que nos conocieron por <strong>{campana.origen}</strong></> : null}.
-          </p>
-        )}
-        {actividad && (
-          <p className="flex flex-wrap items-center gap-2 rounded-lg bg-dorado-50 px-3 py-2 text-sm text-dorado-700 sm:col-span-2 lg:col-span-4">
-            <input type="hidden" name="actividad" value={actividad.id} />
-            Registrados con el QR de <strong>{actividad.nombre}</strong>{actividad.lugar ? ` (${actividad.lugar})` : ''}.
-            <Link href="/leads" className="font-medium underline">Quitar</Link>
-          </p>
-        )}
-        <select name="estado" defaultValue={filtros.estado} className="campo" aria-label="Estado">
-          <option value="">Todos los estados</option>
-          {ESTADOS_LEAD.map((e) => <option key={e} value={e}>{ETIQUETAS_ESTADO[e]}</option>)}
-        </select>
-        <select name="carrera" defaultValue={filtros.carrera} className="campo" aria-label="Carrera">
-          <option value="">Todas las carreras</option>
-          {(carreras ?? []).map((c) => <option key={c.carrera} value={c.carrera!}>{c.carrera}</option>)}
-        </select>
-        <select name="convocatoria" defaultValue={filtros.convocatoria} className="campo" aria-label="Convocatoria">
-          <option value="">Todas las convocatorias</option>
-          {listaConvocatorias.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-        {esAdmin && (
-          <select name="asesor" defaultValue={filtros.asesor} className="campo" aria-label="Asesor">
-            <option value="">Todos los asesores</option>
-            <option value="sin_asesor">Sin asesor</option>
-            {(asesores ?? []).map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
+          <select name="origen" defaultValue={filtros.origen} className="campo" aria-label="Nos conoció por">
+            <option value="">Todos los orígenes</option>
+            {ORIGENES.map((o) => <option key={o} value={o}>{o}</option>)}
+            <option value="Sin dato">Sin dato</option>
           </select>
+          <select name="orden" defaultValue={filtros.orden} className="campo" aria-label="Ordenar">
+            <option value="">Ordenar: escribieron último</option>
+            <option value="interes">Ordenar: más interesados primero</option>
+          </select>
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            Registrado desde <input type="date" name="desde" defaultValue={filtros.desde} className="campo" />
+          </label>
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            hasta <input type="date" name="hasta" defaultValue={filtros.hasta} className="campo" />
+          </label>
+          <div className="flex items-center sm:col-span-2 lg:col-span-1 lg:justify-end">
+            <button className="boton w-full lg:w-auto">Aplicar filtros</button>
+          </div>
+        </FiltrosAvanzados>
+        {actividad && <input type="hidden" name="actividad" value={actividad.id} />}
+
+        {/* Filtros aplicados: se ven de un vistazo y se quitan con ✕ */}
+        {(aplicados.length > 0 || campana || actividad) && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+            {campana && (
+              <span className="rounded-full bg-marca-50 px-2.5 py-1 text-marca-700">
+                📣 Campaña <b>{campana.nombre}</b> ({fechaCorta(campana.inicio)} – {fechaCorta(campana.fin)}{campana.origen ? ` · ${campana.origen}` : ''})
+                <Link href={sinFiltro('campana')} className="ml-1.5 font-semibold hover:text-rose-600" aria-label="Quitar campaña">✕</Link>
+              </span>
+            )}
+            {actividad && (
+              <span className="rounded-full bg-dorado-50 px-2.5 py-1 text-dorado-700">
+                QR de <b>{actividad.nombre}</b>{actividad.lugar ? ` (${actividad.lugar})` : ''}
+                <Link href={sinFiltro('actividad')} className="ml-1.5 font-semibold hover:text-rose-600" aria-label="Quitar actividad">✕</Link>
+              </span>
+            )}
+            {aplicados.filter((a) => a.clave !== 'campana').map((a) => (
+              <span key={a.clave} className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-slate-700">
+                {a.texto}
+                <Link href={sinFiltro(a.clave)} className="ml-1.5 font-semibold text-slate-400 hover:text-rose-600" aria-label={`Quitar ${a.texto}`}>✕</Link>
+              </span>
+            ))}
+            {hayFiltros && <Link href="/leads" className="font-medium text-marca-700 hover:underline">Limpiar todo</Link>}
+          </div>
         )}
-        <select name="origen" defaultValue={filtros.origen} className="campo" aria-label="Nos conoció por">
-          <option value="">Todos los orígenes</option>
-          {ORIGENES.map((o) => <option key={o} value={o}>{o}</option>)}
-          <option value="Sin dato">Sin dato</option>
-        </select>
-        <select name="orden" defaultValue={filtros.orden} className="campo" aria-label="Ordenar">
-          <option value="">Ordenar: escribieron último</option>
-          <option value="interes">Ordenar: más interesados primero</option>
-        </select>
-        <label className="flex items-center gap-2 text-sm text-slate-600">
-          Registrado desde <input type="date" name="desde" defaultValue={filtros.desde} className="campo" />
-        </label>
-        <label className="flex items-center gap-2 text-sm text-slate-600">
-          hasta <input type="date" name="hasta" defaultValue={filtros.hasta} className="campo" />
-        </label>
-        </Plegable>
-        <div className="flex gap-2 sm:col-span-2 lg:col-span-4 lg:justify-end">
-          {hayFiltros && <Link href="/leads" className="boton-secundario">Limpiar</Link>}
-          <button className="boton">Filtrar</button>
-        </div>
       </form>
 
       {error && <p className="rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-700">Error cargando leads: {error.message}</p>}
