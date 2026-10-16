@@ -180,7 +180,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
         <FiltrosAvanzados
           activos={aplicados.length}
           barra={<>
-            <input name="q" defaultValue={filtros.q} placeholder="⌕ Buscar nombre, celular o DNI" className="campo min-w-0 flex-1 basis-56 py-2" aria-label="Buscar" />
+            <input name="q" defaultValue={filtros.q} placeholder="⌕ Buscar nombre, celular o DNI" className="campo min-w-0 flex-1 basis-56 py-2 max-sm:basis-full" aria-label="Buscar" />
             <select name="estado" defaultValue={filtros.estado} className="campo min-w-0 flex-1 py-2 sm:w-auto sm:flex-none" aria-label="Estado">
               <option value="">Todos los estados</option>
               {ESTADOS_LEAD.map((e) => <option key={e} value={e}>{ETIQUETAS_ESTADO[e]}</option>)}
