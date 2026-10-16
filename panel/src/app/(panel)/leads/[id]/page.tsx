@@ -157,7 +157,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
             miNombre={perfil.nombre} nombresAutores={nombresAutores}
             respuestas={respuestas}
             acciones={puede('costos') ? (
-              <ProformaRapida datos={{
+              <ProformaRapida key="proforma" datos={{
                 leadId: lead.id, nombre: lead.nombre, dni: lead.dni, asesor: perfil.nombre,
                 carreraSugerida: carreraParecida(lead.carrera_interes ?? lead.modalidad, 'PRES', 'JUL'),
               }} />
@@ -168,7 +168,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
               asesor: perfil.nombre.split(' ')[0] ?? perfil.nombre,
             }}
             encabezado={apoyo ? undefined : (
-              <ControlesChat
+              <ControlesChat key="controles"
                 leadId={lead.id} estado={lead.estado} botPausadoHasta={lead.bot_pausado_hasta}
                 tieneAsesor={!!lead.asesor_id} ahora={Date.now()} sinResponder={!!lead.sin_responder}
               />
