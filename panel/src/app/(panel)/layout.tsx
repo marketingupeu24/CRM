@@ -101,7 +101,7 @@ export default async function LayoutPanel({ children }: { children: React.ReactN
           </div>
         </header>
 
-        <main className="p-4 pb-24 md:p-8">
+        <main className="p-4 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:p-8">
           {debeCambiarClave ? (
             <div className="mx-auto max-w-md">
               <div className="tarjeta p-6">

@@ -124,29 +124,39 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
   ]
 
   return (
-    <div className="space-y-4 xl:flex xl:h-[calc(100dvh-8rem)] xl:flex-col xl:space-y-0 xl:gap-4 xl:overflow-hidden">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 xl:shrink-0">
+    <div className="group space-y-4 max-md:flex max-md:h-[calc(100dvh-9rem-env(safe-area-inset-bottom))] max-md:flex-col max-md:gap-2 max-md:space-y-0 max-md:overflow-hidden xl:flex xl:h-[calc(100dvh-8rem)] xl:flex-col xl:space-y-0 xl:gap-4 xl:overflow-hidden">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 max-md:shrink-0 max-md:flex-nowrap max-md:gap-x-2 xl:shrink-0">
         <Link href="/leads" title="Volver a leads" aria-label="Volver a leads" className="-ml-1 rounded-lg px-1.5 text-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800">←</Link>
-        <h1 className="text-xl font-semibold md:text-2xl">{lead.nombre ?? 'Lead sin nombre'}</h1>
-        <InsigniaEstado estado={lead.estado} />
+        <h1 className="text-xl font-semibold max-md:min-w-0 max-md:truncate max-md:text-lg md:text-2xl">{lead.nombre ?? 'Lead sin nombre'}</h1>
+        <span className="shrink-0"><InsigniaEstado estado={lead.estado} /></span>
         <span className="max-sm:hidden"><PuntajeInteres puntaje={lead.puntaje} motivos={lead.puntaje_motivos} detalle /></span>
-        <span className="sm:hidden"><PuntajeInteres puntaje={lead.puntaje} motivos={lead.puntaje_motivos} /></span>
+        <span className="shrink-0 sm:hidden"><PuntajeInteres puntaje={lead.puntaje} motivos={lead.puntaje_motivos} /></span>
         {puede('papelera') && !apoyo && <span className="ml-auto max-sm:hidden xl:hidden"><BotonPapelera leadId={lead.id} nombre={lead.nombre ?? lead.telefono} /></span>}
       </div>
 
       {apoyo && (
-        <p className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+        <p className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800 max-md:shrink-0 max-md:px-3 max-md:py-2 max-md:text-xs">
           🤝 Eres <b>asesor(a) de apoyo</b> (lo atendiste en persona o cubres la ausencia de su asesor): es lead de <b>{lead.asesor?.nombre ?? 'otro asesor'}</b>.
           Puedes ver su conversación, escribirle y dejar notas; su estado y seguimiento los lleva su asesor(a).
         </p>
       )}
 
-      <div className="xl:hidden">
+      <div className="max-md:shrink-0 xl:hidden">
         <AccionesRapidas telefono={lead.telefono} proformaHref={puede('costos') ? `/costos?lead=${lead.id}` : undefined} />
       </div>
 
+      {/* Celular: pestañas Chat | Detalles (el chat queda fijo; estado, próxima acción, notas y datos a un toque) */}
+      <div role="tablist" aria-label="Vista de la ficha" className="flex shrink-0 rounded-xl border border-slate-200 bg-slate-100 p-1 text-sm font-medium md:hidden">
+        <label className="flex-1 cursor-pointer rounded-lg py-1.5 text-center text-slate-600 has-checked:bg-superficie has-checked:text-marca-700 has-checked:shadow-theme-xs">
+          <input type="radio" name="pestana-ficha" id="pestana-chat" defaultChecked className="sr-only" />💬 Chat
+        </label>
+        <label className="flex-1 cursor-pointer rounded-lg py-1.5 text-center text-slate-600 has-checked:bg-superficie has-checked:text-marca-700 has-checked:shadow-theme-xs">
+          <input type="radio" name="pestana-ficha" id="pestana-detalles" className="sr-only" />📋 Detalles
+        </label>
+      </div>
+
       {/* Pantallas grandes: el chat ocupa todo el alto (como en las bandejas de Intercom o Chatwoot) y el panel lateral se desplaza aparte */}
-      <div className="grid gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-[3.5rem_minmax(0,1fr)_24rem] xl:grid-rows-[minmax(0,1fr)]">
+      <div className="grid gap-4 max-md:min-h-0 max-md:flex-1 max-md:grid-rows-[minmax(0,1fr)] xl:min-h-0 xl:flex-1 xl:grid-cols-[3.5rem_minmax(0,1fr)_24rem] xl:grid-rows-[minmax(0,1fr)]">
         {/* Pantallas grandes: acciones rápidas en íconos a la izquierda (se despliegan al pasar el mouse) */}
         <div className="relative hidden xl:z-20 xl:block">
           <AccionesRapidas
@@ -154,7 +164,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
             alFinal={puede('papelera') && !apoyo ? <BotonPapelera key="papelera" variante="riel" leadId={lead.id} nombre={lead.nombre ?? lead.telefono} /> : undefined}
           />
         </div>
-        <div className="space-y-4 xl:flex xl:min-h-0 xl:flex-col xl:gap-4 xl:space-y-0">
+        <div className="space-y-4 max-md:flex max-md:min-h-0 max-md:flex-col max-md:gap-2 max-md:space-y-0 max-md:group-has-[#pestana-detalles:checked]:hidden xl:flex xl:min-h-0 xl:flex-col xl:gap-4 xl:space-y-0">
           {lead.origen === 'actividad' && !lead.ultimo_mensaje_lead_at && (
             <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
               Este alumno se registró con un QR y <b>aún no escribe al WhatsApp</b>. Para cuidar el número de Genesys, espera su mensaje
@@ -186,7 +196,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
 
         </div>
 
-        <div className="space-y-4 xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
+        <div className="space-y-4 max-md:hidden max-md:min-h-0 max-md:overflow-y-auto max-md:overscroll-contain max-md:group-has-[#pestana-detalles:checked]:block xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
           <section className="tarjeta p-4">
             <h2 className="mb-3 font-semibold">Contacto fuera del chat</h2>
             <RegistrarContacto leadId={lead.id} />
