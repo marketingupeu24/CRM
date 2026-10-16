@@ -261,19 +261,19 @@ export function Conversacion(
     m.autor_nombre ?? (m.autor_id ? nombresAutores[m.autor_id] : undefined) ?? 'Asesor'
 
   return (
-    <section className="tarjeta flex h-[calc(100dvh-12.5rem)] min-h-[26rem] scroll-mt-[7.5rem] flex-col overflow-hidden md:h-auto md:min-h-0 md:scroll-mt-36 xl:h-auto xl:min-h-0 xl:flex-1" id="chat">
-      <div className="flex items-center justify-between gap-2 border-b border-slate-200 px-4 py-2 md:px-5 md:py-3">
-        <div className="min-w-0">
-          <h2 className="font-semibold">Conversación de WhatsApp</h2>
-          <p className="text-xs text-slate-500 max-md:hidden">{telefono} · los mensajes salen por el número de Genesys, firmados con tu nombre</p>
+    <section className="@container tarjeta flex h-[calc(100dvh-12.5rem)] min-h-[26rem] scroll-mt-[7.5rem] flex-col overflow-hidden md:h-auto md:min-h-0 md:scroll-mt-36 xl:h-auto xl:min-h-0 xl:flex-1" id="chat">
+      {/* Una sola línea: más espacio para los mensajes */}
+      <div className="flex flex-nowrap items-center gap-2 border-b border-slate-200 px-3 py-2 md:px-4">
+        <div className="flex min-w-0 shrink-0 items-center gap-2" title="Los mensajes salen por el número de Genesys, firmados con tu nombre">
+          <h2 className="text-sm font-semibold whitespace-nowrap">💬<span className="@max-[26rem]:hidden"> WhatsApp</span></h2>
+          <span className="truncate text-xs text-slate-500 @max-[36rem]:hidden">{telefono}</span>
+          <span className={`flex shrink-0 items-center gap-1 text-xs ${enVivo ? 'text-emerald-600' : 'text-slate-400'}`} title={enVivo ? 'Recibe los mensajes en vivo' : 'Conectando…'}>
+            <span className={`h-2 w-2 rounded-full ${enVivo ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+            <span className="@max-[46rem]:hidden">{enVivo ? 'En vivo' : 'Conectando…'}</span>
+          </span>
         </div>
-        <span className={`flex shrink-0 items-center gap-1.5 text-xs ${enVivo ? 'text-emerald-600' : 'text-slate-400'}`}>
-          <span className={`h-2 w-2 rounded-full ${enVivo ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-          {enVivo ? 'En vivo' : 'Conectando…'}
-        </span>
+        {encabezado && <div className="ml-auto flex min-w-0 justify-end">{encabezado}</div>}
       </div>
-
-      {encabezado}
       <div ref={fondo} className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain bg-chat-fondo px-4 py-4 md:h-[28rem] md:flex-none xl:h-auto xl:flex-1">
         {mensajes.length === 0 && (
           <p className="mt-24 text-center text-sm text-slate-500">
@@ -413,11 +413,11 @@ export function Conversacion(
           }}
           rows={2}
           maxLength={1500}
-          placeholder={archivo ? 'Mensaje para acompañar el archivo (opcional)…' : tactil ? 'Escribe un mensaje… ( / respuestas rápidas)' : 'Escribe un mensaje… (Enter para enviar, Shift+Enter nueva línea, / respuestas rápidas)'}
-          className="campo resize-none max-sm:order-first max-sm:basis-full"
+          placeholder={archivo ? 'Mensaje para acompañar el archivo (opcional)…' : tactil ? 'Mensaje… ( / respuestas rápidas)' : 'Escribe un mensaje… (Enter envía · Shift+Enter salto de línea · / respuestas rápidas)'}
+          className="campo resize-none max-sm:order-first max-sm:min-w-0 max-sm:flex-1 max-sm:basis-[calc(100%-6.5rem)]"
           aria-label="Mensaje"
         />
-        <button className="boton h-10 shrink-0 max-sm:ml-auto" disabled={enviando || (!texto.trim() && !archivo)}>
+        <button className="boton h-10 shrink-0 max-sm:order-first" disabled={enviando || (!texto.trim() && !archivo)}>
           {enviando ? 'Enviando…' : 'Enviar'}
         </button>
       </form>

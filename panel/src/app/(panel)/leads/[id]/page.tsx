@@ -187,19 +187,19 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
         </div>
 
         <div className="space-y-4 xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
-          <section className="tarjeta p-5">
+          <section className="tarjeta p-4">
             <h2 className="mb-3 font-semibold">Contacto fuera del chat</h2>
             <RegistrarContacto leadId={lead.id} />
           </section>
 
-          <section className="tarjeta p-5">
+          <section className="tarjeta p-4">
             <h2 className="mb-3 font-semibold">Estado</h2>
             {apoyo
               ? <InsigniaEstado estado={lead.estado} />
               : <SelectorEstado key={lead.estado} leadId={lead.id} estado={lead.estado} />}
           </section>
 
-          <section className="tarjeta p-5">
+          <section className="tarjeta p-4">
             <h2 className="mb-3 font-semibold">Asesor</h2>
             <p className="text-sm">{lead.asesor?.nombre ?? <span className="text-slate-400">Sin asesor</span>}</p>
             {lead.notificacion_estado && (
@@ -215,7 +215,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
             )}
           </section>
 
-          {!apoyo && <section id="proxima-accion" className="tarjeta scroll-mt-36 p-5">
+          {!apoyo && <section id="proxima-accion" className="tarjeta scroll-mt-36 p-4">
             <h2 className="mb-3 font-semibold">Próxima acción</h2>
             {!!tareas?.length && (
               <ul className="mb-4 space-y-2">
@@ -238,12 +238,12 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
             <FormularioTarea leadId={lead.id} />
           </section>}
 
-          <section id="nueva-nota" className="tarjeta scroll-mt-36 p-5">
+          <section id="nueva-nota" className="tarjeta scroll-mt-36 p-4">
             <h2 className="mb-3 font-semibold">Nueva nota</h2>
             <FormularioNota leadId={lead.id} />
           </section>
 
-          <section id="datos" className="tarjeta scroll-mt-32 p-5">
+          <section id="datos" className="tarjeta scroll-mt-32 p-4">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-semibold">Datos del lead</h2>
               {!apoyo && <EditarDatos lead={lead} puedeCelular={puede('editar_celular') || lead.registrado_por === perfil.id} carreras={CARRERAS_EDITAR} />}
@@ -258,7 +258,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
             </dl>
           </section>
 
-          <section className="tarjeta p-5">
+          <section className="tarjeta p-4">
             <h2 className="mb-4 font-semibold">Actividad</h2>
             <ol className="space-y-4">
               {actividad.map((h) => {
