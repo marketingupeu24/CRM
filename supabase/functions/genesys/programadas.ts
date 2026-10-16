@@ -319,12 +319,13 @@ export async function revisarPrompt(): Promise<Respuesta> {
       ...vencidas.slice(0, 10).map((f) => `• ${f.titulo} (venció el ${dia(f.vence_el)})`),
       '',
       `👉 Copia el prompt en ${PANEL_URL}/genesys, pégalo en BuilderBot y marca "✓ Ya lo pegué". Te avisaré cada día hasta entonces.`,
+      `Fechas: ${PANEL_URL}/genesys/vencimientos`,
     ] : []),
     ...(avisarPronto.length ? [
       '',
       'Por vencer (actualízalas antes para que Genesys no se quede sin la información):',
       ...avisarPronto.map((f) => `• ${f.titulo} (${cuando(f.dias ?? 0)}, ${dia(f.vence_el)})`),
-      `${PANEL_URL}/genesys?parte=${avisarPronto[0]!.parte}`,
+      `${PANEL_URL}/genesys/vencimientos`,
     ] : []),
   ].join('\n')
 

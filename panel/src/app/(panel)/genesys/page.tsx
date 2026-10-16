@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import type { Route } from 'next'
 import { PARTES_GENESYS, type FichaGenesys } from '@crm/db'
 import { fechaHora } from '@/lib/formato'
 import { promptGenesys, revisarPrompt } from '@/lib/genesys'
@@ -44,7 +45,15 @@ export default async function PaginaGenesys(props: PageProps<'/genesys'>) {
       <div>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h1 className="text-2xl font-semibold">Prompt de Genesys</h1>
-          <Link href="/genesys/pruebas" className="boton-secundario">🧪 Pruebas del prompt</Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href={'/genesys/vencimientos' as Route} className="boton-secundario">
+              ⏰ Vencimientos
+              {estado.vencidas.length + estado.por_vencer.length > 0 && (
+                <span className={`rounded-full px-1.5 text-xs font-semibold text-white ${estado.vencidas.length ? 'bg-rose-500' : 'bg-amber-500'}`}>{estado.vencidas.length + estado.por_vencer.length}</span>
+              )}
+            </Link>
+            <Link href="/genesys/pruebas" className="boton-secundario">🧪 Pruebas del prompt</Link>
+          </div>
         </div>
         <p className="max-w-3xl text-sm text-slate-500">
           Lo que sabe el bot, dividido en partes y fichas pequeñas: actualiza solo el dato que cambió (una carrera, un horario del CEPRE…).
@@ -57,7 +66,8 @@ export default async function PaginaGenesys(props: PageProps<'/genesys'>) {
           <p className="font-semibold">⏰ BuilderBot tiene información vencida</p>
           <p className="mt-1">
             {estado.vencidas.map((f) => `${f.titulo} (venció el ${diaMes(f.vence_el)})`).join(' · ')}. Ya salió del prompt del CRM:
-            copia el prompt, pégalo en BuilderBot y marca <b>✓ Ya lo pegué</b>. Hasta entonces te llega un aviso cada día.
+            copia el prompt, pégalo en BuilderBot y marca <b>✓ Ya lo pegué</b>. Hasta entonces te llega un aviso cada día.{' '}
+            <Link href={'/genesys/vencimientos' as Route} className="font-medium underline">Ver vencimientos</Link>
           </p>
         </div>
       )}
@@ -67,7 +77,8 @@ export default async function PaginaGenesys(props: PageProps<'/genesys'>) {
           <p className="mt-1">
             {estado.por_vencer.map((f, i) => (
               <span key={f.id}>{i > 0 && ' · '}<Link href={`/genesys?parte=${f.parte}`} className="underline">{f.titulo}</Link> ({f.dias === 0 ? 'vence hoy' : `vence el ${diaMes(f.vence_el)}`})</span>
-            ))}. Actualiza la ficha (y su fecha) antes de que venza.
+            ))}. Actualiza la ficha (y su fecha) antes de que venza.{' '}
+            <Link href={'/genesys/vencimientos' as Route} className="font-medium underline">Ver vencimientos</Link>
           </p>
         </div>
       )}

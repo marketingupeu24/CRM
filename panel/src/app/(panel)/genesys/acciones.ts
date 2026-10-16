@@ -105,3 +105,31 @@ export async function eliminarFeriado(fecha: string): Promise<Resultado> {
   revalidatePath('/genesys')
   return { ok: 'Feriado eliminado.' }
 }
+
+/**
+ * Programa (o quita) la fecha "Vence el" de varias fichas a la vez. Cada cambio trae su propia fecha
+ * (así se puede usar la fecha sugerida de cada ficha). Una ficha vencida vuelve al prompt si la nueva fecha es de hoy en adelante.
+ */
+export async function programarVencimientos(cambios: { id: number; fecha: string | null }[]): Promise<Resultado> {
+  await exigirPermiso('conocimiento')
+  if (!cambios.length) return { error: 'Elige al menos una ficha.' }
+  if (cambios.length > 200) return { error: 'Máximo 200 fichas a la vez.' }
+  for (const c of cambios) {
+    if (!Number.isInteger(c.id) || (c.fecha !== null && !/^\d{4}-\d{2}-\d{2}$/.test(c.fecha))) return { error: 'Fecha no válida.' }
+  }
+  const hoy = hoyLima()
+  if (cambios.some((c) => c.fecha && c.fecha < hoy)) return { error: 'La fecha de vencimiento no puede ser anterior a hoy.' }
+  const supabase = await crearClienteServidor()
+  const { data: actuales, error: e1 } = await supabase.from('genesys_fichas').select('id, vencida_at').in('id', cambios.map((c) => c.id))
+  if (e1) return { error: mensajeError(e1) }
+  const vencidas = new Set((actuales ?? []).filter((f) => f.vencida_at).map((f) => f.id))
+  for (const c of cambios) {
+    const datos = vencidas.has(c.id) ? { vence_el: c.fecha, activo: true, vencida_at: null } : { vence_el: c.fecha }
+    const { error } = await supabase.from('genesys_fichas').update(datos).eq('id', c.id)
+    if (error) return { error: mensajeError(error) }
+  }
+  revalidatePath('/genesys')
+  revalidatePath('/genesys/vencimientos')
+  const n = cambios.length
+  return { ok: cambios.every((c) => !c.fecha) ? `Fecha quitada (${n}).` : `Listo: ${n} ficha${n > 1 ? 's' : ''} programada${n > 1 ? 's' : ''}.` }
+}

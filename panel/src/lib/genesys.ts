@@ -101,6 +101,19 @@ export interface Aviso {
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
 
+/** Fechas con año escritas en una ficha ("22 de noviembre de 2026" o "22/11/2026"), en AAAA-MM-DD y ordenadas. */
+export function fechasEnFicha(f: FichaGenesys): string[] {
+  const texto = Object.values(f.campos).join(' ').toLowerCase().replace('setiembre', 'septiembre')
+  const fechas = new Set<string>()
+  for (const m of texto.matchAll(/\b(\d{1,2}) de (enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre) del? (\d{4})\b/g)) {
+    fechas.add(`${m[3]}-${String(MESES.indexOf(m[2]!) + 1).padStart(2, '0')}-${m[1]!.padStart(2, '0')}`)
+  }
+  for (const m of texto.matchAll(/\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/g)) {
+    if (Number(m[2]) >= 1 && Number(m[2]) <= 12 && Number(m[1]) >= 1 && Number(m[1]) <= 31) fechas.add(`${m[3]}-${m[2]!.padStart(2, '0')}-${m[1]!.padStart(2, '0')}`)
+  }
+  return [...fechas].sort()
+}
+
 /**
  * Fechas con año escritas en una ficha ("22 de noviembre de 2026") que ya pasaron.
  * Las fechas sin año ("del 14 de septiembre al 6 de noviembre") no se revisan: serían ambiguas.
