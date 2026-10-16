@@ -141,11 +141,17 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
         </p>
       )}
 
-      <AccionesRapidas telefono={lead.telefono} proformaHref={puede('costos') ? `/costos?lead=${lead.id}` : undefined} />
+      <div className="xl:hidden">
+        <AccionesRapidas telefono={lead.telefono} proformaHref={puede('costos') ? `/costos?lead=${lead.id}` : undefined} />
+      </div>
 
       {/* Pantallas grandes: el chat ocupa todo el alto (como en las bandejas de Intercom o Chatwoot) y el panel lateral se desplaza aparte */}
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_24rem] xl:items-start">
-        <div className="space-y-4 xl:sticky xl:top-[8.25rem]">
+      <div className="grid gap-4 xl:grid-cols-[3.5rem_minmax(0,1fr)_24rem] xl:items-start">
+        {/* Pantallas grandes: acciones rápidas en íconos a la izquierda (se despliegan al pasar el mouse) */}
+        <div className="hidden xl:sticky xl:top-20 xl:z-20 xl:block">
+          <AccionesRapidas variante="riel" telefono={lead.telefono} proformaHref={puede('costos') ? `/costos?lead=${lead.id}` : undefined} />
+        </div>
+        <div className="space-y-4 xl:sticky xl:top-20">
           {lead.origen === 'actividad' && !lead.ultimo_mensaje_lead_at && (
             <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
               Este alumno se registró con un QR y <b>aún no escribe al WhatsApp</b>. Para cuidar el número de Genesys, espera su mensaje
@@ -177,7 +183,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
 
         </div>
 
-        <div className="space-y-4 xl:sticky xl:top-[8.25rem] xl:max-h-[calc(100dvh-9.25rem)] xl:overflow-y-auto xl:pr-1">
+        <div className="space-y-4 xl:sticky xl:top-20 xl:max-h-[calc(100dvh-6rem)] xl:overflow-y-auto xl:pr-1">
           <section className="tarjeta p-5">
             <h2 className="mb-3 font-semibold">Contacto fuera del chat</h2>
             <RegistrarContacto leadId={lead.id} />
