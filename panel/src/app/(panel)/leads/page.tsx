@@ -151,7 +151,8 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
           >
             ⬇ Exportar Excel
           </a>}
-          {puede('registrar') && <Link href="/leads/nuevo" className="boton">+ Registrar lead</Link>}
+          {/* En el celular "Registrar" ya está en la barra inferior */}
+          {puede('registrar') && <Link href="/leads/nuevo" className="boton max-md:hidden">+ Registrar lead</Link>}
         </div>
       </div>
 
@@ -180,12 +181,12 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
           activos={aplicados.length}
           barra={<>
             <input name="q" defaultValue={filtros.q} placeholder="⌕ Buscar nombre, celular o DNI" className="campo min-w-0 flex-1 basis-56 py-2" aria-label="Buscar" />
-            <select name="estado" defaultValue={filtros.estado} className="campo w-auto py-2" aria-label="Estado">
+            <select name="estado" defaultValue={filtros.estado} className="campo min-w-0 flex-1 py-2 sm:w-auto sm:flex-none" aria-label="Estado">
               <option value="">Todos los estados</option>
               {ESTADOS_LEAD.map((e) => <option key={e} value={e}>{ETIQUETAS_ESTADO[e]}</option>)}
             </select>
           </>}
-          acciones={<button className="boton">Buscar</button>}
+          acciones={<button className="boton" aria-label="Buscar"><span aria-hidden className="sm:hidden">⌕</span><span className="hidden sm:inline">Buscar</span></button>}
         >
           {/* Periodo rápido: mes o campaña */}
           <div className="flex min-w-0 flex-wrap items-center gap-2 sm:col-span-2 lg:col-span-4">
