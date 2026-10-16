@@ -261,20 +261,20 @@ export function Conversacion(
     m.autor_nombre ?? (m.autor_id ? nombresAutores[m.autor_id] : undefined) ?? 'Asesor'
 
   return (
-    <section className="tarjeta flex scroll-mt-36 flex-col overflow-hidden" id="chat">
-      <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
-        <div>
+    <section className="tarjeta flex h-[calc(100dvh-12.5rem)] min-h-[26rem] scroll-mt-[7.5rem] flex-col overflow-hidden md:h-auto md:min-h-0 md:scroll-mt-36 xl:h-[calc(100dvh-14.5rem)] xl:min-h-[30rem]" id="chat">
+      <div className="flex items-center justify-between gap-2 border-b border-slate-200 px-4 py-2 md:px-5 md:py-3">
+        <div className="min-w-0">
           <h2 className="font-semibold">Conversación de WhatsApp</h2>
-          <p className="text-xs text-slate-500">{telefono} · los mensajes salen por el número de Genesys, firmados con tu nombre</p>
+          <p className="text-xs text-slate-500 max-md:hidden">{telefono} · los mensajes salen por el número de Genesys, firmados con tu nombre</p>
         </div>
-        <span className={`flex items-center gap-1.5 text-xs ${enVivo ? 'text-emerald-600' : 'text-slate-400'}`}>
+        <span className={`flex shrink-0 items-center gap-1.5 text-xs ${enVivo ? 'text-emerald-600' : 'text-slate-400'}`}>
           <span className={`h-2 w-2 rounded-full ${enVivo ? 'bg-emerald-500' : 'bg-slate-300'}`} />
           {enVivo ? 'En vivo' : 'Conectando…'}
         </span>
       </div>
 
       {encabezado}
-      <div ref={fondo} className="h-[55dvh] space-y-2 overflow-y-auto md:h-[28rem] bg-chat-fondo px-4 py-4">
+      <div ref={fondo} className="min-h-0 flex-1 space-y-2 overflow-y-auto bg-chat-fondo px-4 py-4 md:h-[28rem] md:flex-none xl:h-auto xl:flex-1">
         {mensajes.length === 0 && (
           <p className="mt-24 text-center text-sm text-slate-500">
             Aún no hay mensajes. Escribe abajo para iniciar la conversación.

@@ -124,14 +124,14 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
   ]
 
   return (
-    <div className="space-y-6">
-      <Link href="/leads" className="text-sm text-slate-500 hover:text-slate-800">← Volver a leads</Link>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-semibold">{lead.nombre ?? 'Lead sin nombre'}</h1>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <Link href="/leads" title="Volver a leads" aria-label="Volver a leads" className="-ml-1 rounded-lg px-1.5 text-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800">←</Link>
+        <h1 className="text-xl font-semibold md:text-2xl">{lead.nombre ?? 'Lead sin nombre'}</h1>
         <InsigniaEstado estado={lead.estado} />
-        <PuntajeInteres puntaje={lead.puntaje} motivos={lead.puntaje_motivos} detalle />
-        {puede('papelera') && !apoyo && <span className="ml-auto"><BotonPapelera leadId={lead.id} nombre={lead.nombre ?? lead.telefono} /></span>}
+        <span className="max-sm:hidden"><PuntajeInteres puntaje={lead.puntaje} motivos={lead.puntaje_motivos} detalle /></span>
+        <span className="sm:hidden"><PuntajeInteres puntaje={lead.puntaje} motivos={lead.puntaje_motivos} /></span>
+        {puede('papelera') && !apoyo && <span className="ml-auto max-sm:hidden"><BotonPapelera leadId={lead.id} nombre={lead.nombre ?? lead.telefono} /></span>}
       </div>
 
       {apoyo && (
@@ -143,8 +143,9 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
 
       <AccionesRapidas telefono={lead.telefono} proformaHref={puede('costos') ? `/costos?lead=${lead.id}` : undefined} />
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
+      {/* Pantallas grandes: el chat ocupa todo el alto (como en las bandejas de Intercom o Chatwoot) y el panel lateral se desplaza aparte */}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_24rem] xl:items-start">
+        <div className="space-y-4 xl:sticky xl:top-[8.25rem]">
           {lead.origen === 'actividad' && !lead.ultimo_mensaje_lead_at && (
             <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
               Este alumno se registró con un QR y <b>aún no escribe al WhatsApp</b>. Para cuidar el número de Genesys, espera su mensaje
@@ -174,7 +175,66 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
             )}
           />
 
-          <section id="datos" className="tarjeta scroll-mt-32 p-6">
+        </div>
+
+        <div className="space-y-4 xl:sticky xl:top-[8.25rem] xl:max-h-[calc(100dvh-9.25rem)] xl:overflow-y-auto xl:pr-1">
+          <section className="tarjeta p-5">
+            <h2 className="mb-3 font-semibold">Contacto fuera del chat</h2>
+            <RegistrarContacto leadId={lead.id} />
+          </section>
+
+          <section className="tarjeta p-5">
+            <h2 className="mb-3 font-semibold">Estado</h2>
+            {apoyo
+              ? <InsigniaEstado estado={lead.estado} />
+              : <SelectorEstado key={lead.estado} leadId={lead.id} estado={lead.estado} />}
+          </section>
+
+          <section className="tarjeta p-5">
+            <h2 className="mb-3 font-semibold">Asesor</h2>
+            <p className="text-sm">{lead.asesor?.nombre ?? <span className="text-slate-400">Sin asesor</span>}</p>
+            {lead.notificacion_estado && (
+              <p className={`mt-1 text-xs ${lead.notificacion_estado === 'error' ? 'text-rose-600' : 'text-slate-500'}`}>
+                {NOTIFICACION[lead.notificacion_estado] ?? lead.notificacion_estado}
+                {lead.notificacion_error ? `: ${lead.notificacion_error}` : ''}
+              </p>
+            )}
+            {puede('asignar') && !apoyo && (
+              <div className="mt-4">
+                <ReasignarAsesor key={lead.asesor_id} leadId={lead.id} asesorId={lead.asesor_id} asesores={asesores ?? []} />
+              </div>
+            )}
+          </section>
+
+          {!apoyo && <section id="proxima-accion" className="tarjeta scroll-mt-36 p-5">
+            <h2 className="mb-3 font-semibold">Próxima acción</h2>
+            {!!tareas?.length && (
+              <ul className="mb-4 space-y-2">
+                {tareas.map((t) => {
+                  const vencida = Date.parse(t.vence_at) < Date.now()
+                  return (
+                    <li key={t.id} className={`rounded-lg border p-2 text-sm ${vencida ? 'border-rose-200 bg-rose-50' : 'border-slate-200'}`}>
+                      <p className="font-medium">{t.titulo}</p>
+                      <div className="mt-1 flex items-center justify-between gap-2">
+                        <span className={`text-xs ${vencida ? 'font-semibold text-rose-600' : 'text-slate-500'}`}>
+                          {vencida ? 'Venció ' : ''}{fechaHora(t.vence_at)}
+                        </span>
+                        <BotonesTarea tareaId={t.id} leadId={lead.id} />
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+            <FormularioTarea leadId={lead.id} />
+          </section>}
+
+          <section id="nueva-nota" className="tarjeta scroll-mt-36 p-5">
+            <h2 className="mb-3 font-semibold">Nueva nota</h2>
+            <FormularioNota leadId={lead.id} />
+          </section>
+
+          <section id="datos" className="tarjeta scroll-mt-32 p-5">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-semibold">Datos del lead</h2>
               {!apoyo && <EditarDatos lead={lead} puedeCelular={puede('editar_celular') || lead.registrado_por === perfil.id} carreras={CARRERAS_EDITAR} />}
@@ -189,7 +249,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
             </dl>
           </section>
 
-          <section className="tarjeta p-6">
+          <section className="tarjeta p-5">
             <h2 className="mb-4 font-semibold">Actividad</h2>
             <ol className="space-y-4">
               {actividad.map((h) => {
@@ -215,64 +275,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
               {!actividad.length && <p className="text-sm text-slate-500">Sin actividad todavía.</p>}
             </ol>
           </section>
-        </div>
-
-        <div className="space-y-6">
-          <section className="tarjeta p-6">
-            <h2 className="mb-3 font-semibold">Contacto fuera del chat</h2>
-            <RegistrarContacto leadId={lead.id} />
-          </section>
-
-          <section className="tarjeta p-6">
-            <h2 className="mb-3 font-semibold">Estado</h2>
-            {apoyo
-              ? <InsigniaEstado estado={lead.estado} />
-              : <SelectorEstado key={lead.estado} leadId={lead.id} estado={lead.estado} />}
-          </section>
-
-          <section className="tarjeta p-6">
-            <h2 className="mb-3 font-semibold">Asesor</h2>
-            <p className="text-sm">{lead.asesor?.nombre ?? <span className="text-slate-400">Sin asesor</span>}</p>
-            {lead.notificacion_estado && (
-              <p className={`mt-1 text-xs ${lead.notificacion_estado === 'error' ? 'text-rose-600' : 'text-slate-500'}`}>
-                {NOTIFICACION[lead.notificacion_estado] ?? lead.notificacion_estado}
-                {lead.notificacion_error ? `: ${lead.notificacion_error}` : ''}
-              </p>
-            )}
-            {puede('asignar') && !apoyo && (
-              <div className="mt-4">
-                <ReasignarAsesor key={lead.asesor_id} leadId={lead.id} asesorId={lead.asesor_id} asesores={asesores ?? []} />
-              </div>
-            )}
-          </section>
-
-          {!apoyo && <section id="proxima-accion" className="tarjeta scroll-mt-36 p-6">
-            <h2 className="mb-3 font-semibold">Próxima acción</h2>
-            {!!tareas?.length && (
-              <ul className="mb-4 space-y-2">
-                {tareas.map((t) => {
-                  const vencida = Date.parse(t.vence_at) < Date.now()
-                  return (
-                    <li key={t.id} className={`rounded-lg border p-2 text-sm ${vencida ? 'border-rose-200 bg-rose-50' : 'border-slate-200'}`}>
-                      <p className="font-medium">{t.titulo}</p>
-                      <div className="mt-1 flex items-center justify-between gap-2">
-                        <span className={`text-xs ${vencida ? 'font-semibold text-rose-600' : 'text-slate-500'}`}>
-                          {vencida ? 'Venció ' : ''}{fechaHora(t.vence_at)}
-                        </span>
-                        <BotonesTarea tareaId={t.id} leadId={lead.id} />
-                      </div>
-                    </li>
-                  )
-                })}
-              </ul>
-            )}
-            <FormularioTarea leadId={lead.id} />
-          </section>}
-
-          <section id="nueva-nota" className="tarjeta scroll-mt-36 p-6">
-            <h2 className="mb-3 font-semibold">Nueva nota</h2>
-            <FormularioNota leadId={lead.id} />
-          </section>
+          {puede('papelera') && !apoyo && <div className="flex justify-end sm:hidden"><BotonPapelera leadId={lead.id} nombre={lead.nombre ?? lead.telefono} /></div>}
         </div>
       </div>
     </div>
