@@ -17,7 +17,7 @@ export interface Conversacion {
   hace: string
   sinResponder: boolean
   mio: boolean
-  /** "🤝 Apoyo" o "🧳 Cubres a …": lead de otro asesor */
+  /** "🤝 Apoyo" / "🧳 Cubres a …" (lead de otro asesor) o "🔁 Reasignado" / "📌 Asignado" (nadie escribió desde entonces) */
   etiqueta?: string
 }
 
@@ -102,7 +102,11 @@ export function ListaConversaciones({ conversaciones, actualId, preferencia, ase
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline justify-between gap-2">
                     <span className={`truncate text-sm ${c.sinResponder ? 'font-semibold text-slate-900' : 'font-medium text-slate-800'}`}>{c.nombre}</span>
-                    {c.etiqueta && <span className="shrink-0 rounded-full bg-violet-100 px-1.5 text-[10px] font-medium text-violet-700" title="Lead de otro asesor">{c.etiqueta}</span>}
+                    {c.etiqueta && (
+                      /^(🔁|📌)/u.test(c.etiqueta)
+                        ? <span className="shrink-0 rounded-full bg-amber-100 px-1.5 text-[10px] font-semibold text-amber-800" title="Te lo acaban de asignar: nadie le escribió desde entonces">{c.etiqueta}</span>
+                        : <span className="shrink-0 rounded-full bg-violet-100 px-1.5 text-[10px] font-medium text-violet-700" title="Lead de otro asesor">{c.etiqueta}</span>
+                    )}
                     <span className="flex-1" />
                     <span className={`shrink-0 text-[11px] ${c.sinResponder ? 'font-semibold text-rose-600' : 'text-slate-400'}`}>{c.hace}</span>
                   </span>

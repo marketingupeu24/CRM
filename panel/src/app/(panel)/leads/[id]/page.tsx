@@ -67,7 +67,7 @@ export async function FichaLead({ id, seccion }: { id: string; seccion: 'leads' 
   const { esAdmin, perfil, puede } = await exigirPermiso(seccion)
   const supabase = await crearClienteServidor()
 
-  const camposBandeja = 'id, nombre, telefono, ultimo_mensaje_texto, ultimo_mensaje_at, ultimo_mensaje_lead_at, sin_responder, asesor_id, fecha_asignado'
+  const camposBandeja = 'id, nombre, telefono, ultimo_mensaje_texto, ultimo_mensaje_at, ultimo_mensaje_lead_at, sin_responder, asesor_id, fecha_asignado, reasignaciones'
   // Bandeja: la última vista elegida (todo el equipo, los míos o los de un asesor) se recuerda en una cookie
   const preferencia = leerPreferencia((await cookies()).get(COOKIE_BANDEJA)?.value)
   // Panel de detalles abierto o cerrado como lo dejaste en la conversación anterior
@@ -93,10 +93,10 @@ export async function FichaLead({ id, seccion }: { id: string; seccion: 'leads' 
     puede('chats')
       ? deLaVista(supabase.from('leads').select(camposBandeja).eq('sin_responder', true)).order('ultimo_mensaje_at', { ascending: false }).limit(100)
       : Promise.resolve({ data: [] }),
-    // Asignados o reasignados en la última semana que aún no tienen mensajes (para encontrarlos y escribirles)
+    // Asignados o reasignados en la última semana (con o sin mensajes): suben arriba hasta que alguien escriba
     puede('chats')
-      ? deLaVista(supabase.from('leads').select(camposBandeja).is('ultimo_mensaje_at', null).not('asesor_id', 'is', null)
-        .gte('fecha_asignado', new Date(Date.now() - 7 * 86_400_000).toISOString())).order('fecha_asignado', { ascending: false }).limit(30)
+      ? deLaVista(supabase.from('leads').select(camposBandeja).not('asesor_id', 'is', null)
+        .gte('fecha_asignado', new Date(Date.now() - 7 * 86_400_000).toISOString())).order('fecha_asignado', { ascending: false }).limit(40)
       : Promise.resolve({ data: [] }),
     // Leads de otros asesores que atendí como apoyo o que cubro por su ausencia: salen con etiqueta
     puede('chats') ? supabase.rpc('mis_leads_apoyo') : Promise.resolve({ data: [] }),
@@ -108,19 +108,24 @@ export async function FichaLead({ id, seccion }: { id: string; seccion: 'leads' 
   const propsBandeja = { actualId: id, preferencia, asesores: (asesoresBandeja ?? []) as { id: string; nombre: string }[], miId: perfil.id, veTodos: esAdmin, base: `/${seccion}` as const }
   // Bandeja: sin repetir, de la más reciente a la más antigua
   const vistos = new Set<string>()
-  const cuando = (c: { ultimo_mensaje_at: string | null; fecha_asignado: string | null }) => c.ultimo_mensaje_at ?? c.fecha_asignado ?? ''
+  type ConFechas = { ultimo_mensaje_at: string | null; fecha_asignado: string | null; asesor_id: string | null }
+  // Recién asignado o reasignado: nadie escribió desde que se lo dieron a su asesor (en la última semana)
+  const haceSemana = new Date(Date.now() - 7 * 86_400_000).toISOString()
+  const recienAsignado = (c: ConFechas) => !!c.asesor_id && !!c.fecha_asignado && c.fecha_asignado > haceSemana && c.fecha_asignado > (c.ultimo_mensaje_at ?? '')
+  const cuando = (c: ConFechas) => (recienAsignado(c) ? c.fecha_asignado! : c.ultimo_mensaje_at ?? c.fecha_asignado ?? '')
   // De apoyo: solo en la vista propia (no al mirar los chats de otro asesor)
   const apoyos = !asesorBandeja || asesorBandeja === perfil.id ? (deApoyo ?? []) : []
   const etiquetaApoyo = new Map(apoyos.map((a) => [a.id, a.cubriendo ? `🧳 Cubres a ${a.asesor ?? 'otro asesor'}` : '🤝 Apoyo']))
   const bandeja: ItemBandeja[] = [...(esperando ?? []), ...(recientes ?? []), ...(sinChat ?? []),
-    ...apoyos.filter((a) => a.ultimo_mensaje_at || !a.cubriendo).map((a) => ({ ...a, asesor_id: null, fecha_asignado: a.desde }))]
+    ...apoyos.filter((a) => a.ultimo_mensaje_at || !a.cubriendo).map((a) => ({ ...a, asesor_id: null, fecha_asignado: a.desde, reasignaciones: 0 }))]
     .filter((c) => !vistos.has(c.id) && vistos.add(c.id))
     .sort((a, b) => cuando(b).localeCompare(cuando(a)))
     .map((c) => ({
       id: c.id, nombre: c.nombre ?? c.telefono,
-      ultimo: c.ultimo_mensaje_at ? c.ultimo_mensaje_texto : etiquetaApoyo.has(c.id) ? 'Aún sin mensajes' : '📌 Asignado · aún sin mensajes',
+      ultimo: c.ultimo_mensaje_at ? c.ultimo_mensaje_texto : 'Aún sin mensajes',
       deMi: !!c.ultimo_mensaje_at && c.ultimo_mensaje_lead_at !== c.ultimo_mensaje_at,
-      hace: haceCuanto(cuando(c) || null), sinResponder: !!c.sin_responder, mio: c.asesor_id === perfil.id, etiqueta: etiquetaApoyo.get(c.id),
+      hace: haceCuanto(cuando(c) || null), sinResponder: !!c.sin_responder, mio: c.asesor_id === perfil.id,
+      etiqueta: etiquetaApoyo.get(c.id) ?? (recienAsignado(c) ? (c.reasignaciones ? '🔁 Reasignado' : '📌 Asignado') : undefined),
     }))
   const noUsa = new Set((ocultas ?? []).map((o) => o.respuesta_id))
   // Las personales primero

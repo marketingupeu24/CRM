@@ -49,19 +49,20 @@ export default async function PaginaChats(props: PageProps<'/chats'>) {
   let conteo = supabase.from('leads').select('id', { count: 'exact', head: true }).eq('sin_responder', true)
   if (asesorFiltro) conteo = conteo.eq('asesor_id', asesorFiltro)
 
-  // Asignados o reasignados en la última semana que aún no tienen mensajes: también salen, para encontrarlos
-  let sinChat = supabase.from('leads').select('id, nombre, telefono, estado, fecha_asignado, asesor:asesores!leads_asesor_id_fkey(nombre)')
-    .is('ultimo_mensaje_at', null).not('asesor_id', 'is', null).gte('fecha_asignado', new Date(Date.now() - 7 * 86_400_000).toISOString())
+  // Asignados o reasignados en la última semana a los que nadie escribió desde entonces: salen arriba, para encontrarlos
+  let sinChat = supabase.from('leads').select('id, nombre, telefono, estado, fecha_asignado, ultimo_mensaje_at, reasignaciones, asesor:asesores!leads_asesor_id_fkey(nombre)')
+    .not('asesor_id', 'is', null).gte('fecha_asignado', new Date(Date.now() - 7 * 86_400_000).toISOString())
   if (asesorFiltro) sinChat = sinChat.eq('asesor_id', asesorFiltro)
 
   const [{ data: chats, error }, { count: totalSinResponder }, { data: asesores }, { data: nuevos }, { data: deApoyo }] = await Promise.all([
     consulta.order('sin_responder', { ascending: false }).order('ultimo_mensaje_at', { ascending: false }).limit(LIMITE),
     conteo,
     esAdmin ? supabase.rpc('posibles_reemplazos') : Promise.resolve({ data: [] as { id: string; nombre: string }[] }),
-    soloSinResponder ? Promise.resolve({ data: [] }) : sinChat.order('fecha_asignado', { ascending: false }).limit(30),
+    soloSinResponder ? Promise.resolve({ data: [] }) : sinChat.order('fecha_asignado', { ascending: false }).limit(60),
     // Leads de otros asesores que atendí como apoyo o que cubro: salen con etiqueta (solo en mi vista)
     !asesorFiltro || soloMios ? supabase.rpc('mis_leads_apoyo') : Promise.resolve({ data: [] }),
   ])
+  const asignados = (nuevos ?? []).filter((n) => n.fecha_asignado! > (n.ultimo_mensaje_at ?? '')).slice(0, 30)
   const etiquetaApoyo = new Map((deApoyo ?? []).map((a) => [a.id, a.cubriendo ? `🧳 Cubres a ${a.asesor ?? 'otro asesor'}` : '🤝 Apoyo']))
   const vistos = new Set((chats ?? []).map((c) => c.id))
   const lista = [
@@ -87,11 +88,11 @@ export default async function PaginaChats(props: PageProps<'/chats'>) {
 
       {error && <p className="rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-700">{error.message}</p>}
 
-      {!!nuevos?.length && (
+      {!!asignados.length && (
         <section className="tarjeta">
-          <h2 className="border-b border-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">📌 Asignados a {asesorFiltro && !soloMios ? (nombreAsesor ?? 'este asesor') : esAdmin && !soloMios ? 'asesores' : 'ti'} · aún sin mensajes</h2>
+          <h2 className="border-b border-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">📌 Asignados a {asesorFiltro && !soloMios ? (nombreAsesor ?? 'este asesor') : esAdmin && !soloMios ? 'asesores' : 'ti'} · nadie les escribió aún</h2>
           <ul className="divide-y divide-slate-100">
-            {nuevos.map((n) => (
+            {asignados.map((n) => (
               <li key={n.id}>
                 <Link href={`/chats/${n.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100 text-sm font-semibold text-amber-700">{(n.nombre ?? '?').slice(0, 1).toUpperCase()}</span>
@@ -99,6 +100,7 @@ export default async function PaginaChats(props: PageProps<'/chats'>) {
                     <span className="block truncate font-medium">{n.nombre ?? n.telefono}</span>
                     <span className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
                       <InsigniaEstado estado={n.estado} />
+                      {!!n.reasignaciones && <span className="rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-800">🔁 Reasignado</span>}
                       {esAdmin && !asesorFiltro && <span>{n.asesor?.nombre}</span>}
                       <span title={fechaHora(n.fecha_asignado)}>asignado {haceCuanto(n.fecha_asignado)}</span>
                     </span>
