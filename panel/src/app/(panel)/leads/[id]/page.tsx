@@ -2,7 +2,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { cookies } from 'next/headers'
-import { asesorDeLaVista, COOKIE_BANDEJA, leerPreferencia } from '@/lib/bandeja'
+import { asesorDeLaVista, COOKIE_BANDEJA, COOKIE_DETALLES, leerPreferencia } from '@/lib/bandeja'
+import { CasillaDetalles } from './CasillaDetalles'
 import { CARRERAS_OFICIALES, carreraParecida, ETIQUETAS_FUENTE, type Fuente, type InteraccionTipo } from '@crm/db'
 import { InsigniaEstado } from '@/components/InsigniaEstado'
 import { PuntajeInteres } from '@/components/PuntajeInteres'
@@ -63,6 +64,8 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
   const camposBandeja = 'id, nombre, telefono, ultimo_mensaje_texto, ultimo_mensaje_at, ultimo_mensaje_lead_at, sin_responder, asesor_id'
   // Bandeja: la última vista elegida (todo el equipo, los míos o los de un asesor) se recuerda en una cookie
   const preferencia = leerPreferencia((await cookies()).get(COOKIE_BANDEJA)?.value)
+  // Panel de detalles abierto o cerrado como lo dejaste en la conversación anterior
+  const detallesMarcado = (await cookies()).get(COOKIE_DETALLES)?.value === '1'
   const asesorBandeja = asesorDeLaVista(preferencia, perfil.id, esAdmin)
   const deLaVista = <T extends { eq: (c: 'asesor_id', v: string) => T }>(c: T) => (asesorBandeja ? c.eq('asesor_id', asesorBandeja) : c)
   const [{ data: propio }, { data: historial }, { data: asesores }, { data: tareas }, { data: todasRespuestas }, { data: ocultas }, { data: recientes }, { data: esperando }] = await Promise.all([
@@ -161,7 +164,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
         <span className="shrink-0"><PuntajeInteres puntaje={lead.puntaje} motivos={lead.puntaje_motivos} /></span>
         {puede('chats') && <BandejaMovil key="bandeja-movil" conversaciones={bandeja} {...propsBandeja} />}
         <label className="ml-auto hidden cursor-pointer items-center gap-1.5 rounded-lg border border-slate-300 bg-superficie px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 has-checked:border-marca-600 has-checked:text-marca-700 xl:inline-flex" title="Mostrar u ocultar el panel de detalles (estado, próxima acción, notas, datos)">
-          <input type="checkbox" id="alternar-detalles" className="sr-only" />📋 Detalles
+          <CasillaDetalles marcada={detallesMarcado} />📋 Detalles
         </label>
         {puede('papelera') && !apoyo && <span className="hidden"><BotonPapelera leadId={lead.id} nombre={lead.nombre ?? lead.telefono} /></span>}
       </div>

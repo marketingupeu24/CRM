@@ -27,3 +27,6 @@ export function asesorDeLaVista(p: PreferenciaBandeja, miId: string, veTodos: bo
   if (p.de === 'mios') return miId
   return UUID.test(p.de) ? p.de : null
 }
+
+/** Panel "📋 Detalles" de la ficha: se recuerda si lo dejaste abierto o cerrado al pasar a otra conversación. */
+export const COOKIE_DETALLES = 'crm-detalles'
