@@ -13,7 +13,7 @@ export interface Resultado {
 
 function refrescar(leadId?: string) {
   revalidatePath('/pendientes')
-  if (leadId) revalidatePath(`/leads/${leadId}`)
+  if (leadId) { revalidatePath(`/leads/${leadId}`); revalidatePath(`/chats/${leadId}`) }
 }
 
 /** Agenda una tarea. venceIso viene del navegador ya convertido a ISO (hora de Lima del usuario). */

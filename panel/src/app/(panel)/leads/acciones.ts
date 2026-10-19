@@ -16,7 +16,7 @@ export interface Resultado {
 function refrescar(leadId?: string) {
   revalidatePath('/leads')
   revalidatePath('/kanban')
-  if (leadId) revalidatePath(`/leads/${leadId}`)
+  if (leadId) { revalidatePath(`/leads/${leadId}`); revalidatePath(`/chats/${leadId}`) }
 }
 
 /** Mueve el lead a otro estado (ficha del lead y Kanban). */

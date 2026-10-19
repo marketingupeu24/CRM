@@ -49,7 +49,7 @@ export function AvisosEscritorio() {
       const aviso = new Notification(`💬 ${lead?.nombre ?? lead?.telefono ?? 'Nuevo mensaje'}`, {
         body: (m.contenido ?? '').slice(0, 140), tag: m.lead_id,
       })
-      aviso.onclick = () => { window.focus(); router.push(`/leads/${m.lead_id}#chat` as never); aviso.close() }
+      aviso.onclick = () => { window.focus(); router.push(`/chats/${m.lead_id}` as never); aviso.close() }
     }
     window.addEventListener('crm:interaccion', alLlegar)
     return () => window.removeEventListener('crm:interaccion', alLlegar)

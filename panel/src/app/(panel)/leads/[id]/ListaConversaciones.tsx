@@ -31,9 +31,11 @@ export interface PropsBandeja {
   asesores: { id: string; nombre: string }[]
   miId: string
   veTodos: boolean
+  /** Sección donde se abre cada conversación: Chats (/chats/…) o Leads (/leads/…) */
+  base?: '/chats' | '/leads'
 }
 
-export function ListaConversaciones({ conversaciones, actualId, preferencia, asesores, miId, veTodos }: PropsBandeja & {
+export function ListaConversaciones({ conversaciones, actualId, preferencia, asesores, miId, veTodos, base = '/leads' }: PropsBandeja & {
   conversaciones: Conversacion[]
 }) {
   const router = useRouter()
@@ -89,7 +91,7 @@ export function ListaConversaciones({ conversaciones, actualId, preferencia, ase
           return (
             <li key={c.id}>
               <Link
-                ref={esActual ? actual : undefined} href={`/leads/${c.id}`} aria-current={esActual ? 'page' : undefined}
+                ref={esActual ? actual : undefined} href={`${base}/${c.id}` as `/leads/${string}`} aria-current={esActual ? 'page' : undefined}
                 className={`flex items-start gap-2.5 px-3 py-2.5 ${esActual ? 'bg-marca-50' : 'hover:bg-slate-50'}`}
               >
                 <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${c.sinResponder ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'}`}>

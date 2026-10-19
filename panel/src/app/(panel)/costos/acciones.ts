@@ -63,5 +63,5 @@ export async function marcarEnviada(id: number, archivoUrl: string | null, leadI
   await exigirPermiso('costos')
   const supabase = await crearClienteServidor()
   await supabase.from('proformas').update({ archivo_url: archivoUrl, enviada_at: new Date().toISOString() }).eq('id', id)
-  if (leadId) revalidatePath(`/leads/${leadId}`)
+  if (leadId) { revalidatePath(`/leads/${leadId}`); revalidatePath(`/chats/${leadId}`) }
 }

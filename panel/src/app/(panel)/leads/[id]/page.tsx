@@ -54,21 +54,26 @@ function textoCambioEstado(contenido: string | null): string {
   return (contenido ?? '').split(' -> ').map((e) => etiquetas[e] ?? e).join(' → ')
 }
 
-export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
-  const { id } = await props.params
+export default async function PaginaFicha(props: PageProps<'/leads/[id]'>) {
+  return <FichaLead id={(await props.params).id} seccion="leads" />
+}
+
+/** La ficha con el chat. Se usa en Leads (/leads/[id]) y en Chats (/chats/[id]): en Chats el menú queda en "Chats"
+ *  y la bandeja te lleva a otras conversaciones sin salir de esa sección. */
+export async function FichaLead({ id, seccion }: { id: string; seccion: 'leads' | 'chats' }) {
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound()
 
-  const { esAdmin, perfil, puede } = await exigirPermiso('leads')
+  const { esAdmin, perfil, puede } = await exigirPermiso(seccion)
   const supabase = await crearClienteServidor()
 
-  const camposBandeja = 'id, nombre, telefono, ultimo_mensaje_texto, ultimo_mensaje_at, ultimo_mensaje_lead_at, sin_responder, asesor_id'
+  const camposBandeja = 'id, nombre, telefono, ultimo_mensaje_texto, ultimo_mensaje_at, ultimo_mensaje_lead_at, sin_responder, asesor_id, fecha_asignado'
   // Bandeja: la última vista elegida (todo el equipo, los míos o los de un asesor) se recuerda en una cookie
   const preferencia = leerPreferencia((await cookies()).get(COOKIE_BANDEJA)?.value)
   // Panel de detalles abierto o cerrado como lo dejaste en la conversación anterior
   const detallesMarcado = (await cookies()).get(COOKIE_DETALLES)?.value === '1'
   const asesorBandeja = asesorDeLaVista(preferencia, perfil.id, esAdmin)
   const deLaVista = <T extends { eq: (c: 'asesor_id', v: string) => T }>(c: T) => (asesorBandeja ? c.eq('asesor_id', asesorBandeja) : c)
-  const [{ data: propio }, { data: historial }, { data: asesores }, { data: tareas }, { data: todasRespuestas }, { data: ocultas }, { data: recientes }, { data: esperando }] = await Promise.all([
+  const [{ data: propio }, { data: historial }, { data: asesores }, { data: tareas }, { data: todasRespuestas }, { data: ocultas }, { data: recientes }, { data: esperando }, { data: sinChat }] = await Promise.all([
     supabase.from('leads').select('*, asesor:asesores!leads_asesor_id_fkey(id, nombre, telefono), actividad:actividades(id, nombre)').eq('id', id).maybeSingle(),
     supabase.from('lead_interacciones')
       .select('*, autor:asesores!lead_interacciones_autor_id_fkey(nombre)')
@@ -87,19 +92,25 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
     puede('chats')
       ? deLaVista(supabase.from('leads').select(camposBandeja).eq('sin_responder', true)).order('ultimo_mensaje_at', { ascending: false }).limit(100)
       : Promise.resolve({ data: [] }),
+    // Asignados o reasignados en la última semana que aún no tienen mensajes (para encontrarlos y escribirles)
+    puede('chats')
+      ? deLaVista(supabase.from('leads').select(camposBandeja).is('ultimo_mensaje_at', null).not('asesor_id', 'is', null)
+        .gte('fecha_asignado', new Date(Date.now() - 7 * 86_400_000).toISOString())).order('fecha_asignado', { ascending: false }).limit(30)
+      : Promise.resolve({ data: [] }),
   ])
   // Asesores para el filtro de la bandeja (solo quien ve los chats de todo el equipo)
   const { data: asesoresBandeja } = esAdmin && puede('chats') ? await supabase.rpc('posibles_reemplazos') : { data: [] as { id: string; nombre: string }[] }
-  const propsBandeja = { actualId: id, preferencia, asesores: (asesoresBandeja ?? []) as { id: string; nombre: string }[], miId: perfil.id, veTodos: esAdmin }
+  const propsBandeja = { actualId: id, preferencia, asesores: (asesoresBandeja ?? []) as { id: string; nombre: string }[], miId: perfil.id, veTodos: esAdmin, base: `/${seccion}` as const }
   // Bandeja: sin repetir, de la más reciente a la más antigua
   const vistos = new Set<string>()
-  const bandeja: ItemBandeja[] = [...(esperando ?? []), ...(recientes ?? [])]
+  const cuando = (c: { ultimo_mensaje_at: string | null; fecha_asignado: string | null }) => c.ultimo_mensaje_at ?? c.fecha_asignado ?? ''
+  const bandeja: ItemBandeja[] = [...(esperando ?? []), ...(recientes ?? []), ...(sinChat ?? [])]
     .filter((c) => !vistos.has(c.id) && vistos.add(c.id))
-    .sort((a, b) => (b.ultimo_mensaje_at ?? '').localeCompare(a.ultimo_mensaje_at ?? ''))
+    .sort((a, b) => cuando(b).localeCompare(cuando(a)))
     .map((c) => ({
-      id: c.id, nombre: c.nombre ?? c.telefono, ultimo: c.ultimo_mensaje_texto,
+      id: c.id, nombre: c.nombre ?? c.telefono, ultimo: c.ultimo_mensaje_at ? c.ultimo_mensaje_texto : '📌 Asignado · aún sin mensajes',
       deMi: !!c.ultimo_mensaje_at && c.ultimo_mensaje_lead_at !== c.ultimo_mensaje_at,
-      hace: haceCuanto(c.ultimo_mensaje_at), sinResponder: !!c.sin_responder, mio: c.asesor_id === perfil.id,
+      hace: haceCuanto(cuando(c) || null), sinResponder: !!c.sin_responder, mio: c.asesor_id === perfil.id,
     }))
   const noUsa = new Set((ocultas ?? []).map((o) => o.respuesta_id))
   // Las personales primero
@@ -158,7 +169,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
   return (
     <div className="group space-y-4 max-xl:flex max-md:h-[calc(100dvh-9rem-env(safe-area-inset-bottom))] md:max-xl:h-[calc(100dvh-8rem)] max-xl:flex-col max-xl:gap-2 max-xl:space-y-0 max-xl:overflow-hidden xl:flex xl:h-[calc(100dvh-8rem)] xl:flex-col xl:space-y-0 xl:gap-4 xl:overflow-hidden">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 max-xl:shrink-0 max-xl:flex-nowrap max-xl:gap-x-2 xl:shrink-0">
-        <Link href="/leads" title="Volver a leads" aria-label="Volver a leads" className="-ml-1 rounded-lg px-1.5 text-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800">←</Link>
+        <Link href={seccion === 'chats' ? '/chats?lista' : '/leads'} title={seccion === 'chats' ? 'Volver a chats' : 'Volver a leads'} aria-label={seccion === 'chats' ? 'Volver a chats' : 'Volver a leads'} className="-ml-1 rounded-lg px-1.5 text-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800">←</Link>
         <h1 className="text-xl font-semibold max-xl:min-w-0 max-xl:truncate max-xl:text-lg md:text-2xl">{lead.nombre ?? 'Lead sin nombre'}</h1>
         <span className="shrink-0"><InsigniaEstado estado={lead.estado} /></span>
         <span className="shrink-0"><PuntajeInteres puntaje={lead.puntaje} motivos={lead.puntaje_motivos} /></span>

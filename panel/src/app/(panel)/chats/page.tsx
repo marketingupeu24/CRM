@@ -37,7 +37,7 @@ export default async function PaginaChats(props: PageProps<'/chats'>) {
     if (soloSinResponder) masReciente = masReciente.eq('sin_responder', true)
     if (asesorFiltro) masReciente = masReciente.eq('asesor_id', asesorFiltro)
     const { data: ultimo } = await masReciente.order('ultimo_mensaje_at', { ascending: false }).limit(1).maybeSingle()
-    if (ultimo) redirect(`/leads/${ultimo.id}`)
+    if (ultimo) redirect(`/chats/${ultimo.id}`)
   }
 
   let consulta = supabase
@@ -49,10 +49,16 @@ export default async function PaginaChats(props: PageProps<'/chats'>) {
   let conteo = supabase.from('leads').select('id', { count: 'exact', head: true }).eq('sin_responder', true)
   if (asesorFiltro) conteo = conteo.eq('asesor_id', asesorFiltro)
 
-  const [{ data: chats, error }, { count: totalSinResponder }, { data: asesores }] = await Promise.all([
+  // Asignados o reasignados en la última semana que aún no tienen mensajes: también salen, para encontrarlos
+  let sinChat = supabase.from('leads').select('id, nombre, telefono, estado, fecha_asignado, asesor:asesores!leads_asesor_id_fkey(nombre)')
+    .is('ultimo_mensaje_at', null).not('asesor_id', 'is', null).gte('fecha_asignado', new Date(Date.now() - 7 * 86_400_000).toISOString())
+  if (asesorFiltro) sinChat = sinChat.eq('asesor_id', asesorFiltro)
+
+  const [{ data: chats, error }, { count: totalSinResponder }, { data: asesores }, { data: nuevos }] = await Promise.all([
     consulta.order('sin_responder', { ascending: false }).order('ultimo_mensaje_at', { ascending: false }).limit(LIMITE),
     conteo,
     esAdmin ? supabase.rpc('posibles_reemplazos') : Promise.resolve({ data: [] as { id: string; nombre: string }[] }),
+    soloSinResponder ? Promise.resolve({ data: [] }) : sinChat.order('fecha_asignado', { ascending: false }).limit(30),
   ])
   const nombreAsesor = asesorFiltro && !soloMios ? ((asesores ?? []) as { id: string; nombre: string }[]).find((a) => a.id === asesorFiltro)?.nombre : null
 
@@ -72,12 +78,35 @@ export default async function PaginaChats(props: PageProps<'/chats'>) {
 
       {error && <p className="rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-700">{error.message}</p>}
 
+      {!!nuevos?.length && (
+        <section className="tarjeta">
+          <h2 className="border-b border-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">📌 Asignados a {asesorFiltro && !soloMios ? (nombreAsesor ?? 'este asesor') : esAdmin && !soloMios ? 'asesores' : 'ti'} · aún sin mensajes</h2>
+          <ul className="divide-y divide-slate-100">
+            {nuevos.map((n) => (
+              <li key={n.id}>
+                <Link href={`/chats/${n.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100 text-sm font-semibold text-amber-700">{(n.nombre ?? '?').slice(0, 1).toUpperCase()}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium">{n.nombre ?? n.telefono}</span>
+                    <span className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                      <InsigniaEstado estado={n.estado} />
+                      {esAdmin && !asesorFiltro && <span>{n.asesor?.nombre}</span>}
+                      <span title={fechaHora(n.fecha_asignado)}>asignado {haceCuanto(n.fecha_asignado)}</span>
+                    </span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <ul className="tarjeta divide-y divide-slate-100">
         {(chats ?? []).map((c) => {
           const ultimoEsDelLead = c.ultimo_mensaje_lead_at === c.ultimo_mensaje_at
           return (
             <li key={c.id}>
-              <Link href={`/leads/${c.id}#chat`} className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50">
+              <Link href={`/chats/${c.id}`} className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50">
                 <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${c.sin_responder ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'}`}>
                   {(c.nombre ?? '?').slice(0, 1).toUpperCase()}
                 </div>

@@ -310,7 +310,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
                   </Link>
                   <span className="ml-2"><PuntajeInteres puntaje={l.puntaje} motivos={l.puntaje_motivos} /></span>
                   {l.sin_responder && (
-                    <Link href={`/leads/${l.id}#chat`} className="ml-2 rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700">✉ Sin responder</Link>
+                    <Link href={`/chats/${l.id}`} className="ml-2 rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700">✉ Sin responder</Link>
                   )}
                   <p className="text-xs text-slate-500">
                     {l.telefono}{l.dni ? ` · DNI ${l.dni}` : ''}

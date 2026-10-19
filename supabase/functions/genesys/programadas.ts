@@ -104,7 +104,7 @@ export async function recordatorios(): Promise<Respuesta> {
       ...atrasados.slice(0, 15).map(linea),
       atrasados.length > 15 ? `… y ${atrasados.length - 15} más.` : null,
       mensajes.length ? `\n*Te escribieron con la oficina cerrada (${mensajes.length}):*` : null,
-      ...mensajes.slice(0, 15).map((l) => `• ${l.nombre ?? l.telefono} – ${PANEL_URL}/leads/${l.id}#chat`),
+      ...mensajes.slice(0, 15).map((l) => `• ${l.nombre ?? l.telefono} – ${PANEL_URL}/chats/${l.id}`),
       mensajes.length > 15 ? `… y ${mensajes.length - 15} más.` : null,
       '',
       `Escríbeles desde el CRM: ${PANEL_URL}/pendientes`,

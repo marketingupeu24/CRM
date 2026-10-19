@@ -48,7 +48,7 @@ function ListaLeads(
       <ul className="divide-y divide-slate-100">
         {leads.map((l) => (
           <li key={l.id} className="flex items-center gap-2 pr-3 hover:bg-slate-50">
-            <Link href={`/leads/${l.id}#chat`} className="block min-w-0 flex-1 py-2.5 pl-5 text-sm">
+            <Link href={`/chats/${l.id}`} className="block min-w-0 flex-1 py-2.5 pl-5 text-sm">
               <div className="flex items-baseline justify-between gap-2">
                 <span className="min-w-0 truncate font-medium text-marca-700">{l.nombre ?? l.telefono}</span>
                 <span className="shrink-0 text-xs text-slate-500">{detalle(l)}</span>

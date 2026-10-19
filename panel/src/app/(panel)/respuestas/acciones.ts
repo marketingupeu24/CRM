@@ -17,6 +17,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 function refrescar() {
   revalidatePath('/respuestas')
   revalidatePath('/leads/[id]', 'page')
+  revalidatePath('/chats/[id]', 'page')
 }
 
 function datos(formData: FormData) {

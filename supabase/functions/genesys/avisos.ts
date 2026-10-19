@@ -36,7 +36,7 @@ export function mensajeNuevoLead(lead: Lead, fuente: Fuente, tipo: TipoAviso = '
     lead.origen_campana ? `*Nos conoció por:* ${lead.origen_campana}` : null,
     `*Celular:* ${lead.telefono}`,
     `*WhatsApp:* https://wa.me/${lead.telefono}`,
-    tipo === 'asignado' ? `*Ficha en el CRM:* ${PANEL_URL}/leads/${lead.id}` : null,
+    `*Abrir en el CRM:* ${PANEL_URL}/chats/${lead.id}`,
   ].filter((linea) => linea !== null).join('\n')
 }
 
@@ -57,7 +57,7 @@ export async function notificarAsesor(lead: Lead, telefonoAsesor: string, fuente
   EdgeRuntime.waitUntil(enviarPush(supabase, lead.asesor_id, {
     titulo: tipo === 'reasignado' ? '🔁 Lead reasignado a ti' : tipo === 'asignado' ? '📌 Lead asignado a ti' : tipo === 'reconsulta' ? '🔁 Volvió a consultar' : '🆕 Nuevo lead',
     cuerpo: `${lead.nombre ?? lead.telefono} · ${lead.modalidad ?? lead.carrera_interes ?? 'Consulta general'}`,
-    url: `/leads/${lead.id}`, etiqueta: `lead-${lead.id}`,
+    url: `/chats/${lead.id}`, etiqueta: `lead-${lead.id}`,
   }))
   let envio = await enviarWhatsApp(telefonoAsesor, texto)
   for (let intento = 1; !envio.ok && intento < 3; intento++) {
@@ -109,11 +109,11 @@ export async function avisarMensajeNuevo(lead: Lead, mensaje: string) {
     '',
     mensaje.length > 300 ? mensaje.slice(0, 300) + '…' : mensaje,
     '',
-    `Responde desde el CRM: ${PANEL_URL}/leads/${lead.id}#chat`,
+    `Responde desde el CRM: ${PANEL_URL}/chats/${lead.id}`,
   ].filter((linea) => linea !== null).join('\n')
   EdgeRuntime.waitUntil(enviarPush(supabase, reemplazo?.telefono ? asesor.ausente_reemplazo : lead.asesor_id, {
     titulo: `💬 ${lead.nombre ?? lead.telefono}`,
-    cuerpo: mensaje, url: `/leads/${lead.id}#chat`, etiqueta: `chat-${lead.id}`,
+    cuerpo: mensaje, url: `/chats/${lead.id}`, etiqueta: `chat-${lead.id}`,
   }))
   const envio = await enviarWhatsApp(destino, texto)
   if (!envio.ok) console.error('[genesys] No se pudo avisar el mensaje nuevo al asesor:', envio.error)
@@ -253,7 +253,7 @@ export async function avisarVisita(cuerpo: Cuerpo): Promise<Respuesta> {
       '*🤝 QUEDASTE DE APOYO*',
       `${lead.nombre ?? lead.telefono} es lead de *${dueno?.nombre ?? 'otro asesor'}* y sigue siendo suyo.`,
       'Puedes ver su conversación y enviarle información desde el CRM:',
-      `${PANEL_URL}/leads/${lead.id}#chat`,
+      `${PANEL_URL}/chats/${lead.id}`,
     ].join('\n'))
     if (!aviso.ok) console.error('[genesys] No se pudo avisar al asesor de apoyo:', aviso.error)
   }
