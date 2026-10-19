@@ -51,6 +51,10 @@ export async function recordatorios(): Promise<Respuesta> {
   //    a) leads que llegaron con la oficina cerrada (o cuyo aviso se guardó para la apertura) y aún no contacta
   //    b) leads sin contactar desde hace más de 12 h (una sola vez por lead)
   //    c) leads que le escribieron con la oficina cerrada y siguen sin respuesta
+  // Avisos guardados para la apertura de leads que el asesor ya contactó (o ya se cerraron): quedan dados por avisados
+  await supabase.from('leads').update({ notificacion_estado: 'notificado' }).eq('notificacion_estado', 'fuera_horario')
+    .or('primer_contacto_asesor_at.not.is.null,estado.in.(lead_perdido,lead_no_interesado,lead_matriculado)')
+
   const { data: cierre } = await supabase.rpc('ultimo_cierre')
   const desdeCierre = cierre ? new Date(cierre as string).toISOString() : new Date(Date.now() - 16 * 3_600_000).toISOString()
   const [llegaron, sinContactar, escribieron] = await Promise.all([
