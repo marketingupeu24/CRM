@@ -11,6 +11,8 @@
 @theme {
   /* Estilo TailAdmin con la marca UPeU: tipografía Outfit, azul UPeU #003865, dorado #F7A800, grises cálidos y sombras suaves */
   --font-sans: var(--font-outfit), ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  /* Pantallas muy anchas (1800 px): la ficha del lead muestra los detalles abiertos por defecto */
+  --breakpoint-3xl: 112.5rem;
 
   --color-marca-50: #e9f1f8;
   --color-marca-100: #d2e2f0;

@@ -14,6 +14,7 @@ import { ControlesChat } from './ControlesChat'
 import { RegistrarContacto } from './RegistrarContacto'
 import { AccionesRapidas } from './AccionesRapidas'
 import { ProformaRapida } from './ProformaRapida'
+import { ListaConversaciones, type Conversacion as ItemBandeja } from './ListaConversaciones'
 import { BotonesTarea, FormularioTarea } from '@/components/Tareas'
 
 /** Sugerencias de carrera al editar los datos (presencial, campus Juliaca) */
@@ -56,7 +57,8 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
   const { esAdmin, perfil, puede } = await exigirPermiso('leads')
   const supabase = await crearClienteServidor()
 
-  const [{ data: propio }, { data: historial }, { data: asesores }, { data: tareas }, { data: todasRespuestas }, { data: ocultas }] = await Promise.all([
+  const camposBandeja = 'id, nombre, telefono, ultimo_mensaje_texto, ultimo_mensaje_at, ultimo_mensaje_lead_at, sin_responder, asesor_id'
+  const [{ data: propio }, { data: historial }, { data: asesores }, { data: tareas }, { data: todasRespuestas }, { data: ocultas }, { data: recientes }, { data: esperando }] = await Promise.all([
     supabase.from('leads').select('*, asesor:asesores!leads_asesor_id_fkey(id, nombre, telefono), actividad:actividades(id, nombre)').eq('id', id).maybeSingle(),
     supabase.from('lead_interacciones')
       .select('*, autor:asesores!lead_interacciones_autor_id_fkey(nombre)')
@@ -69,7 +71,23 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
     supabase.from('respuestas_rapidas').select('id, titulo, contenido, asesor_id').eq('activa', true)
       .or(`asesor_id.is.null,asesor_id.eq.${perfil.id}`).order('orden').order('titulo'),
     supabase.from('respuestas_ocultas').select('respuesta_id').eq('asesor_id', perfil.id),
+    puede('chats')
+      ? supabase.from('leads').select(camposBandeja).not('ultimo_mensaje_at', 'is', null).order('ultimo_mensaje_at', { ascending: false }).limit(80)
+      : Promise.resolve({ data: [] }),
+    puede('chats')
+      ? supabase.from('leads').select(camposBandeja).eq('sin_responder', true).order('ultimo_mensaje_at', { ascending: false }).limit(100)
+      : Promise.resolve({ data: [] }),
   ])
+  // Bandeja: sin repetir, de la más reciente a la más antigua
+  const vistos = new Set<string>()
+  const bandeja: ItemBandeja[] = [...(esperando ?? []), ...(recientes ?? [])]
+    .filter((c) => !vistos.has(c.id) && vistos.add(c.id))
+    .sort((a, b) => (b.ultimo_mensaje_at ?? '').localeCompare(a.ultimo_mensaje_at ?? ''))
+    .map((c) => ({
+      id: c.id, nombre: c.nombre ?? c.telefono, ultimo: c.ultimo_mensaje_texto,
+      deMi: !!c.ultimo_mensaje_at && c.ultimo_mensaje_lead_at !== c.ultimo_mensaje_at,
+      hace: haceCuanto(c.ultimo_mensaje_at), sinResponder: !!c.sin_responder, mio: c.asesor_id === perfil.id,
+    }))
   const noUsa = new Set((ocultas ?? []).map((o) => o.respuesta_id))
   // Las personales primero
   const respuestas = (todasRespuestas ?? []).filter((r) => !noUsa.has(r.id))
@@ -131,6 +149,9 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
         <span className="shrink-0"><InsigniaEstado estado={lead.estado} /></span>
         <span className="max-sm:hidden"><PuntajeInteres puntaje={lead.puntaje} motivos={lead.puntaje_motivos} detalle /></span>
         <span className="shrink-0 sm:hidden"><PuntajeInteres puntaje={lead.puntaje} motivos={lead.puntaje_motivos} /></span>
+        <label className="ml-auto hidden cursor-pointer items-center gap-1.5 rounded-lg border border-slate-300 bg-superficie px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 has-checked:border-marca-600 has-checked:text-marca-700 xl:inline-flex" title="Mostrar u ocultar el panel de detalles (estado, próxima acción, notas, datos)">
+          <input type="checkbox" id="alternar-detalles" className="sr-only" />📋 Detalles
+        </label>
         {puede('papelera') && !apoyo && <span className="ml-auto max-sm:hidden xl:hidden"><BotonPapelera leadId={lead.id} nombre={lead.nombre ?? lead.telefono} /></span>}
       </div>
 
@@ -156,7 +177,14 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
       </div>
 
       {/* Pantallas grandes: el chat ocupa todo el alto (como en las bandejas de Intercom o Chatwoot) y el panel lateral se desplaza aparte */}
-      <div className="grid gap-4 max-md:min-h-0 max-md:flex-1 max-md:grid-rows-[minmax(0,1fr)] xl:min-h-0 xl:flex-1 xl:grid-cols-[3.5rem_minmax(0,1fr)_24rem] xl:grid-rows-[minmax(0,1fr)]">
+      <div className="grid gap-4 max-md:min-h-0 max-md:flex-1 max-md:grid-rows-[minmax(0,1fr)] xl:min-h-0 xl:flex-1 xl:grid-cols-[17rem_3.5rem_minmax(0,1fr)] xl:grid-rows-[minmax(0,1fr)] xl:group-has-[#alternar-detalles:checked]:grid-cols-[17rem_3.5rem_minmax(0,1fr)_21rem] 3xl:grid-cols-[19rem_3.5rem_minmax(0,1fr)_23rem] 3xl:group-has-[#alternar-detalles:checked]:grid-cols-[19rem_3.5rem_minmax(0,1fr)]">
+        {/* Bandeja de conversaciones (pantallas grandes) */}
+        {puede('chats') && (
+          <div className="hidden xl:flex xl:min-h-0 xl:flex-col">
+            <ListaConversaciones key="bandeja" conversaciones={bandeja} actualId={lead.id} verMios={esAdmin} />
+          </div>
+        )}
+        {!puede('chats') && <div className="hidden xl:block" />}
         {/* Pantallas grandes: acciones rápidas en íconos a la izquierda (se despliegan al pasar el mouse) */}
         <div className="relative hidden xl:z-20 xl:block">
           <AccionesRapidas
@@ -196,7 +224,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
 
         </div>
 
-        <div className="space-y-4 max-md:hidden max-md:min-h-0 max-md:overflow-y-auto max-md:overscroll-contain max-md:group-has-[#pestana-detalles:checked]:block xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
+        <div className="space-y-4 max-md:hidden max-md:min-h-0 max-md:overflow-y-auto max-md:overscroll-contain max-md:group-has-[#pestana-detalles:checked]:block xl:hidden xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain xl:pr-1 xl:group-has-[#alternar-detalles:checked]:block 3xl:block 3xl:group-has-[#alternar-detalles:checked]:hidden">
           <section className="tarjeta p-4">
             <h2 className="mb-3 font-semibold">Contacto fuera del chat</h2>
             <RegistrarContacto leadId={lead.id} />
