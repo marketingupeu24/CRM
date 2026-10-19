@@ -10,7 +10,7 @@ export default async function PaginaRecordatorios() {
   await exigirPermiso('conocimiento')
   const supabase = await crearClienteServidor()
   const { data } = await supabase.from('recordatorios_alumnos')
-    .select('id, titulo, mensaje, enviar_el, desde_hora, carreras, excluir_carreras, solo_registrados, activo, completado_at')
+    .select('id, titulo, mensaje, enviar_el, desde_hora, carreras, excluir_carreras, solo_registrados, activo, completado_at, dias_sin_contacto, dias_maximo')
     .order('enviar_el').order('id')
   const recordatorios = (data ?? []) as Recordatorio[]
   const resumenes = await Promise.all(recordatorios.map(async (r) => {
@@ -23,7 +23,8 @@ export default async function PaginaRecordatorios() {
       <div>
         <h1 className="text-2xl font-semibold">⏰ Recordatorios a alumnos</h1>
         <p className="max-w-3xl text-sm text-slate-500">
-          Avisos automáticos por WhatsApp (ej. &quot;faltan 3 días para el cierre de inscripciones&quot;). Llegan solo a quienes ya nos escribieron,
+          Avisos automáticos por WhatsApp: en una fecha (ej. &quot;faltan 3 días para el cierre de inscripciones&quot;) o de seguimiento,
+          a quien lleva varios días sin contacto (ej. 7 días; una sola vez por alumno, aunque no responda). Llegan solo a quienes ya nos escribieron,
           no se inscribieron y no pidieron dejar de recibirlos; una sola vez por alumno, en horario de atención y de a pocos (10 cada 10 minutos).
           Si el alumno responde &quot;NO&quot;, no recibe más.
         </p>

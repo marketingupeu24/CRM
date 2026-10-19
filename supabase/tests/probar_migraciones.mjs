@@ -860,6 +860,40 @@ seccion('horario de atención')
   await q(`delete from tareas where id = $1`, [tarea])
 }
 
+seccion('recordatorio automático: 7 días sin contacto, una sola vez')
+{
+  await reset()
+  const rec = (await uno(`insert into recordatorios_alumnos (titulo, mensaje, enviar_el, excluir_carreras, solo_registrados, dias_sin_contacto, dias_maximo, activo)
+    values ('Seguimiento prueba', 'Hola {nombre}, ¿pudiste avanzar?', current_date, '{}', false, 7, 30, true) returning id`)).id
+  const base = (await uno(`select id, asesor_id from leads where asesor_id is not null limit 1`))
+  const otro = (await uno(`select id from leads where asesor_id is not null and id <> $1 limit 1`, [base.id])).id
+  // Inactivo hace 10 días, ya nos escribió
+  const inactivo = `update leads set estado = 'lead_contactado', ultimo_mensaje_lead_at = now() - interval '10 days', ultimo_mensaje_at = now() - interval '10 days', ultimo_contacto = now() - interval '10 days', atendido_at = null, no_recordatorios = false where id = $1`
+  await q(inactivo, [base.id]); await q(inactivo, [otro])
+  const dest = async () => (await q(`select id from destinatarios_recordatorio($1)`, [rec])).map((x) => x.id)
+  ok((await dest()).includes(base.id), 'le llega a quien lleva 10 días sin contacto')
+  await q(`update leads set ultimo_mensaje_at = now() - interval '3 days' where id = $1`, [otro])
+  ok(!(await dest()).includes(otro), 'no le llega a quien tuvo contacto hace 3 días')
+  await q(`update leads set ultimo_mensaje_at = now() - interval '60 days', ultimo_contacto = now() - interval '60 days', ultimo_mensaje_lead_at = now() - interval '60 days' where id = $1`, [otro])
+  ok(!(await dest()).includes(otro), 'no le llega a contactos muy antiguos (más de 30 días)')
+  await q(`update leads set estado = 'lead_inscrito' where id = $1`, [base.id])
+  ok(!(await dest()).includes(base.id), 'no le llega a un inscrito')
+  await q(`update leads set estado = 'lead_contactado' where id = $1`, [base.id])
+  const t = (await uno(`insert into tareas (lead_id, asesor_id, titulo, vence_at) values ($1, $2, 'Llamar', now() + interval '2 days') returning id`, [base.id, base.asesor_id])).id
+  ok(!(await dest()).includes(base.id), 'no le llega si el asesor ya agendó contactarlo')
+  await q(`delete from tareas where id = $1`, [t])
+  await q(`update leads set no_recordatorios = true where id = $1`, [base.id])
+  ok(!(await dest()).includes(base.id), 'no le llega si pidió no recibir más (NO)')
+  await q(`update leads set no_recordatorios = false where id = $1`, [base.id])
+  await q(`insert into recordatorios_envios (recordatorio_id, lead_id, enviado_at) values ($1, $2, now())`, [rec, base.id])
+  ok(!(await dest()).includes(base.id), 'una sola vez: después de enviado no le vuelve a llegar')
+  const rec2 = (await uno(`insert into recordatorios_alumnos (titulo, mensaje, enviar_el, excluir_carreras, solo_registrados, dias_sin_contacto, activo) values ('Otro seguimiento', 'Hola de nuevo, ¿alguna duda?', current_date, '{}', false, 7, true) returning id`)).id
+  ok(!(await q(`select id from destinatarios_recordatorio($1)`, [rec2])).some((x) => x.id === base.id), 'una sola vez aunque haya otro recordatorio automático')
+  await q(`select reservar_recordatorios(30)`)
+  ok((await uno(`select completado_at from recordatorios_alumnos where id = $1`, [rec])).completado_at === null, 'el automático nunca queda "completo" (sigue para los que cumplan 7 días)')
+  await reset()
+}
+
 seccion('carreras con su nombre oficial (sin duplicados)')
 {
   const casos = {

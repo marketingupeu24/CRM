@@ -18,16 +18,24 @@ export async function guardarRecordatorio(id: number | null, _previo: Resultado,
   await exigirPermiso('conocimiento')
   const titulo = String(formData.get('titulo') ?? '').trim()
   const mensaje = String(formData.get('mensaje') ?? '').replace(/\r\n/g, '\n').trim()
-  const enviarEl = String(formData.get('enviar_el') ?? '')
+  // Automático por inactividad: sin fecha fija (empieza hoy) y con los días sin contacto
+  const automatico = formData.get('tipo') === 'inactividad'
+  const diasSinContacto = Number.parseInt(String(formData.get('dias_sin_contacto') ?? ''), 10)
+  const diasMaximo = Number.parseInt(String(formData.get('dias_maximo') ?? '30'), 10)
+  const enviarEl = automatico ? new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date()) : String(formData.get('enviar_el') ?? '')
   const desdeHora = String(formData.get('desde_hora') ?? '09:00')
   if (titulo.length < 2) return { error: 'Escribe un título.' }
   if (mensaje.length < 10 || mensaje.length > 1500) return { error: 'El mensaje debe tener entre 10 y 1500 caracteres.' }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(enviarEl)) return { error: 'Elige el día de envío.' }
   if (!/^\d{2}:\d{2}$/.test(desdeHora)) return { error: 'Elige la hora.' }
+  if (automatico && !(diasSinContacto >= 2 && diasSinContacto <= 90)) return { error: 'Días sin contacto: entre 2 y 90.' }
+  if (automatico && !(diasMaximo > diasSinContacto && diasMaximo <= 365)) return { error: 'El máximo de días debe ser mayor que los días sin contacto (hasta 365).' }
   const datos = {
     titulo: titulo.slice(0, 120), mensaje, enviar_el: enviarEl, desde_hora: desdeHora,
     carreras: lista(formData.get('carreras')), excluir_carreras: lista(formData.get('excluir_carreras')),
     solo_registrados: formData.get('solo_registrados') === 'on',
+    dias_sin_contacto: automatico ? diasSinContacto : null,
+    ...(automatico ? { dias_maximo: diasMaximo } : {}),
   }
   const supabase = await crearClienteServidor()
   // Al editar uno ya terminado, vuelve a quedar pendiente (solo para quienes aún no lo recibieron)
@@ -45,7 +53,7 @@ export async function cambiarActivo(id: number, activo: boolean): Promise<Result
   const { error } = await supabase.from('recordatorios_alumnos').update({ activo }).eq('id', id)
   if (error) return { error: mensajeError(error) }
   revalidatePath('/recordatorios')
-  return { ok: activo ? 'Activado: se enviará el día indicado, en horario de atención.' : 'Apagado.' }
+  return { ok: activo ? 'Activado: se enviará en horario de atención y de a pocos.' : 'Apagado.' }
 }
 
 export async function eliminarRecordatorio(id: number): Promise<Resultado> {

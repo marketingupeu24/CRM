@@ -15,6 +15,9 @@ export interface Recordatorio {
   solo_registrados: boolean
   activo: boolean
   completado_at: string | null
+  /** Automático: a quien lleva estos días sin contacto (una sola vez por alumno) */
+  dias_sin_contacto: number | null
+  dias_maximo: number
 }
 
 function Mensaje({ r }: { r: Resultado }) {
@@ -25,8 +28,20 @@ function Mensaje({ r }: { r: Resultado }) {
 
 export function FormularioRecordatorio({ rec }: { rec?: Recordatorio }) {
   const [r, accion, guardando] = useActionState<Resultado, FormData>(guardarRecordatorio.bind(null, rec?.id ?? null), {})
+  const [tipo, setTipo] = useState<'fecha' | 'inactividad'>(rec?.dias_sin_contacto ? 'inactividad' : 'fecha')
   return (
     <form action={accion} className="grid gap-3 md:grid-cols-2">
+      <fieldset className="md:col-span-2">
+        <legend className="text-sm text-slate-600">¿Cuándo se envía?</legend>
+        <div className="mt-1 flex flex-wrap gap-2 text-sm">
+          <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 px-3 py-1.5 has-checked:border-marca-600 has-checked:bg-marca-50">
+            <input type="radio" name="tipo" value="fecha" checked={tipo === 'fecha'} onChange={() => setTipo('fecha')} /> 📅 En una fecha
+          </label>
+          <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 px-3 py-1.5 has-checked:border-marca-600 has-checked:bg-marca-50">
+            <input type="radio" name="tipo" value="inactividad" checked={tipo === 'inactividad'} onChange={() => setTipo('inactividad')} /> 🔁 Automático: días sin contacto
+          </label>
+        </div>
+      </fieldset>
       <label className="text-sm text-slate-600 md:col-span-2">Título (solo para el CRM) *
         <input name="titulo" required maxLength={120} defaultValue={rec?.titulo} placeholder="Cierre de inscripciones" className="campo mt-1" />
       </label>
@@ -37,9 +52,24 @@ export function FormularioRecordatorio({ rec }: { rec?: Recordatorio }) {
           Variables: <code>{'{nombre}'}</code> (primer nombre), <code>{'{carrera}'}</code>, <code>{'{asesor}'}</code>. Al final se agrega: &quot;Si no deseas recibir estos avisos, responde NO&quot;.
         </span>
       </label>
-      <label className="text-sm text-slate-600">Día de envío *
-        <input type="date" name="enviar_el" required defaultValue={rec?.enviar_el} className="campo mt-1" />
-      </label>
+      {tipo === 'fecha' ? (
+        <label className="text-sm text-slate-600">Día de envío *
+          <input type="date" name="enviar_el" required defaultValue={rec?.enviar_el} className="campo mt-1" />
+        </label>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <label className="text-sm text-slate-600">Días sin contacto *
+            <input type="number" name="dias_sin_contacto" min={2} max={90} required defaultValue={rec?.dias_sin_contacto ?? 7} className="campo mt-1" />
+          </label>
+          <label className="text-sm text-slate-600" title="No le escribe a quien lleva más días sin contacto (evita escribir a contactos muy antiguos)">Hasta (días)
+            <input type="number" name="dias_maximo" min={3} max={365} defaultValue={rec?.dias_maximo ?? 30} className="campo mt-1" />
+          </label>
+          <p className="col-span-2 text-xs text-slate-500">
+            Le escribe <b>una sola vez</b> a cada alumno que cumpla esos días sin contacto (aunque no responda), si tiene asesor, ya nos escribió, no está inscrito ni matriculado
+            y su asesor no le agendó una tarea a futuro.
+          </p>
+        </div>
+      )}
       <label className="text-sm text-slate-600">Desde la hora (solo en horario de atención)
         <input type="time" name="desde_hora" defaultValue={rec?.desde_hora?.slice(0, 5) ?? '09:00'} className="campo mt-1" />
       </label>
@@ -66,12 +96,15 @@ export function TarjetaRecordatorio({ rec, resumen }: { rec: Recordatorio; resum
   const [r, setR] = useState<Resultado>({})
   const [pendiente, iniciar] = useTransition()
   const fecha = new Intl.DateTimeFormat('es-PE', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(`${rec.enviar_el}T12:00:00Z`))
+  const automatico = rec.dias_sin_contacto !== null
 
   async function alternar() {
     if (!rec.activo) {
       const ok = await confirmar({
         titulo: '¿Activar este recordatorio?',
-        mensaje: <>Se enviará por WhatsApp a <b>{resumen.pendientes}</b> alumno(s) el {fecha}, desde las {rec.desde_hora.slice(0, 5)}, en horario de atención y de a pocos. El número de Genesys está conectado por QR: envíos masivos pueden hacer que WhatsApp lo bloquee. Úsalo solo para avisos importantes.</>,
+        mensaje: automatico
+          ? <>Desde hoy, cada alumno que cumpla <b>{rec.dias_sin_contacto} días sin contacto</b> recibirá este mensaje <b>una sola vez</b>. Ahora mismo cumplen la condición <b>{resumen.pendientes}</b> alumno(s): se les escribirá en horario de atención y de a pocos (10 cada 10 minutos). El número de Genesys está conectado por QR: envíos masivos pueden hacer que WhatsApp lo bloquee.</>
+          : <>Se enviará por WhatsApp a <b>{resumen.pendientes}</b> alumno(s) el {fecha}, desde las {rec.desde_hora.slice(0, 5)}, en horario de atención y de a pocos. El número de Genesys está conectado por QR: envíos masivos pueden hacer que WhatsApp lo bloquee. Úsalo solo para avisos importantes.</>,
         confirmar: 'Activar',
       })
       if (!ok) return
@@ -87,11 +120,11 @@ export function TarjetaRecordatorio({ rec, resumen }: { rec: Recordatorio; resum
             {rec.completado_at ? '✅' : rec.activo ? '🟢' : '⏸'} {rec.titulo}
           </p>
           <p className="text-xs text-slate-500">
-            {fecha} desde {rec.desde_hora.slice(0, 5)} · {rec.carreras.length ? rec.carreras.join(', ') : 'todas las carreras'}
+            {automatico ? <>🔁 Automático: a los <b>{rec.dias_sin_contacto} días sin contacto</b> (hasta {rec.dias_maximo}) · una sola vez por alumno</> : <>{fecha} desde {rec.desde_hora.slice(0, 5)}</>} · {rec.carreras.length ? rec.carreras.join(', ') : 'todas las carreras'}
             {rec.excluir_carreras.length ? ` (excepto ${rec.excluir_carreras.join(', ')})` : ''} · {rec.solo_registrados ? 'solo registrados' : 'todos los que escribieron'}
           </p>
           <p className="mt-1 text-xs">
-            <b>{resumen.enviados}</b> enviados · <b>{resumen.pendientes}</b> por enviar{resumen.errores ? <> · <span className="text-rose-600">{resumen.errores} con error</span></> : null}
+            <b>{resumen.enviados}</b> enviados · <b>{resumen.pendientes}</b> {automatico ? 'cumplen la condición ahora' : 'por enviar'}{resumen.errores ? <> · <span className="text-rose-600">{resumen.errores} con error</span></> : null}
           </p>
           <p className="mt-2 rounded-lg bg-slate-50 p-3 text-sm whitespace-pre-wrap text-slate-700">{rec.mensaje}</p>
         </div>

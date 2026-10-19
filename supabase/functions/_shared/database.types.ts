@@ -507,13 +507,13 @@ isOneToOne: false
                   ]
                 },"recordatorios_alumnos": {
                   Row: {
-                    "activo": boolean,"carreras": (string)[],"completado_at": string | null,"creado_por": string | null,"created_at": string,"desde_hora": string,"enviar_el": string,"excluir_carreras": (string)[],"id": number,"mensaje": string,"solo_registrados": boolean,"titulo": string
+                    "activo": boolean,"carreras": (string)[],"completado_at": string | null,"creado_por": string | null,"created_at": string,"desde_hora": string,"dias_maximo": number,"dias_sin_contacto": number | null,"enviar_el": string,"excluir_carreras": (string)[],"id": number,"mensaje": string,"solo_registrados": boolean,"titulo": string
                   }
                   Insert: {
-                    "activo"?: boolean,"carreras"?: (string)[],"completado_at"?: string | null,"creado_por"?: string | null,"created_at"?: string,"desde_hora"?: string,"enviar_el": string,"excluir_carreras"?: (string)[],"id"?: never,"mensaje": string,"solo_registrados"?: boolean,"titulo": string
+                    "activo"?: boolean,"carreras"?: (string)[],"completado_at"?: string | null,"creado_por"?: string | null,"created_at"?: string,"desde_hora"?: string,"dias_maximo"?: number,"dias_sin_contacto"?: number | null,"enviar_el": string,"excluir_carreras"?: (string)[],"id"?: never,"mensaje": string,"solo_registrados"?: boolean,"titulo": string
                   }
                   Update: {
-                    "activo"?: boolean,"carreras"?: (string)[],"completado_at"?: string | null,"creado_por"?: string | null,"created_at"?: string,"desde_hora"?: string,"enviar_el"?: string,"excluir_carreras"?: (string)[],"id"?: never,"mensaje"?: string,"solo_registrados"?: boolean,"titulo"?: string
+                    "activo"?: boolean,"carreras"?: (string)[],"completado_at"?: string | null,"creado_por"?: string | null,"created_at"?: string,"desde_hora"?: string,"dias_maximo"?: number,"dias_sin_contacto"?: number | null,"enviar_el"?: string,"excluir_carreras"?: (string)[],"id"?: never,"mensaje"?: string,"solo_registrados"?: boolean,"titulo"?: string
                   }
                   Relationships: [
                     {
