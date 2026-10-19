@@ -44,6 +44,34 @@ export type MensajeChat = LeadInteraccion & { autor_nombre?: string | null }
 const TIPOS_ADJUNTO = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
 const MAX_ADJUNTO = 10 * 1024 * 1024
 
+/** Día en Lima (AAAA-MM-DD) para separar la conversación por días. */
+function diaLima(iso: string): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date(iso))
+}
+
+/** "Hoy", "Ayer" o "lunes 13 de octubre" (con el año si no es el actual). */
+function etiquetaDia(dia: string): string {
+  const hoy = diaLima(new Date().toISOString())
+  const ayer = diaLima(new Date(Date.now() - 86_400_000).toISOString())
+  if (dia === hoy) return 'Hoy'
+  if (dia === ayer) return 'Ayer'
+  const fecha = new Date(`${dia}T12:00:00Z`)
+  return new Intl.DateTimeFormat('es-PE', {
+    timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', ...(dia.slice(0, 4) !== hoy.slice(0, 4) ? { year: 'numeric' } : {}),
+  }).format(fecha)
+}
+
+/** Solo la hora ("07:33 p. m."): el día va en el separador. */
+function soloHora(iso: string): string {
+  return new Intl.DateTimeFormat('es-PE', { timeZone: 'America/Lima', hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
+}
+
+/** Quién habla: alumno, bot o un asesor en particular (para agrupar mensajes seguidos). */
+const quien = (m: MensajeChat) => (m.tipo === 'mensaje_asesor' ? `asesor-${m.autor_id ?? ''}` : m.tipo)
+
+/** Distancia al final (px) para considerar que el asesor está "abajo" leyendo lo último. */
+const CERCA_DEL_FINAL = 150
+
 function hora(iso: string): string {
   return new Intl.DateTimeFormat('es-PE', {
     timeZone: 'America/Lima', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
@@ -105,6 +133,14 @@ export function Conversacion(
   const [error, setError] = useState<string | null>(null)
   const [enVivo, setEnVivo] = useState(false)
   const fondo = useRef<HTMLDivElement>(null)
+  const campoTexto = useRef<HTMLTextAreaElement>(null)
+  // Si el asesor subió a leer, los mensajes nuevos no lo bajan: se avisan con un botón
+  const cercaDelFinal = useRef(true)
+  const primeraVez = useRef(true)
+  const [nuevosSinVer, setNuevosSinVer] = useState(0)
+  const cantidad = useRef(inicial.length)
+  // Ids negativos para los mensajes que se están enviando (nunca chocan con los de la base)
+  const temporales = useRef(-1)
 
   /** Agrega mensajes sin repetir y mantiene el orden por fecha. */
   const agregarVarios = (nuevos: MensajeChat[]) =>
@@ -198,10 +234,35 @@ export function Conversacion(
     }
   }, [leadId])
 
-  // Bajar al último mensaje
+  // Al abrir: directo al último mensaje. Después: baja solo si el asesor ya estaba abajo o si él mismo envió;
+  // si estaba leyendo más arriba, se muestra "↓ N mensajes nuevos" en vez de moverle la conversación.
   useEffect(() => {
+    const caja = fondo.current
+    if (!caja) return
+    const agregados = mensajes.length - cantidad.current
+    cantidad.current = mensajes.length
+    if (primeraVez.current) { primeraVez.current = false; caja.scrollTop = caja.scrollHeight; return }
+    if (agregados <= 0) return
+    const ultimo = mensajes.at(-1)
+    if (cercaDelFinal.current || ultimo?.tipo === 'mensaje_asesor') {
+      caja.scrollTo({ top: caja.scrollHeight, behavior: 'smooth' })
+    } else {
+      setNuevosSinVer((n) => n + agregados)
+    }
+  }, [mensajes])
+
+  function irAlFinal() {
     fondo.current?.scrollTo({ top: fondo.current.scrollHeight, behavior: 'smooth' })
-  }, [mensajes.length])
+    setNuevosSinVer(0)
+  }
+
+  // La caja de texto crece con lo que se escribe (hasta ~6 líneas) y vuelve a su tamaño al enviar
+  useEffect(() => {
+    const c = campoTexto.current
+    if (!c) return
+    c.style.height = 'auto'
+    c.style.height = `${Math.min(c.scrollHeight, 160)}px`
+  }, [texto])
 
   /** Valida y deja listo el archivo para enviar (imagen o PDF, máx. 10 MB). */
   function elegirArchivo(f: File | null | undefined) {
@@ -225,9 +286,35 @@ export function Conversacion(
     if (selector.current) selector.current.value = ''
   }
 
-  async function enviar(contenido: string, adjunto: File | null = null) {
+  async function enviar(contenido: string, adjunto: File | null = null, reintentoDe?: number) {
     const limpio = contenido.trim()
-    if ((!limpio && !adjunto) || enviando) return
+    if (!limpio && !adjunto) return
+    // Solo texto: aparece al instante en el chat y la caja queda libre para seguir escribiendo
+    if (!adjunto) {
+      const temporal: MensajeChat = {
+        id: temporales.current--, lead_id: leadId, tipo: 'mensaje_asesor', contenido: limpio, created_at: new Date().toISOString(),
+        estado_envio: 'pendiente', error_envio: null, adjunto_url: null, autor_id: null, autor_nombre: miNombre,
+      }
+      setMensajes((previos) => [...previos.filter((p) => p.id !== reintentoDe), temporal])
+      if (reintentoDe === undefined) setTexto('')
+      setError(null)
+      campoTexto.current?.focus()
+      const { data, error: fallo } = await crearClienteNavegador().functions.invoke('chat', { body: { lead_id: leadId, texto: limpio } })
+      let respuesta = data as { ok?: boolean; error?: string; mensaje?: MensajeChat } | null
+      if (fallo && 'context' in fallo && fallo.context instanceof Response) respuesta = await fallo.context.json().catch(() => null)
+      setMensajes((previos) => {
+        const sin = previos.filter((p) => p.id !== temporal.id)
+        if (respuesta?.mensaje) {
+          const real = { ...respuesta.mensaje, autor_nombre: miNombre }
+          return sin.some((p) => p.id === real.id) ? sin : [...sin, real].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))
+        }
+        // No llegó al servidor: queda en el chat marcado para reintentar
+        return [...sin, { ...temporal, estado_envio: 'error' }]
+      })
+      if (!respuesta?.ok) setError(respuesta?.error ?? 'No se pudo enviar el mensaje. Revisa tu conexión.')
+      return
+    }
+    if (enviando) return
     setEnviando(true)
     setError(null)
     const supabase = crearClienteNavegador()
@@ -274,51 +361,91 @@ export function Conversacion(
         </div>
         {encabezado && <div className="ml-auto flex min-w-0 justify-end">{encabezado}</div>}
       </div>
-      <div ref={fondo} className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain bg-chat-fondo px-4 py-4">
+      <div className="relative flex min-h-0 flex-1 flex-col">
+      <div
+        ref={fondo} className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-chat-fondo px-3 py-3 md:px-4"
+        onScroll={(e) => {
+          const c = e.currentTarget
+          cercaDelFinal.current = c.scrollHeight - c.scrollTop - c.clientHeight < CERCA_DEL_FINAL
+          if (cercaDelFinal.current && nuevosSinVer) setNuevosSinVer(0)
+        }}
+      >
         {mensajes.length === 0 && (
           <p className="mt-24 text-center text-sm text-slate-500">
             Aún no hay mensajes. Escribe abajo para iniciar la conversación.
           </p>
         )}
-        {mensajes.map((m) => {
+        {mensajes.map((m, i) => {
+          const previo = mensajes[i - 1]
+          const dia = diaLima(m.created_at)
+          const nuevoDia = !previo || diaLima(previo.created_at) !== dia
+          const separador = nuevoDia && (
+            <div className="sticky top-0 z-10 my-3 flex justify-center first:mt-0">
+              <span className="rounded-full bg-superficie/90 px-3 py-0.5 text-[11px] font-medium text-slate-600 shadow-sm backdrop-blur first-letter:uppercase">{etiquetaDia(dia)}</span>
+            </div>
+          )
           if (m.tipo === 'sistema') {
             return (
-              <div key={m.id} className="mx-auto max-w-sm rounded-lg bg-amber-50 px-3 py-2 text-xs whitespace-pre-wrap text-amber-900 shadow-sm">
-                {m.contenido}
+              <div key={m.id}>
+                {separador}
+                <div className="mx-auto my-2 max-w-sm rounded-lg bg-amber-50 px-3 py-1.5 text-center text-xs whitespace-pre-wrap text-amber-900 shadow-sm">
+                  {m.contenido}
+                </div>
               </div>
             )
           }
           const propio = m.tipo === 'mensaje_asesor'
           const bot = m.tipo === 'respuesta_bot'
           const fallido = propio && m.estado_envio === 'error'
+          const pendiente = propio && m.estado_envio === 'pendiente'
+          // Mensajes seguidos del mismo autor (hasta 5 min) van juntos: el nombre solo en el primero
+          const mismoGrupo = !nuevoDia && !!previo && previo.tipo !== 'sistema' && quien(previo) === quien(m)
+            && Date.parse(m.created_at) - Date.parse(previo.created_at) < 5 * 60_000
           return (
-            <div key={m.id} className={`flex ${propio ? 'justify-end' : 'justify-start'}`}>
-              <div
-                className={`max-w-[80%] rounded-lg px-3 py-2 text-sm shadow-sm ${
-                  propio ? (fallido ? 'bg-rose-100' : 'bg-burbuja-propia') : bot ? 'bg-slate-100' : 'bg-superficie'
-                }`}
-              >
-                <p className="mb-0.5 text-[11px] font-semibold text-slate-500">
-                  {propio ? nombreAutor(m) : bot ? 'Genesys (bot)' : 'Lead'}
-                </p>
-                {m.adjunto_url && <Adjunto ruta={m.adjunto_url} propio={propio} />}
-                <p className="break-words whitespace-pre-wrap text-slate-800">{m.contenido}</p>
-                <p className="mt-1 text-right text-[10px] text-slate-500">
-                  {hora(m.created_at)}
-                  {propio && !fallido && ' ✓'}
-                </p>
-                {fallido && (
-                  <div className="mt-1 flex items-center justify-between gap-3 text-xs text-rose-700">
-                    <span>No enviado</span>
-                    <button onClick={() => enviar(m.contenido ?? '')} disabled={enviando} className="font-semibold underline">
-                      Reintentar
-                    </button>
-                  </div>
-                )}
+            <div key={m.id}>
+              {separador}
+              <div className={`flex ${propio ? 'justify-end' : 'justify-start'} ${mismoGrupo ? 'mt-0.5' : 'mt-3'}`}>
+                <div
+                  className={`max-w-[85%] rounded-2xl px-3 py-1.5 text-sm shadow-sm md:max-w-[75%] ${propio ? 'rounded-br-md' : 'rounded-bl-md'} ${
+                    propio ? (fallido ? 'bg-rose-100' : 'bg-burbuja-propia') : bot ? 'bg-slate-100' : 'bg-superficie'
+                  } ${pendiente ? 'opacity-70' : ''}`}
+                >
+                  {!mismoGrupo && (
+                    <p className={`mb-0.5 text-[11px] font-semibold ${propio ? 'text-emerald-800' : bot ? 'text-violet-700' : 'text-marca-700'}`}>
+                      {propio ? nombreAutor(m) : bot ? '🤖 Genesys' : 'Alumno'}
+                    </p>
+                  )}
+                  {m.adjunto_url && <Adjunto ruta={m.adjunto_url} propio={propio} />}
+                  <p className="break-words whitespace-pre-wrap text-slate-800">
+                    {m.contenido}
+                    {/* Hora (y estado del envío) al final del texto, como en WhatsApp */}
+                    <span className="float-right mt-1.5 ml-3 text-[10px] leading-none text-slate-500" title={hora(m.created_at)}>
+                      {soloHora(m.created_at)}
+                      {propio && (pendiente ? ' 🕓' : fallido ? ' ⚠️' : ' ✓')}
+                    </span>
+                  </p>
+                  {fallido && (
+                    <div className="mt-1 flex items-center justify-between gap-3 text-xs text-rose-700">
+                      <span>No enviado</span>
+                      <button onClick={() => enviar(m.contenido ?? '', null, m.id < 0 ? m.id : undefined)} className="font-semibold underline">
+                        Reintentar
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )
         })}
+      </div>
+      {nuevosSinVer > 0 && (
+        <button
+          type="button" onClick={irAlFinal}
+          className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-marca-600 px-3 py-1.5 text-xs font-semibold text-white shadow-lg hover:brightness-110"
+        >
+          ↓ {nuevosSinVer} {nuevosSinVer === 1 ? 'mensaje nuevo' : 'mensajes nuevos'}
+        </button>
+      )}
       </div>
 
       {atajo && (
@@ -392,6 +519,7 @@ export function Conversacion(
         </button>
         {acciones}
         <textarea
+          ref={campoTexto}
           value={texto}
           onChange={(e) => { setTexto(e.target.value); setElegida(0) }}
           onKeyDown={(e) => {
@@ -414,10 +542,10 @@ export function Conversacion(
           rows={tactil ? 1 : 2}
           maxLength={1500}
           placeholder={archivo ? 'Mensaje (opcional)' : 'Escribe un mensaje'}
-          className="campo resize-none @max-[36rem]:min-h-10 @max-[36rem]:min-w-0 @max-[36rem]:flex-1 @max-[36rem]:py-2"
+          className="campo max-h-40 resize-none @max-[36rem]:min-h-10 @max-[36rem]:min-w-0 @max-[36rem]:flex-1 @max-[36rem]:py-2"
           aria-label="Mensaje"
         />
-        <button className="boton h-10 shrink-0 @max-[36rem]:w-10 @max-[36rem]:px-0" aria-label="Enviar" disabled={enviando || (!texto.trim() && !archivo)}>
+        <button className="boton h-10 shrink-0 @max-[36rem]:w-10 @max-[36rem]:px-0" aria-label="Enviar" disabled={(enviando && !!archivo) || (!texto.trim() && !archivo)}>
           <span className="@max-[36rem]:hidden">{enviando ? 'Enviando…' : 'Enviar'}</span>
           <span aria-hidden className="text-base @min-[36rem]:hidden">{enviando ? '…' : '➤'}</span>
         </button>
