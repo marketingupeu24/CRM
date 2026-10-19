@@ -122,6 +122,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
 
   const anuncio = lead.anuncio as { titulo?: string; url?: string; red?: string } | null
   const datos: [string, React.ReactNode][] = [
+    ['Nombre', lead.nombre],
     ['Celular', <a key="tel" href={`https://wa.me/${lead.telefono}`} target="_blank" rel="noreferrer" className="text-marca-700 hover:underline">{lead.telefono} ↗</a>],
     ['DNI', lead.dni],
     ['Programa', lead.programa === 'cepre' ? 'CePre' : 'Pregrado'],
@@ -210,7 +211,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
             </p>
           )}
           <Conversacion
-            leadId={lead.id} telefono={lead.telefono} inicial={chat}
+            leadId={lead.id} telefono={lead.telefono} inicial={chat} nombreAlumno={lead.nombre}
             miNombre={perfil.nombre} nombresAutores={nombresAutores}
             respuestas={respuestas}
             acciones={puede('costos') ? (

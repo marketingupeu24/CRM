@@ -84,6 +84,8 @@ interface Props {
   inicial: MensajeChat[]
   miNombre: string
   nombresAutores: Record<string, string>
+  /** Nombre del alumno para sus mensajes (si no tiene, se muestra su número) */
+  nombreAlumno?: string | null
   /** Plantillas del chat; {nombre}, {carrera} y {asesor} se reemplazan con `variables` */
   respuestas?: { id: number; titulo: string; contenido: string; personal?: boolean }[]
   variables?: { nombre: string; carrera: string; asesor: string }
@@ -94,7 +96,7 @@ interface Props {
 }
 
 export function Conversacion(
-  { leadId, telefono, inicial, miNombre, nombresAutores, encabezado, acciones, respuestas = [], variables }: Props,
+  { leadId, telefono, inicial, miNombre, nombresAutores, encabezado, acciones, respuestas = [], variables, nombreAlumno }: Props,
 ) {
   const [mensajes, setMensajes] = useState<MensajeChat[]>(inicial)
   const [texto, setTexto] = useState('')
@@ -344,6 +346,12 @@ export function Conversacion(
     setEnviando(false)
   }
 
+  // Primer nombre y primer apellido del alumno (o su número si aún no dio su nombre)
+  const nombreCorto = (() => {
+    const partes = (nombreAlumno ?? '').trim().split(/\s+/).filter(Boolean)
+    if (!partes.length) return telefono
+    return partes.length >= 4 ? `${partes[0]} ${partes[2]}` : partes.slice(0, 2).join(' ')
+  })()
   const nombreAutor = (m: MensajeChat) =>
     m.autor_nombre ?? (m.autor_id ? nombresAutores[m.autor_id] : undefined) ?? 'Asesor'
 
@@ -412,7 +420,7 @@ export function Conversacion(
                 >
                   {!mismoGrupo && (
                     <p className={`mb-0.5 text-[11px] font-semibold ${propio ? 'text-emerald-800' : bot ? 'text-violet-700' : 'text-marca-700'}`}>
-                      {propio ? nombreAutor(m) : bot ? '🤖 Genesys' : 'Alumno'}
+                      {propio ? nombreAutor(m) : bot ? '🤖 Genesys' : nombreCorto}
                     </p>
                   )}
                   {m.adjunto_url && <Adjunto ruta={m.adjunto_url} propio={propio} />}
