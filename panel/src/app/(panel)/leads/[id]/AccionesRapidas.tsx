@@ -77,9 +77,9 @@ export function AccionesRapidas({ telefono, proformaHref, variante = 'barra', al
     )
   }
 
-  const boton = 'inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-superficie px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-marca-600 hover:text-marca-700 max-md:gap-1 max-md:px-2.5 max-md:py-1 max-md:text-xs'
+  const boton = 'inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-200 bg-superficie px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-marca-600 hover:text-marca-700 max-xl:gap-1 max-xl:px-2.5 max-xl:py-1 max-xl:text-xs'
   return (
-    <div className="sticky top-14 z-20 -mx-4 flex items-center gap-2 overflow-x-auto border-b border-slate-200 bg-slate-50/90 px-4 py-2 backdrop-blur max-md:static max-md:gap-1.5 max-md:py-1.5 sm:flex-wrap md:top-16 md:-mx-8 md:px-8">
+    <div className="sticky top-14 z-20 -mx-4 flex items-center gap-2 overflow-x-auto border-b border-slate-200 bg-slate-50/90 px-4 py-2 backdrop-blur max-xl:static max-xl:gap-1.5 max-xl:py-1.5 md:top-16 md:-mx-8 md:px-8">
       {acciones.map((a) => {
         const contenido = <><span aria-hidden>{a.icono}</span> {a.texto}</>
         return (

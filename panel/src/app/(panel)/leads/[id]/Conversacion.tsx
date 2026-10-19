@@ -261,7 +261,7 @@ export function Conversacion(
     m.autor_nombre ?? (m.autor_id ? nombresAutores[m.autor_id] : undefined) ?? 'Asesor'
 
   return (
-    <section className="@container tarjeta flex min-h-0 flex-1 flex-col overflow-hidden md:h-auto md:flex-none md:min-h-0 md:scroll-mt-36 xl:h-auto xl:min-h-0 xl:flex-1" id="chat">
+    <section className="@container tarjeta flex min-h-0 flex-1 flex-col overflow-hidden" id="chat">
       {/* Una sola línea: más espacio para los mensajes */}
       <div className="flex flex-nowrap items-center gap-2 border-b border-slate-200 px-3 py-2 md:px-4">
         <div className="flex min-w-0 shrink-0 items-center gap-2" title="Los mensajes salen por el número de Genesys, firmados con tu nombre">
@@ -274,7 +274,7 @@ export function Conversacion(
         </div>
         {encabezado && <div className="ml-auto flex min-w-0 justify-end">{encabezado}</div>}
       </div>
-      <div ref={fondo} className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain bg-chat-fondo px-4 py-4 md:h-[28rem] md:flex-none xl:h-auto xl:flex-1">
+      <div ref={fondo} className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain bg-chat-fondo px-4 py-4">
         {mensajes.length === 0 && (
           <p className="mt-24 text-center text-sm text-slate-500">
             Aún no hay mensajes. Escribe abajo para iniciar la conversación.
@@ -370,7 +370,7 @@ export function Conversacion(
         </div>
       )}
       <form
-        className="flex items-end gap-2 border-t border-slate-200 bg-superficie p-3 max-sm:gap-1.5 max-sm:p-2"
+        className="flex items-end gap-2 border-t border-slate-200 bg-superficie p-3 @max-[36rem]:gap-1.5 @max-[36rem]:p-2"
         onSubmit={(e) => { e.preventDefault(); enviar(texto, archivo) }}
       >
         <input
@@ -380,13 +380,13 @@ export function Conversacion(
         <button
           type="button" onClick={() => selector.current?.click()} disabled={enviando} title="Adjuntar imagen o PDF"
           aria-label="Adjuntar imagen o PDF"
-          className="h-10 shrink-0 rounded-lg border border-slate-300 px-3 text-sm text-slate-600 hover:bg-slate-50 max-sm:w-9 max-sm:px-0"
+          className="h-10 shrink-0 rounded-lg border border-slate-300 px-3 text-sm text-slate-600 hover:bg-slate-50 @max-[36rem]:w-9 @max-[36rem]:px-0"
         >
           📎
         </button>
         <button
           type="button" onClick={() => setVerRespuestas((v) => !v)} title="Respuestas rápidas (atajo: escribe / en el mensaje)"
-          className={`h-10 shrink-0 rounded-lg border px-3 text-sm max-sm:w-9 max-sm:px-0 ${verRespuestas ? 'border-marca-600 bg-marca-50 text-marca-700' : 'border-slate-300 text-slate-600 hover:bg-slate-50'}`}
+          className={`h-10 shrink-0 rounded-lg border px-3 text-sm @max-[36rem]:w-9 @max-[36rem]:px-0 @max-[22rem]:hidden ${verRespuestas ? 'border-marca-600 bg-marca-50 text-marca-700' : 'border-slate-300 text-slate-600 hover:bg-slate-50'}`}
         >
           ⚡
         </button>
@@ -414,12 +414,12 @@ export function Conversacion(
           rows={tactil ? 1 : 2}
           maxLength={1500}
           placeholder={archivo ? 'Mensaje (opcional)' : 'Escribe un mensaje'}
-          className="campo resize-none max-sm:min-h-10 max-sm:min-w-0 max-sm:flex-1 max-sm:py-2"
+          className="campo resize-none @max-[36rem]:min-h-10 @max-[36rem]:min-w-0 @max-[36rem]:flex-1 @max-[36rem]:py-2"
           aria-label="Mensaje"
         />
-        <button className="boton h-10 shrink-0 max-sm:w-10 max-sm:px-0" aria-label="Enviar" disabled={enviando || (!texto.trim() && !archivo)}>
-          <span className="max-sm:hidden">{enviando ? 'Enviando…' : 'Enviar'}</span>
-          <span aria-hidden className="text-base sm:hidden">{enviando ? '…' : '➤'}</span>
+        <button className="boton h-10 shrink-0 @max-[36rem]:w-10 @max-[36rem]:px-0" aria-label="Enviar" disabled={enviando || (!texto.trim() && !archivo)}>
+          <span className="@max-[36rem]:hidden">{enviando ? 'Enviando…' : 'Enviar'}</span>
+          <span aria-hidden className="text-base @min-[36rem]:hidden">{enviando ? '…' : '➤'}</span>
         </button>
       </form>
       {error && <p role="alert" className="border-t border-rose-100 bg-rose-50 px-4 py-2 text-sm text-rose-700">{error}</p>}

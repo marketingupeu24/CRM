@@ -60,10 +60,10 @@ export function ProformaRapida({ datos, alEnviar }: { datos: DatosProformaRapida
     <>
       <button
         type="button" onClick={() => { setEmitida(new Date()); setAbierta(true) }}
-        className="h-10 shrink-0 rounded-lg border border-slate-200 bg-superficie px-3 text-sm font-medium whitespace-nowrap text-slate-700 max-sm:w-9 max-sm:px-0 hover:border-marca-600 hover:text-marca-700"
+        className="h-10 shrink-0 rounded-lg border border-slate-200 bg-superficie px-3 text-sm font-medium whitespace-nowrap text-slate-700 @max-[36rem]:w-9 @max-[36rem]:px-0 hover:border-marca-600 hover:text-marca-700"
         title="Enviar la proforma de costos por este chat"
       >
-        💰<span className="max-sm:hidden"> Proforma</span>
+        💰<span className="@max-[36rem]:hidden"> Proforma</span>
       </button>
 
       {abierta && (
