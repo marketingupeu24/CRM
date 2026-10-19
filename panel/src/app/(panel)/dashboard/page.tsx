@@ -115,11 +115,20 @@ export default async function PaginaDashboard(props: PageProps<'/dashboard'>) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <p className="text-sm text-slate-500">
-          {esAdmin ? 'Todos los leads' : 'Tus leads'} · {desde || hasta ? `del ${desde || r.desde} al ${hasta || r.hasta}` : 'todo el periodo'}
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">Dashboard</h1>
+          <p className="text-sm text-slate-500">
+            {esAdmin ? 'Todos los leads' : 'Tus leads'} · {desde || hasta ? `del ${desde || r.desde} al ${hasta || r.hasta}` : 'todo el periodo'}
+          </p>
+        </div>
+        {/* Excel con los mismos filtros: una hoja por sección (resumen, estados, carreras, asesores, embudos, días, motivos) */}
+        <a
+          href={`/dashboard/exportar?${new URLSearchParams(Object.entries({ desde, hasta, convocatoria, asesor }).filter(([, v]) => v)).toString()}`}
+          download className="boton-secundario" title="Descargar el dashboard en Excel con los filtros actuales"
+        >
+          ⬇ Descargar Excel
+        </a>
       </div>
 
       {/* Filtros en una sola fila, encima de los gráficos */}
