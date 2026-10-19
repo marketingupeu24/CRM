@@ -4,9 +4,10 @@ import { InsigniaEstado } from '@/components/InsigniaEstado'
 import { fechaHora, haceCuanto } from '@/lib/formato'
 import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
+import { redirect } from 'next/navigation'
 import { asesorDeLaVista, COOKIE_BANDEJA, leerPreferencia } from '@/lib/bandeja'
-import { AbrirUltimoChat, VistaChats } from './VistaChats'
+import { VistaChats } from './VistaChats'
 
 export const metadata: Metadata = { title: 'Chats' }
 
@@ -27,6 +28,18 @@ export default async function PaginaChats(props: PageProps<'/chats'>) {
   const soloMios = asesorFiltro === perfil.id
   const supabase = await crearClienteServidor()
 
+  // En computadora, Chats abre directo la conversación más reciente de la vista elegida (vista tipo bandeja).
+  // Se decide en el servidor, antes de mostrar nada, para que no aparezca primero la lista y luego salte.
+  // En el celular (o con ?lista) se queda en la lista.
+  const esCelular = /Mobi|Android|iPhone|iPad|iPod/i.test((await headers()).get('user-agent') ?? '')
+  if (!esCelular && !('lista' in sp)) {
+    let masReciente = supabase.from('leads').select('id').not('ultimo_mensaje_at', 'is', null)
+    if (soloSinResponder) masReciente = masReciente.eq('sin_responder', true)
+    if (asesorFiltro) masReciente = masReciente.eq('asesor_id', asesorFiltro)
+    const { data: ultimo } = await masReciente.order('ultimo_mensaje_at', { ascending: false }).limit(1).maybeSingle()
+    if (ultimo) redirect(`/leads/${ultimo.id}`)
+  }
+
   let consulta = supabase
     .from('leads')
     .select('id, nombre, telefono, estado, ultimo_mensaje_texto, ultimo_mensaje_at, ultimo_mensaje_lead_at, ultima_respuesta_at, sin_responder, asesor:asesores!leads_asesor_id_fkey(nombre)')
@@ -41,8 +54,6 @@ export default async function PaginaChats(props: PageProps<'/chats'>) {
     conteo,
     esAdmin ? supabase.rpc('posibles_reemplazos') : Promise.resolve({ data: [] as { id: string; nombre: string }[] }),
   ])
-  // La conversación más reciente (mensaje que llegó o que se envió): se abre directo en pantallas grandes
-  const ultimo = [...(chats ?? [])].sort((a, b) => (b.ultimo_mensaje_at ?? '').localeCompare(a.ultimo_mensaje_at ?? ''))[0]?.id ?? null
   const nombreAsesor = asesorFiltro && !soloMios ? ((asesores ?? []) as { id: string; nombre: string }[]).find((a) => a.id === asesorFiltro)?.nombre : null
 
   return (
@@ -54,7 +65,6 @@ export default async function PaginaChats(props: PageProps<'/chats'>) {
         </p>
       </div>
 
-      <AbrirUltimoChat leadId={ultimo} />
       <VistaChats
         preferencia={preferencia} asesores={(asesores ?? []) as { id: string; nombre: string }[]} miId={perfil.id}
         veTodos={esAdmin} sinResponder={totalSinResponder ?? 0}

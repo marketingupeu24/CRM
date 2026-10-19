@@ -2,8 +2,7 @@
 
 // Chats: elegir de quién son los chats (todo el equipo, los míos o un asesor) y Todos / Sin responder.
 // La elección se recuerda (cookie): la misma vista sale en la lista de Chats y en la bandeja de la ficha.
-// En pantallas grandes, entrar a Chats abre directo la última conversación (vista tipo bandeja).
-import { useEffect, useTransition } from 'react'
+import { useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { guardarPreferencia, type PreferenciaBandeja } from '@/lib/bandeja'
 
@@ -40,11 +39,3 @@ export function VistaChats({ preferencia, asesores, miId, veTodos, sinResponder 
   )
 }
 
-/** Pantallas grandes (1280 px o más): Chats abre directo la última conversación en la vista tipo bandeja. */
-export function AbrirUltimoChat({ leadId }: { leadId: string | null }) {
-  const router = useRouter()
-  useEffect(() => {
-    if (leadId && window.matchMedia('(min-width: 1280px)').matches) router.replace(`/leads/${leadId}`)
-  }, [leadId, router])
-  return null
-}
