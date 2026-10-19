@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
-import { ORIGENES } from '@crm/db'
+import { carreraOficial, ORIGENES } from '@crm/db'
 import { SelectorAsignacion, type PermisosAsignacion } from '@/components/SelectorAsignacion'
 import { COLUMNAS, filaVacia, leerTabla, PLANTILLA_CSV, problemaFila, type FilaImportar } from '@/lib/importar'
 import { importarLeads, type ResultadoFila } from './acciones'
@@ -163,6 +163,10 @@ export function Importador({ carreras, actividades, asignacion }: {
                             aria-label={`${TITULOS[c]} fila ${i + 1}`}
                             className={`w-full ${c === 'nombre' ? 'min-w-56' : c === 'colegio' || c === 'carrera' ? 'min-w-40' : 'min-w-28'} rounded-md border px-2 py-1.5 text-sm ${problema && (f.nombre || f.celular) ? 'border-amber-300 bg-amber-50/40' : 'border-slate-200 bg-superficie'}`}
                           />
+                          {/* Cómo se guardará la carrera (nombre oficial: sin duplicados) */}
+                          {c === 'carrera' && f.carrera.trim() && carreraOficial(f.carrera) !== f.carrera.trim().replace(/\s+/g, ' ') && (
+                            <p className="mt-0.5 px-1 text-[11px] text-emerald-700" title="Se guardará con el nombre oficial de la carrera">→ {carreraOficial(f.carrera)}</p>
+                          )}
                         </td>
                       ))}
                       <td className="px-2 py-1 text-xs whitespace-nowrap">

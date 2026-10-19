@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { carreraParecida, carreras, ETIQUETAS_FUENTE, type Fuente, type InteraccionTipo } from '@crm/db'
+import { CARRERAS_OFICIALES, carreraParecida, ETIQUETAS_FUENTE, type Fuente, type InteraccionTipo } from '@crm/db'
 import { InsigniaEstado } from '@/components/InsigniaEstado'
 import { PuntajeInteres } from '@/components/PuntajeInteres'
 import { fechaHora, haceCuanto } from '@/lib/formato'
@@ -19,7 +19,7 @@ import { BandejaMovil } from './BandejaMovil'
 import { BotonesTarea, FormularioTarea } from '@/components/Tareas'
 
 /** Sugerencias de carrera al editar los datos (presencial, campus Juliaca) */
-const CARRERAS_EDITAR = [...new Set(carreras('PRES', 'JUL').map((c) => c[0]))]
+const CARRERAS_EDITAR = [...CARRERAS_OFICIALES]
 
 export const metadata: Metadata = { title: 'Ficha del lead' }
 

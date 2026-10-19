@@ -150,3 +150,4 @@ export const MOTIVOS_PERDIDA = [
 
 export * from './costos'
 export * from './genesys'
+export * from './carreras'

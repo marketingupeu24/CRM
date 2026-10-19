@@ -860,6 +860,43 @@ seccion('horario de atención')
   await q(`delete from tareas where id = $1`, [tarea])
 }
 
+seccion('carreras con su nombre oficial (sin duplicados)')
+{
+  const casos = {
+    'Educación Inicial y Puericultura, Presencial': 'Educación Inicial y Puericultura',
+    'EDUCACIÓN INICIAL - MODALIDAD PRESENCIAL': 'Educación Inicial y Puericultura',
+    'Educación, Especialidad Primaria y Pedagogía Terapeútica': 'Educación Primaria y Pedagogía Terapéutica',
+    'Educación Primaria y pedagógica terapéutica': 'Educación Primaria y Pedagogía Terapéutica',
+    'Nutrición Humana': 'Nutrición Humana', 'NUTRICION': 'Nutrición Humana', 'Nutrición': 'Nutrición Humana',
+    'Ingeniería de Sistemas, Presencial': 'Ingeniería de Sistemas',
+    'Arquitectura y Urbanismo': 'Arquitectura y Urbanismo',
+    'Contabilidad, Gestión Tributaria y Aduanera': 'Contabilidad, Gestión Tributaria y Aduanera',
+    'Contabilidad, Gestión tributaria y aduanera': 'Contabilidad, Gestión Tributaria y Aduanera', 'Contabilidad': 'Contabilidad, Gestión Tributaria y Aduanera',
+    'Administración, Presencial': 'Administración', 'Administración de Empresas': 'Administración',
+    'Educación, Especialidad Educación Física, Recreación y Deportes': 'Educación Física, Recreación y Deportes',
+    'Educacion Fisica': 'Educación Física, Recreación y Deportes',
+    'Ingeniería Ambiental': 'Ingeniería Ambiental', 'INGENIERÍA CIVIL': 'Ingeniería Civil', 'Enfermeria': 'Enfermería',
+    'Medicina': 'Medicina Humana', 'Medicina (sede Juliaca)': 'Medicina Humana',
+    'Ingeniería Industrias Alimentarias': 'Ingeniería de Industrias Alimentarias', 'Industrias Alimentarias': 'Ingeniería de Industrias Alimentarias',
+    'Tecnología Médica, Especialidad de Terapia física y rehabilitación': 'Tecnología Médica en Terapia Física y Rehabilitación',
+    'Educación (Inglés y Español)': 'Educación, Especialidad Lingüística e Inglés',
+    'Educación, Especialidad Lingüística e Inglés (A distancia)': 'Educación, Especialidad Lingüística e Inglés (a distancia)',
+    'Semipresencial Psicología': 'Psicología (semipresencial)',
+    'Posgrado – Segunda Especialidad en Psicología Clínica y de la Salud': 'Posgrado – Segunda Especialidad en Psicología Clínica y de la Salud',
+    'Educación Fisica/Primaria': 'Educación Fisica/Primaria',
+    'Gastronomía  internacional ': 'Gastronomía internacional',
+  }
+  const malos = []
+  for (const [entrada, esperado] of Object.entries(casos)) {
+    const r = (await uno('select carrera_oficial($1) c', [entrada])).c
+    if (r !== esperado) malos.push(`${entrada} → ${r} (esperado ${esperado})`)
+  }
+  ok(!malos.length, `${Object.keys(casos).length} formas de escribir se reconocen con su nombre oficial${malos.length ? ': ' + malos.join('; ') : ''}`)
+  const lc = (await uno(`select id from leads limit 1`)).id
+  await q(`update leads set carrera_interes = 'NUTRICION' where id = $1`, [lc])
+  ok((await uno(`select carrera_interes c from leads where id = $1`, [lc])).c === 'Nutrición Humana', 'al guardar en un lead se guarda con el nombre oficial')
+}
+
 seccion('prompt de Genesys: fichas con vencimiento')
 await reset()
 const hoyLima = (await uno(`select (now() at time zone 'America/Lima')::date::text d`)).d

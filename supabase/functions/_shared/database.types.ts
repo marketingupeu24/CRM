@@ -808,6 +808,9 @@ isOneToOne: false
 "canal_entrada_texto":
 { Args: { "p_app": string,"p_fuente": string }; Returns: string
                            },
+"carrera_oficial":
+{ Args: { "p_texto": string }; Returns: string
+                           },
 "crear_usuario_panel":
 { Args: { "p_asesor_id": string,"p_clave": string,"p_debe_cambiar"?: boolean,"p_usuario": string }; Returns: string
                            },
