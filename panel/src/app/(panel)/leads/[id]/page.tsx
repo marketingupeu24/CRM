@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { cookies } from 'next/headers'
+import { asesorDeLaVista, COOKIE_BANDEJA, leerPreferencia } from '@/lib/bandeja'
 import { CARRERAS_OFICIALES, carreraParecida, ETIQUETAS_FUENTE, type Fuente, type InteraccionTipo } from '@crm/db'
 import { InsigniaEstado } from '@/components/InsigniaEstado'
 import { PuntajeInteres } from '@/components/PuntajeInteres'
@@ -59,6 +61,10 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
   const supabase = await crearClienteServidor()
 
   const camposBandeja = 'id, nombre, telefono, ultimo_mensaje_texto, ultimo_mensaje_at, ultimo_mensaje_lead_at, sin_responder, asesor_id'
+  // Bandeja: la última vista elegida (todo el equipo, los míos o los de un asesor) se recuerda en una cookie
+  const preferencia = leerPreferencia((await cookies()).get(COOKIE_BANDEJA)?.value)
+  const asesorBandeja = asesorDeLaVista(preferencia, perfil.id, esAdmin)
+  const deLaVista = <T extends { eq: (c: 'asesor_id', v: string) => T }>(c: T) => (asesorBandeja ? c.eq('asesor_id', asesorBandeja) : c)
   const [{ data: propio }, { data: historial }, { data: asesores }, { data: tareas }, { data: todasRespuestas }, { data: ocultas }, { data: recientes }, { data: esperando }] = await Promise.all([
     supabase.from('leads').select('*, asesor:asesores!leads_asesor_id_fkey(id, nombre, telefono), actividad:actividades(id, nombre)').eq('id', id).maybeSingle(),
     supabase.from('lead_interacciones')
@@ -73,12 +79,15 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
       .or(`asesor_id.is.null,asesor_id.eq.${perfil.id}`).order('orden').order('titulo'),
     supabase.from('respuestas_ocultas').select('respuesta_id').eq('asesor_id', perfil.id),
     puede('chats')
-      ? supabase.from('leads').select(camposBandeja).not('ultimo_mensaje_at', 'is', null).order('ultimo_mensaje_at', { ascending: false }).limit(80)
+      ? deLaVista(supabase.from('leads').select(camposBandeja).not('ultimo_mensaje_at', 'is', null)).order('ultimo_mensaje_at', { ascending: false }).limit(80)
       : Promise.resolve({ data: [] }),
     puede('chats')
-      ? supabase.from('leads').select(camposBandeja).eq('sin_responder', true).order('ultimo_mensaje_at', { ascending: false }).limit(100)
+      ? deLaVista(supabase.from('leads').select(camposBandeja).eq('sin_responder', true)).order('ultimo_mensaje_at', { ascending: false }).limit(100)
       : Promise.resolve({ data: [] }),
   ])
+  // Asesores para el filtro de la bandeja (solo quien ve los chats de todo el equipo)
+  const { data: asesoresBandeja } = esAdmin && puede('chats') ? await supabase.rpc('posibles_reemplazos') : { data: [] as { id: string; nombre: string }[] }
+  const propsBandeja = { actualId: id, preferencia, asesores: (asesoresBandeja ?? []) as { id: string; nombre: string }[], miId: perfil.id, veTodos: esAdmin }
   // Bandeja: sin repetir, de la más reciente a la más antigua
   const vistos = new Set<string>()
   const bandeja: ItemBandeja[] = [...(esperando ?? []), ...(recientes ?? [])]
@@ -149,7 +158,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
         <h1 className="text-xl font-semibold max-xl:min-w-0 max-xl:truncate max-xl:text-lg md:text-2xl">{lead.nombre ?? 'Lead sin nombre'}</h1>
         <span className="shrink-0"><InsigniaEstado estado={lead.estado} /></span>
         <span className="shrink-0"><PuntajeInteres puntaje={lead.puntaje} motivos={lead.puntaje_motivos} /></span>
-        {puede('chats') && <BandejaMovil key="bandeja-movil" conversaciones={bandeja} actualId={lead.id} verMios={esAdmin} />}
+        {puede('chats') && <BandejaMovil key="bandeja-movil" conversaciones={bandeja} {...propsBandeja} />}
         <label className="ml-auto hidden cursor-pointer items-center gap-1.5 rounded-lg border border-slate-300 bg-superficie px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 has-checked:border-marca-600 has-checked:text-marca-700 xl:inline-flex" title="Mostrar u ocultar el panel de detalles (estado, próxima acción, notas, datos)">
           <input type="checkbox" id="alternar-detalles" className="sr-only" />📋 Detalles
         </label>
@@ -182,7 +191,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
         {/* Bandeja de conversaciones (pantallas grandes) */}
         {puede('chats') && (
           <div className="hidden xl:order-1 xl:flex xl:min-h-0 xl:flex-col">
-            <ListaConversaciones key="bandeja" conversaciones={bandeja} actualId={lead.id} verMios={esAdmin} />
+            <ListaConversaciones key="bandeja" conversaciones={bandeja} {...propsBandeja} />
           </div>
         )}
         {!puede('chats') && <div className="hidden xl:order-1 xl:block" />}

@@ -4,9 +4,10 @@
 // para pasar de un cliente a otro sin volver a Chats.
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ListaConversaciones, type Conversacion } from './ListaConversaciones'
+import { ListaConversaciones, type Conversacion, type PropsBandeja } from './ListaConversaciones'
 
-export function BandejaMovil({ conversaciones, actualId, verMios }: { conversaciones: Conversacion[]; actualId: string; verMios: boolean }) {
+export function BandejaMovil(props: PropsBandeja & { conversaciones: Conversacion[] }) {
+  const { conversaciones, actualId } = props
   const [abierta, setAbierta] = useState(false)
   const pendientes = conversaciones.filter((c) => c.sinResponder && c.id !== actualId).length
 
@@ -44,7 +45,7 @@ export function BandejaMovil({ conversaciones, actualId, verMios }: { conversaci
               <h2 className="font-semibold">💬 Conversaciones</h2>
               <button type="button" onClick={() => setAbierta(false)} aria-label="Cerrar" className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-200">✕</button>
             </div>
-            <ListaConversaciones conversaciones={conversaciones} actualId={actualId} verMios={verMios} />
+            <ListaConversaciones {...props} />
           </div>
         </div>,
         document.body,

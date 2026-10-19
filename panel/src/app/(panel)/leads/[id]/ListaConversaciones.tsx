@@ -4,7 +4,9 @@
 // sin salir de la ficha y ver de un vistazo quién escribió y espera respuesta. Se actualiza en vivo
 // (RefrescoEnVivo vuelve a pedir la página cuando llega un mensaje).
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useRef, useState, useTransition } from 'react'
+import { guardarPreferencia, type PreferenciaBandeja } from '@/lib/bandeja'
 
 export interface Conversacion {
   id: string
@@ -17,17 +19,29 @@ export interface Conversacion {
   mio: boolean
 }
 
-type Filtro = 'todos' | 'sin_responder' | 'mios'
+type Filtro = PreferenciaBandeja['filtro']
 
 const normalizar = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
-export function ListaConversaciones({ conversaciones, actualId, verMios }: {
-  conversaciones: Conversacion[]
+export interface PropsBandeja {
   actualId: string
-  /** Quien ve los chats de todo el equipo puede quedarse con los suyos */
-  verMios: boolean
+  /** Última vista elegida (se recuerda en una cookie) */
+  preferencia: PreferenciaBandeja
+  /** Para el selector "Chats de": solo quien ve los chats de todo el equipo */
+  asesores: { id: string; nombre: string }[]
+  miId: string
+  veTodos: boolean
+}
+
+export function ListaConversaciones({ conversaciones, actualId, preferencia, asesores, miId, veTodos }: PropsBandeja & {
+  conversaciones: Conversacion[]
 }) {
-  const [filtro, setFiltro] = useState<Filtro>('todos')
+  const router = useRouter()
+  const [cargando, iniciar] = useTransition()
+  const [filtro, setFiltroLocal] = useState<Filtro>(preferencia.filtro)
+  const setFiltro = (f: Filtro) => { setFiltroLocal(f); guardarPreferencia({ ...preferencia, filtro: f }) }
+  // Cambiar de quién son los chats: el servidor vuelve a cargar la bandeja (más conversaciones de ese asesor)
+  const cambiarDe = (de: string) => { guardarPreferencia({ de, filtro }); iniciar(() => router.refresh()) }
   const [buscar, setBuscar] = useState('')
   const actual = useRef<HTMLAnchorElement>(null)
   // Al abrir, la conversación actual queda a la vista en la lista
@@ -36,7 +50,7 @@ export function ListaConversaciones({ conversaciones, actualId, verMios }: {
   const pendientes = conversaciones.filter((c) => c.sinResponder).length
   const q = normalizar(buscar.trim())
   const lista = conversaciones.filter((c) =>
-    (filtro === 'todos' || (filtro === 'sin_responder' ? c.sinResponder : c.mio)) && (!q || normalizar(c.nombre).includes(q)))
+    (filtro === 'todos' || c.sinResponder) && (!q || normalizar(c.nombre).includes(q)))
 
   const pestana = (valor: Filtro, texto: React.ReactNode) => (
     <button
@@ -54,13 +68,22 @@ export function ListaConversaciones({ conversaciones, actualId, verMios }: {
           value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="⌕ Buscar conversación"
           className="campo py-1.5 text-sm" aria-label="Buscar conversación"
         />
+        {veTodos && (
+          <select
+            value={preferencia.de === miId ? 'mios' : preferencia.de} onChange={(e) => cambiarDe(e.target.value)} disabled={cargando}
+            aria-label="Chats de" className="campo py-1.5 text-sm"
+          >
+            <option value="todos">👥 Chats de todo el equipo</option>
+            <option value="mios">🙋 Solo los míos</option>
+            {asesores.filter((a) => a.id !== miId).map((a) => <option key={a.id} value={a.id}>👤 {a.nombre}</option>)}
+          </select>
+        )}
         <div className="flex gap-1 rounded-lg bg-slate-100 p-0.5 text-xs font-medium">
           {pestana('todos', 'Todos')}
           {pestana('sin_responder', <>Sin responder{pendientes > 0 && <span className="ml-1 rounded-full bg-rose-500 px-1.5 text-[10px] text-white">{pendientes}</span>}</>)}
-          {verMios && pestana('mios', 'Míos')}
         </div>
       </div>
-      <ul className="min-h-0 flex-1 divide-y divide-slate-100 overflow-y-auto overscroll-contain">
+      <ul className={`min-h-0 flex-1 divide-y divide-slate-100 overflow-y-auto overscroll-contain ${cargando ? 'opacity-50' : ''}`}>
         {lista.map((c) => {
           const esActual = c.id === actualId
           return (
