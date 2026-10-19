@@ -297,13 +297,13 @@ isOneToOne: false
                   ]
                 },"lead_apoyo": {
                   Row: {
-                    "asesor_id": string,"created_at": string,"lead_id": string,"motivo": string | null
+                    "asesor_id": string,"created_at": string,"lead_id": string,"motivo": string | null,"oculto_at": string | null
                   }
                   Insert: {
-                    "asesor_id": string,"created_at"?: string,"lead_id": string,"motivo"?: string | null
+                    "asesor_id": string,"created_at"?: string,"lead_id": string,"motivo"?: string | null,"oculto_at"?: string | null
                   }
                   Update: {
-                    "asesor_id"?: string,"created_at"?: string,"lead_id"?: string,"motivo"?: string | null
+                    "asesor_id"?: string,"created_at"?: string,"lead_id"?: string,"motivo"?: string | null,"oculto_at"?: string | null
                   }
                   Relationships: [
                     {
@@ -975,6 +975,9 @@ isOneToOne: false
                            },
 "nombre_desde_texto":
 { Args: { "p_texto": string }; Returns: string
+                           },
+"ocultar_apoyo":
+{ Args: { "p_lead_id": string }; Returns: undefined
                            },
 "papelera":
 { Args: Record<PropertyKey, never>; Returns: Json

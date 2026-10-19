@@ -179,6 +179,15 @@ export async function enviarAPapelera(ids: string[]): Promise<ResultadoMasivo> {
   return { ok: true, cambiados: data ?? 0 }
 }
 
+/** "🤝 Atendidos como apoyo": quita el lead de mi lista (el registro del apoyo se conserva). */
+export async function ocultarApoyo(leadId: string): Promise<Resultado> {
+  const supabase = await crearClienteServidor()
+  const { error } = await supabase.rpc('ocultar_apoyo', { p_lead_id: leadId })
+  if (error) return { error: mensajeError(error) }
+  revalidatePath('/leads')
+  return { ok: true }
+}
+
 /** Pausa a Genesys 5 horas para este lead (el asesor conversa con él) o lo reactiva. */
 export async function pausarBot(leadId: string, pausar: boolean): Promise<Resultado> {
   const supabase = await crearClienteServidor()

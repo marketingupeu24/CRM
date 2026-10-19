@@ -7,6 +7,7 @@ import { fechaHora, haceCuanto } from '@/lib/formato'
 import { exigirPermiso } from '@/lib/sesion'
 import { fechaCorta, mesLima, nombreMes, rangoMes } from '@/lib/periodos'
 import { FiltrosAvanzados } from '@/components/FiltrosAvanzados'
+import { QuitarApoyo } from './QuitarApoyo'
 import { BarraMasiva } from './BarraMasiva'
 import { crearClienteServidor } from '@/lib/supabase/server'
 
@@ -169,6 +170,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
                   {l.cubriendo
                     ? <>De {l.asesor ?? 'otro asesor'} · 🧳 {l.motivo}</>
                     : <>De {l.asesor ?? 'otro asesor'} · lo atendiste {haceCuanto(l.desde)}{l.motivo ? ` (${l.motivo})` : ''}</>}
+                  {!l.cubriendo && <span className="ml-2"><QuitarApoyo leadId={l.id} nombre={l.nombre ?? l.telefono} /></span>}
                 </span>
               </li>
             ))}
