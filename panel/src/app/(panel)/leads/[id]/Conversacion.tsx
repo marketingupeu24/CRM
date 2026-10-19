@@ -413,7 +413,7 @@ export function Conversacion(
           }}
           rows={tactil ? 1 : 2}
           maxLength={1500}
-          placeholder={archivo ? 'Mensaje para acompañar el archivo (opcional)…' : tactil ? 'Mensaje (/ = respuestas)' : 'Escribe un mensaje… (Enter envía · Shift+Enter salto de línea · / respuestas rápidas)'}
+          placeholder={archivo ? 'Mensaje (opcional)' : 'Escribe un mensaje'}
           className="campo resize-none max-sm:min-h-10 max-sm:min-w-0 max-sm:flex-1 max-sm:py-2"
           aria-label="Mensaje"
         />
