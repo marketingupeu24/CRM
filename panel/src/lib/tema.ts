@@ -3,6 +3,8 @@
 // React lo borre al actualizar). "Automático" no lleva atributo y lo resuelve el CSS con el sistema.
 export type Tema = 'claro' | 'oscuro' | 'auto'
 export const COOKIE_TEMA = 'crm-tema'
+/** Menú lateral plegado a solo íconos ('1') o completo. */
+export const COOKIE_MENU = 'crm-menu-compacto'
 
 /** Tema si el usuario aún no eligió: claro (como TailAdmin). */
 export const TEMA_POR_DEFECTO: Tema = 'claro'

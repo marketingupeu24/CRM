@@ -12,7 +12,8 @@ import { SelectorTema } from '@/components/SelectorTema'
 import { etiquetaRol, obtenerSesion } from '@/lib/sesion'
 import { contarPendientes } from '@/lib/pendientes'
 import { crearClienteServidor } from '@/lib/supabase/server'
-import { COOKIE_TEMA, TEMA_POR_DEFECTO, type Tema } from '@/lib/tema'
+import { COOKIE_MENU, COOKIE_TEMA, TEMA_POR_DEFECTO, type Tema } from '@/lib/tema'
+import { AlternarMenu } from '@/components/AlternarMenu'
 import { cerrarSesion } from '../login/acciones'
 import { FormularioClave } from './cuenta/FormularioClave'
 
@@ -31,6 +32,8 @@ export default async function LayoutPanel({ children }: { children: React.ReactN
   const promptVencido = ((estadoPrompt as { vencidas?: unknown[] } | null)?.vencidas ?? []).length
   const revisionBot = (revision ?? []).filter((p: { revisada: boolean }) => !p.revisada).length
   const temaGuardado = ((await cookies()).get(COOKIE_TEMA)?.value ?? TEMA_POR_DEFECTO) as Tema
+  // Menú lateral plegado a solo íconos (lo elige cada usuario; más espacio para el chat)
+  const menuCompacto = (await cookies()).get(COOKIE_MENU)?.value === '1'
   const iniciales = perfil.nombre.split(' ').slice(0, 2).map((p) => p[0]).join('').toUpperCase()
   const navegacion = !debeCambiarClave && (
     <Navegacion permisos={permisos} superadmin={superadmin} sinResponder={sinResponder ?? 0} pendientes={pendientes} revisionBot={revisionBot} promptVencido={promptVencido} />
@@ -48,19 +51,26 @@ export default async function LayoutPanel({ children }: { children: React.ReactN
       {!debeCambiarClave && <PaletaComandos permisos={permisos} superadmin={superadmin} />}
 
       {/* Menú lateral (blanco, estilo TailAdmin). En el celular se abre con ☰ o con "Menú" de la barra inferior */}
-      <aside className="hidden border-lateral-borde bg-lateral md:fixed md:inset-y-0 md:flex md:w-[270px] md:flex-col md:overflow-y-auto md:border-r md:px-5 md:py-6">
+      <aside className={`hidden border-lateral-borde bg-lateral md:fixed md:inset-y-0 md:flex md:flex-col md:overflow-y-auto md:border-r md:py-6 ${menuCompacto ? 'md:w-[76px] md:px-3' : 'md:w-[270px] md:px-5'}`}>
         {/* Logo oficial UPeU */}
-        <div className="mb-8 px-2">
-          <LogoUpeu className="h-11" />
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-            <span className="rounded-full bg-dorado-50 px-2.5 py-0.5 font-semibold text-dorado-700">CRM Admisión</span>
-            <span className="text-lateral-suave">Juliaca · {etiquetaRol(sesion)}</span>
+        {menuCompacto ? (
+          <div className="mb-6 flex justify-center" title={`CRM Admisión · Juliaca · ${etiquetaRol(sesion)}`}><LogoUpeu tipo="isotipo" className="h-9" /></div>
+        ) : (
+          <div className="mb-8 px-2">
+            <LogoUpeu className="h-11" />
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+              <span className="rounded-full bg-dorado-50 px-2.5 py-0.5 font-semibold text-dorado-700">CRM Admisión</span>
+              <span className="text-lateral-suave">Juliaca · {etiquetaRol(sesion)}</span>
+            </div>
           </div>
-        </div>
-        {navegacion}
+        )}
+        <AlternarMenu compacto={menuCompacto} />
+        {!debeCambiarClave && (
+          <Navegacion permisos={permisos} superadmin={superadmin} sinResponder={sinResponder ?? 0} pendientes={pendientes} revisionBot={revisionBot} promptVencido={promptVencido} compacto={menuCompacto} />
+        )}
       </aside>
 
-      <div className="min-w-0 flex-1 overflow-x-clip md:ml-[270px]">
+      <div className={`min-w-0 flex-1 overflow-x-clip ${menuCompacto ? 'md:ml-[76px]' : 'md:ml-[270px]'}`}>
         {/* Barra superior: buscador, avisos, tema y usuario */}
         <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-slate-200 bg-superficie/95 px-3 backdrop-blur md:h-16 md:gap-3 md:px-8">
           {/* Celular: ☰ con el menú completo, el tema y cerrar sesión */}

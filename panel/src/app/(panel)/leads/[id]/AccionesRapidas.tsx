@@ -10,6 +10,7 @@ function irA(id: string, enfocar?: string) {
   const pestana = document.getElementById(id === 'chat' ? 'pestana-chat' : 'pestana-detalles') as HTMLInputElement | null
   if (pestana && pestana.offsetParent !== null) pestana.checked = true
   const seccion = document.getElementById(id)
+  if (seccion instanceof HTMLDetailsElement) seccion.open = true
   // Pantallas grandes: si el panel de detalles está plegado, se abre
   const detalles = document.getElementById('alternar-detalles') as HTMLInputElement | null
   if (id !== 'chat' && detalles && seccion && seccion.offsetParent === null) detalles.checked = !detalles.checked

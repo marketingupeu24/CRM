@@ -21,8 +21,10 @@ interface Grupo {
 }
 
 export function Navegacion(
-  { permisos, superadmin = false, sinResponder = 0, pendientes = 0, revisionBot = 0, promptVencido = 0 }:
-  { permisos: Modulo[]; superadmin?: boolean; sinResponder?: number; pendientes?: number; revisionBot?: number; promptVencido?: number },
+  { permisos, superadmin = false, sinResponder = 0, pendientes = 0, revisionBot = 0, promptVencido = 0, compacto = false }:
+  { permisos: Modulo[]; superadmin?: boolean; sinResponder?: number; pendientes?: number; revisionBot?: number; promptVencido?: number
+    /** Solo íconos (menú plegado): el nombre aparece al pasar el mouse */
+    compacto?: boolean },
 ) {
   const ruta = usePathname()
   const todos: Grupo[] = [
@@ -81,10 +83,12 @@ export function Navegacion(
     .sort((a, b) => b.href.length - a.href.length)[0]?.href
 
   return (
-    <nav className="flex flex-col gap-5" aria-label="Menú principal">
+    <nav className={`flex flex-col ${compacto ? 'gap-3' : 'gap-5'}`} aria-label="Menú principal">
       {grupos.map((g) => (
         <div key={g.titulo} className="flex flex-col gap-0.5">
-          <p className="px-3 pb-1 text-xs font-medium tracking-wide text-lateral-suave uppercase">{g.titulo}</p>
+          {compacto
+            ? <hr className="mx-2 mb-1 border-lateral-borde first:hidden" />
+            : <p className="px-3 pb-1 text-xs font-medium tracking-wide text-lateral-suave uppercase">{g.titulo}</p>}
           {g.enlaces.map((e) => {
             const esActivo = activo === e.href
             return (
@@ -92,14 +96,15 @@ export function Navegacion(
                 key={e.href}
                 href={e.href}
                 aria-current={esActivo ? 'page' : undefined}
-                className={`relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition ${
+                title={compacto ? e.texto : undefined}
+                className={`relative flex items-center gap-3 rounded-lg py-2 text-sm font-medium whitespace-nowrap transition ${compacto ? 'justify-center px-0' : 'px-3'} ${
                   esActivo ? 'bg-lateral-activo text-lateral-activo-texto' : 'text-lateral-texto hover:bg-lateral-hover'
                 }`}
               >
                 <span aria-hidden className={`w-5 text-center text-base ${esActivo ? '' : 'text-lateral-suave'}`}>{e.icono}</span>
-                {e.texto}
+                <span className={compacto ? 'sr-only' : ''}>{e.texto}</span>
                 {!!e.contador?.valor && (
-                  <span className={`ml-auto min-w-5 rounded-full px-1.5 text-center text-xs font-semibold ${e.contador.estilo}`}>
+                  <span className={`min-w-5 rounded-full px-1.5 text-center text-xs font-semibold ${compacto ? 'absolute -top-0.5 right-0 text-[10px] leading-4' : 'ml-auto'} ${e.contador.estilo}`}>
                     {e.contador.valor}
                   </span>
                 )}

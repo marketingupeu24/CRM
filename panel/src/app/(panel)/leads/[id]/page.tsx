@@ -148,8 +148,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
         <Link href="/leads" title="Volver a leads" aria-label="Volver a leads" className="-ml-1 rounded-lg px-1.5 text-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800">←</Link>
         <h1 className="text-xl font-semibold max-xl:min-w-0 max-xl:truncate max-xl:text-lg md:text-2xl">{lead.nombre ?? 'Lead sin nombre'}</h1>
         <span className="shrink-0"><InsigniaEstado estado={lead.estado} /></span>
-        <span className="max-xl:hidden"><PuntajeInteres puntaje={lead.puntaje} motivos={lead.puntaje_motivos} detalle /></span>
-        <span className="shrink-0 xl:hidden"><PuntajeInteres puntaje={lead.puntaje} motivos={lead.puntaje_motivos} /></span>
+        <span className="shrink-0"><PuntajeInteres puntaje={lead.puntaje} motivos={lead.puntaje_motivos} /></span>
         {puede('chats') && <BandejaMovil key="bandeja-movil" conversaciones={bandeja} actualId={lead.id} verMios={esAdmin} />}
         <label className="ml-auto hidden cursor-pointer items-center gap-1.5 rounded-lg border border-slate-300 bg-superficie px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 has-checked:border-marca-600 has-checked:text-marca-700 xl:inline-flex" title="Mostrar u ocultar el panel de detalles (estado, próxima acción, notas, datos)">
           <input type="checkbox" id="alternar-detalles" className="sr-only" />📋 Detalles
@@ -226,37 +225,36 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
 
         </div>
 
-        <div className="space-y-4 max-xl:hidden max-xl:min-h-0 max-xl:overflow-y-auto max-xl:overscroll-contain max-xl:group-has-[#pestana-detalles:checked]:block xl:hidden xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain xl:pr-1 xl:group-has-[#alternar-detalles:checked]:block 3xl:block 3xl:group-has-[#alternar-detalles:checked]:hidden">
-          <section className="tarjeta p-4">
-            <h2 className="mb-3 font-semibold">Contacto fuera del chat</h2>
-            <RegistrarContacto leadId={lead.id} />
-          </section>
-
-          <section className="tarjeta p-4">
-            <h2 className="mb-3 font-semibold">Estado</h2>
-            {apoyo
-              ? <InsigniaEstado estado={lead.estado} />
-              : <SelectorEstado key={lead.estado} leadId={lead.id} estado={lead.estado} />}
-          </section>
-
-          <section className="tarjeta p-4">
-            <h2 className="mb-3 font-semibold">Asesor</h2>
-            <p className="text-sm">{lead.asesor?.nombre ?? <span className="text-slate-400">Sin asesor</span>}</p>
-            {lead.notificacion_estado && (
-              <p className={`mt-1 text-xs ${lead.notificacion_estado === 'error' ? 'text-rose-600' : 'text-slate-500'}`}>
-                {NOTIFICACION[lead.notificacion_estado] ?? lead.notificacion_estado}
-                {lead.notificacion_error ? `: ${lead.notificacion_error}` : ''}
-              </p>
-            )}
-            {puede('asignar') && !apoyo && (
-              <div className="mt-4">
+        <div className="space-y-4 max-xl:hidden max-xl:min-h-0 max-xl:overflow-y-auto max-xl:overscroll-contain max-xl:group-has-[#pestana-detalles:checked]:block xl:hidden space-y-3 xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain xl:pr-1 xl:group-has-[#alternar-detalles:checked]:block 3xl:block 3xl:group-has-[#alternar-detalles:checked]:hidden">
+          {/* Resumen: lo que más se usa, compacto y siempre a la vista */}
+          <section className="tarjeta divide-y divide-slate-100">
+            <div className="space-y-1.5 p-4">
+              <h2 className="text-xs font-semibold tracking-wide text-slate-500 uppercase">Estado</h2>
+              {apoyo
+                ? <InsigniaEstado estado={lead.estado} />
+                : <SelectorEstado key={lead.estado} leadId={lead.id} estado={lead.estado} />}
+            </div>
+            <div className="space-y-1.5 p-4">
+              <h2 className="text-xs font-semibold tracking-wide text-slate-500 uppercase">Asesor</h2>
+              <p className="text-sm font-medium">{lead.asesor?.nombre ?? <span className="text-slate-400">Sin asesor</span>}</p>
+              {lead.notificacion_estado && (
+                <p className={`text-xs ${lead.notificacion_estado === 'error' ? 'text-rose-600' : 'text-slate-500'}`}>
+                  {NOTIFICACION[lead.notificacion_estado] ?? lead.notificacion_estado}
+                  {lead.notificacion_error ? `: ${lead.notificacion_error}` : ''}
+                </p>
+              )}
+              {puede('asignar') && !apoyo && (
                 <ReasignarAsesor key={lead.asesor_id} leadId={lead.id} asesorId={lead.asesor_id} asesores={asesores ?? []} />
-              </div>
-            )}
+              )}
+            </div>
+            <div className="p-3">
+              <RegistrarContacto leadId={lead.id} />
+            </div>
           </section>
 
-          {!apoyo && <section id="proxima-accion" className="tarjeta scroll-mt-36 p-4">
-            <h2 className="mb-3 font-semibold">Próxima acción</h2>
+          {!apoyo && <details id="proxima-accion" open className="group/sec tarjeta scroll-mt-36">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm font-semibold [&::-webkit-details-marker]:hidden"><span>📅 Próxima acción{!!tareas?.length && <span className="ml-1.5 rounded-full bg-marca-50 px-1.5 text-xs text-marca-700">{tareas.length}</span>}</span><span aria-hidden className="text-xs text-slate-400 transition group-open/sec:rotate-180">▾</span></summary>
+            <div className="px-4 pb-4">
             {!!tareas?.length && (
               <ul className="mb-4 space-y-2">
                 {tareas.map((t) => {
@@ -276,19 +274,19 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
               </ul>
             )}
             <FormularioTarea leadId={lead.id} />
-          </section>}
-
-          <section id="nueva-nota" className="tarjeta scroll-mt-36 p-4">
-            <h2 className="mb-3 font-semibold">Nueva nota</h2>
-            <FormularioNota leadId={lead.id} />
-          </section>
-
-          <section id="datos" className="tarjeta scroll-mt-32 p-4">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="font-semibold">Datos del lead</h2>
-              {!apoyo && <EditarDatos lead={lead} puedeCelular={puede('editar_celular') || lead.registrado_por === perfil.id} carreras={CARRERAS_EDITAR} />}
             </div>
-            <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+          </details>}
+
+          <details id="nueva-nota" className="group/sec tarjeta scroll-mt-36">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm font-semibold [&::-webkit-details-marker]:hidden"><span>📝 Nueva nota</span><span aria-hidden className="text-xs text-slate-400 transition group-open/sec:rotate-180">▾</span></summary>
+            <div className="px-4 pb-4"><FormularioNota leadId={lead.id} /></div>
+          </details>
+
+          <details id="datos" className="group/sec tarjeta scroll-mt-32">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm font-semibold [&::-webkit-details-marker]:hidden"><span>🪪 Datos del lead</span><span aria-hidden className="text-xs text-slate-400 transition group-open/sec:rotate-180">▾</span></summary>
+            <div className="px-4 pb-4">
+            {!apoyo && <div className="mb-3 flex justify-end"><EditarDatos lead={lead} puedeCelular={puede('editar_celular') || lead.registrado_por === perfil.id} carreras={CARRERAS_EDITAR} /></div>}
+            <dl className="grid gap-x-4 gap-y-2.5 text-sm sm:grid-cols-2">
               {datos.map(([etiqueta, valor]) => (
                 <div key={etiqueta}>
                   <dt className="text-xs text-slate-500">{etiqueta}</dt>
@@ -296,11 +294,12 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
                 </div>
               ))}
             </dl>
-          </section>
+            </div>
+          </details>
 
-          <section className="tarjeta p-4">
-            <h2 className="mb-4 font-semibold">Actividad</h2>
-            <ol className="space-y-4">
+          <details className="group/sec tarjeta">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm font-semibold [&::-webkit-details-marker]:hidden"><span>🕘 Actividad <span className="ml-1 text-xs font-normal text-slate-400">{actividad.length}</span></span><span aria-hidden className="text-xs text-slate-400 transition group-open/sec:rotate-180">▾</span></summary>
+            <ol className="space-y-3 px-4 pb-4">
               {actividad.map((h) => {
                 const tipo = TIPO_INTERACCION[h.tipo]
                 const esMiNota = h.tipo === 'nota_asesor' && (h.autor_id === perfil.id || esAdmin)
@@ -323,7 +322,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
               })}
               {!actividad.length && <p className="text-sm text-slate-500">Sin actividad todavía.</p>}
             </ol>
-          </section>
+          </details>
           {puede('papelera') && !apoyo && <div className="flex justify-end xl:hidden"><BotonPapelera leadId={lead.id} nombre={lead.nombre ?? lead.telefono} /></div>}
         </div>
       </div>

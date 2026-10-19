@@ -26,7 +26,7 @@ export function SelectorEstado({ leadId, estado }: { leadId: string; estado: Lea
 
   return (
     <div className="space-y-3">
-      <select value={nuevo} onChange={(e) => { setNuevo(e.target.value as LeadEstado); setResultado({}) }} className="campo">
+      <select value={nuevo} onChange={(e) => { setNuevo(e.target.value as LeadEstado); setResultado({}) }} className="campo py-2">
         {ESTADOS_LEAD.map((e) => <option key={e} value={e}>{ETIQUETAS_ESTADO[e]}</option>)}
       </select>
       {pideMotivo && (
@@ -39,7 +39,7 @@ export function SelectorEstado({ leadId, estado }: { leadId: string; estado: Lea
         <input value={detalle} onChange={(e) => setDetalle(e.target.value)} maxLength={150} placeholder="Detalle del motivo" className="campo" />
       )}
       <button
-        className="boton w-full" disabled={pendiente || nuevo === estado || (pideMotivo && !motivo)}
+        className={`boton w-full ${nuevo === estado ? 'hidden' : ''}`} disabled={pendiente || nuevo === estado || (pideMotivo && !motivo)}
         onClick={() => iniciar(async () => setResultado(await cambiarEstado(leadId, nuevo, pideMotivo ? motivoFinal : undefined)))}
       >
         {pendiente ? 'Guardando…' : 'Cambiar estado'}
@@ -86,12 +86,12 @@ export function ReasignarAsesor(
   const [pendiente, iniciar] = useTransition()
   return (
     <div className="space-y-3">
-      <select value={nuevo} onChange={(e) => { setNuevo(e.target.value); setResultado({}) }} className="campo">
+      <select value={nuevo} onChange={(e) => { setNuevo(e.target.value); setResultado({}) }} className="campo py-2">
         <option value="" disabled>Elegir asesor…</option>
         {asesores.map((a) => <option key={a.id} value={a.id}>{a.nombre}{a.activo ? '' : ' (inactivo)'}</option>)}
       </select>
       <button
-        className="boton-secundario w-full" disabled={pendiente || !nuevo || nuevo === asesorId}
+        className={`boton-secundario w-full ${!nuevo || nuevo === asesorId ? 'hidden' : ''}`} disabled={pendiente || !nuevo || nuevo === asesorId}
         onClick={() => iniciar(async () => setResultado(await reasignarAsesor(leadId, nuevo)))}
       >
         {pendiente ? 'Guardando…' : asesorId ? 'Reasignar' : 'Asignar'}
