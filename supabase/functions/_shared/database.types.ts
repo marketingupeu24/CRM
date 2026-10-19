@@ -970,7 +970,7 @@ isOneToOne: false
                            },
 "mis_leads_apoyo":
 { Args: Record<PropertyKey, never>; Returns: {
-              "asesor": string,"cubriendo": boolean,"desde": string,"id": string,"motivo": string,"nombre": string,"telefono": string,"ultimo_contacto": string
+              "asesor": string,"cubriendo": boolean,"desde": string,"id": string,"motivo": string,"nombre": string,"sin_responder": boolean,"telefono": string,"ultimo_contacto": string,"ultimo_mensaje_at": string,"ultimo_mensaje_lead_at": string,"ultimo_mensaje_texto": string
             }[]
                            },
 "nombre_desde_texto":

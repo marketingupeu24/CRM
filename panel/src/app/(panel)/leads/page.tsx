@@ -7,7 +7,6 @@ import { fechaHora, haceCuanto } from '@/lib/formato'
 import { exigirPermiso } from '@/lib/sesion'
 import { fechaCorta, mesLima, nombreMes, rangoMes } from '@/lib/periodos'
 import { FiltrosAvanzados } from '@/components/FiltrosAvanzados'
-import { QuitarApoyo } from './QuitarApoyo'
 import { BarraMasiva } from './BarraMasiva'
 import { crearClienteServidor } from '@/lib/supabase/server'
 
@@ -76,7 +75,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
   if (/^\d{4}-\d{2}-\d{2}$/.test(filtros.hasta)) consulta = consulta.lte('created_at', `${filtros.hasta}T23:59:59.999-05:00`)
 
   const desde = (pagina - 1) * POR_PAGINA
-  const [{ data: leads, count, error }, { data: carreras }, { data: convocatorias }, { data: asesores }, { data: deApoyo }] = await Promise.all([
+  const [{ data: leads, count, error }, { data: carreras }, { data: convocatorias }, { data: asesores }] = await Promise.all([
     // Los que volvieron a escribir suben arriba
     (filtros.orden === 'interes' ? consulta.order('puntaje', { ascending: false }).order('ultimo_contacto', { ascending: false }) : consulta.order('ultimo_contacto', { ascending: false }))
       .range(desde, desde + POR_PAGINA - 1),
@@ -85,8 +84,6 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
     esAdmin || puede('asignar')
       ? supabase.from('asesores').select('id, nombre').or('rol.eq.asesor,activo.eq.true').is('eliminado_at', null).order('nombre')
       : Promise.resolve({ data: [] as { id: string; nombre: string }[] }),
-    // Leads de otros asesores que atendí en persona (apoyo): no están en mi lista, se abren desde aquí
-    supabase.rpc('mis_leads_apoyo'),
   ])
 
   const listaConvocatorias = [...new Set((convocatorias ?? []).map((c) => c.convocatoria!))].sort().reverse()
@@ -156,27 +153,6 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
           {puede('registrar') && <Link href="/leads/nuevo" className="boton max-md:hidden">+ Registrar lead</Link>}
         </div>
       </div>
-
-      {!!deApoyo?.length && (
-        <details className="tarjeta p-4" open={deApoyo.some((l) => l.cubriendo)}>
-          <summary className="cursor-pointer text-sm font-semibold">
-            🤝 Atendidos como apoyo <span className="font-normal text-slate-500">· {deApoyo.length} · leads de otros asesores que atendiste en persona o que cubres por su ausencia</span>
-          </summary>
-          <ul className="mt-3 divide-y divide-slate-100 text-sm">
-            {deApoyo.map((l) => (
-              <li key={l.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
-                <Link href={`/leads/${l.id}`} className="font-medium text-marca-700 hover:underline">{l.nombre ?? l.telefono}</Link>
-                <span className="text-xs text-slate-500">
-                  {l.cubriendo
-                    ? <>De {l.asesor ?? 'otro asesor'} · 🧳 {l.motivo}</>
-                    : <>De {l.asesor ?? 'otro asesor'} · lo atendiste {haceCuanto(l.desde)}{l.motivo ? ` (${l.motivo})` : ''}</>}
-                  {!l.cubriendo && <span className="ml-2"><QuitarApoyo leadId={l.id} nombre={l.nombre ?? l.telefono} /></span>}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
 
       <form className="tarjeta p-3 sm:p-4">
         <FiltrosAvanzados

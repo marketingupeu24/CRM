@@ -19,6 +19,7 @@ import { AccionesRapidas } from './AccionesRapidas'
 import { ProformaRapida } from './ProformaRapida'
 import { ListaConversaciones, type Conversacion as ItemBandeja } from './ListaConversaciones'
 import { BandejaMovil } from './BandejaMovil'
+import { QuitarApoyo } from './QuitarApoyo'
 import { BotonesTarea, FormularioTarea } from '@/components/Tareas'
 
 /** Sugerencias de carrera al editar los datos (presencial, campus Juliaca) */
@@ -73,7 +74,7 @@ export async function FichaLead({ id, seccion }: { id: string; seccion: 'leads' 
   const detallesMarcado = (await cookies()).get(COOKIE_DETALLES)?.value === '1'
   const asesorBandeja = asesorDeLaVista(preferencia, perfil.id, esAdmin)
   const deLaVista = <T extends { eq: (c: 'asesor_id', v: string) => T }>(c: T) => (asesorBandeja ? c.eq('asesor_id', asesorBandeja) : c)
-  const [{ data: propio }, { data: historial }, { data: asesores }, { data: tareas }, { data: todasRespuestas }, { data: ocultas }, { data: recientes }, { data: esperando }, { data: sinChat }] = await Promise.all([
+  const [{ data: propio }, { data: historial }, { data: asesores }, { data: tareas }, { data: todasRespuestas }, { data: ocultas }, { data: recientes }, { data: esperando }, { data: sinChat }, { data: deApoyo }, { data: miApoyo }] = await Promise.all([
     supabase.from('leads').select('*, asesor:asesores!leads_asesor_id_fkey(id, nombre, telefono), actividad:actividades(id, nombre)').eq('id', id).maybeSingle(),
     supabase.from('lead_interacciones')
       .select('*, autor:asesores!lead_interacciones_autor_id_fkey(nombre)')
@@ -97,6 +98,10 @@ export async function FichaLead({ id, seccion }: { id: string; seccion: 'leads' 
       ? deLaVista(supabase.from('leads').select(camposBandeja).is('ultimo_mensaje_at', null).not('asesor_id', 'is', null)
         .gte('fecha_asignado', new Date(Date.now() - 7 * 86_400_000).toISOString())).order('fecha_asignado', { ascending: false }).limit(30)
       : Promise.resolve({ data: [] }),
+    // Leads de otros asesores que atendí como apoyo o que cubro por su ausencia: salen con etiqueta
+    puede('chats') ? supabase.rpc('mis_leads_apoyo') : Promise.resolve({ data: [] }),
+    // ¿Soy apoyo de este lead? (para poder quitarlo de mi lista)
+    supabase.from('lead_apoyo').select('oculto_at').eq('lead_id', id).eq('asesor_id', perfil.id).maybeSingle(),
   ])
   // Asesores para el filtro de la bandeja (solo quien ve los chats de todo el equipo)
   const { data: asesoresBandeja } = esAdmin && puede('chats') ? await supabase.rpc('posibles_reemplazos') : { data: [] as { id: string; nombre: string }[] }
@@ -104,13 +109,18 @@ export async function FichaLead({ id, seccion }: { id: string; seccion: 'leads' 
   // Bandeja: sin repetir, de la más reciente a la más antigua
   const vistos = new Set<string>()
   const cuando = (c: { ultimo_mensaje_at: string | null; fecha_asignado: string | null }) => c.ultimo_mensaje_at ?? c.fecha_asignado ?? ''
-  const bandeja: ItemBandeja[] = [...(esperando ?? []), ...(recientes ?? []), ...(sinChat ?? [])]
+  // De apoyo: solo en la vista propia (no al mirar los chats de otro asesor)
+  const apoyos = !asesorBandeja || asesorBandeja === perfil.id ? (deApoyo ?? []) : []
+  const etiquetaApoyo = new Map(apoyos.map((a) => [a.id, a.cubriendo ? `🧳 Cubres a ${a.asesor ?? 'otro asesor'}` : '🤝 Apoyo']))
+  const bandeja: ItemBandeja[] = [...(esperando ?? []), ...(recientes ?? []), ...(sinChat ?? []),
+    ...apoyos.filter((a) => a.ultimo_mensaje_at || !a.cubriendo).map((a) => ({ ...a, asesor_id: null, fecha_asignado: a.desde }))]
     .filter((c) => !vistos.has(c.id) && vistos.add(c.id))
     .sort((a, b) => cuando(b).localeCompare(cuando(a)))
     .map((c) => ({
-      id: c.id, nombre: c.nombre ?? c.telefono, ultimo: c.ultimo_mensaje_at ? c.ultimo_mensaje_texto : '📌 Asignado · aún sin mensajes',
+      id: c.id, nombre: c.nombre ?? c.telefono,
+      ultimo: c.ultimo_mensaje_at ? c.ultimo_mensaje_texto : etiquetaApoyo.has(c.id) ? 'Aún sin mensajes' : '📌 Asignado · aún sin mensajes',
       deMi: !!c.ultimo_mensaje_at && c.ultimo_mensaje_lead_at !== c.ultimo_mensaje_at,
-      hace: haceCuanto(cuando(c) || null), sinResponder: !!c.sin_responder, mio: c.asesor_id === perfil.id,
+      hace: haceCuanto(cuando(c) || null), sinResponder: !!c.sin_responder, mio: c.asesor_id === perfil.id, etiqueta: etiquetaApoyo.get(c.id),
     }))
   const noUsa = new Set((ocultas ?? []).map((o) => o.respuesta_id))
   // Las personales primero
@@ -184,6 +194,13 @@ export async function FichaLead({ id, seccion }: { id: string; seccion: 'leads' 
         <p className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800 max-xl:shrink-0 max-xl:px-3 max-xl:py-2 max-xl:text-xs">
           🤝 Eres <b>asesor(a) de apoyo</b> (lo atendiste en persona o cubres la ausencia de su asesor): es lead de <b>{lead.asesor?.nombre ?? 'otro asesor'}</b>.
           Puedes ver su conversación, escribirle y dejar notas; su estado y seguimiento los lleva su asesor(a).
+          {miApoyo && !miApoyo.oculto_at && <span className="ml-2 inline-block"><QuitarApoyo key="quitar-apoyo" leadId={lead.id} nombre={lead.nombre ?? lead.telefono} /></span>}
+        </p>
+      )}
+      {!apoyo && miApoyo && !miApoyo.oculto_at && (
+        <p className="flex flex-wrap items-center gap-2 text-xs text-violet-700 max-xl:shrink-0">
+          🤝 Lo atendiste como apoyo: sale con esa etiqueta en tus chats.
+          <QuitarApoyo key="quitar-apoyo" leadId={lead.id} nombre={lead.nombre ?? lead.telefono} />
         </p>
       )}
 

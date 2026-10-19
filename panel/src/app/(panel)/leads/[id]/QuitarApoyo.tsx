@@ -2,7 +2,7 @@
 
 // "🤝 Atendidos como apoyo": quitar de mi lista un lead de otro asesor que ya no necesito ver.
 import { useTransition } from 'react'
-import { ocultarApoyo } from './acciones'
+import { ocultarApoyo } from '../acciones'
 import { useAviso, useConfirmar } from '@/components/Confirmacion'
 
 export function QuitarApoyo({ leadId, nombre }: { leadId: string; nombre: string }) {
@@ -12,7 +12,7 @@ export function QuitarApoyo({ leadId, nombre }: { leadId: string; nombre: string
   const quitar = async () => {
     const ok = await confirmar({
       titulo: '¿Quitar de tu lista de apoyo?',
-      mensaje: <>Dejarás de ver a <b>{nombre}</b> en «Atendidos como apoyo». El lead sigue siendo de su asesor y no se borra nada.</>,
+      mensaje: <>Dejarás de ver a <b>{nombre}</b> con la etiqueta 🤝 Apoyo en tus chats. El lead sigue siendo de su asesor y no se borra nada.</>,
       confirmar: 'Quitar',
     })
     if (!ok) return
@@ -23,7 +23,7 @@ export function QuitarApoyo({ leadId, nombre }: { leadId: string; nombre: string
       type="button" onClick={quitar} disabled={pendiente} title="Quitar de mi lista de apoyo"
       className="rounded border border-slate-300 px-2 py-0.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
     >
-      {pendiente ? '…' : '✕ Quitar'}
+      {pendiente ? '…' : '✕ Quitar de mis chats'}
     </button>
   )
 }

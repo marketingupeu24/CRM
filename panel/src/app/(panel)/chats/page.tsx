@@ -54,12 +54,21 @@ export default async function PaginaChats(props: PageProps<'/chats'>) {
     .is('ultimo_mensaje_at', null).not('asesor_id', 'is', null).gte('fecha_asignado', new Date(Date.now() - 7 * 86_400_000).toISOString())
   if (asesorFiltro) sinChat = sinChat.eq('asesor_id', asesorFiltro)
 
-  const [{ data: chats, error }, { count: totalSinResponder }, { data: asesores }, { data: nuevos }] = await Promise.all([
+  const [{ data: chats, error }, { count: totalSinResponder }, { data: asesores }, { data: nuevos }, { data: deApoyo }] = await Promise.all([
     consulta.order('sin_responder', { ascending: false }).order('ultimo_mensaje_at', { ascending: false }).limit(LIMITE),
     conteo,
     esAdmin ? supabase.rpc('posibles_reemplazos') : Promise.resolve({ data: [] as { id: string; nombre: string }[] }),
     soloSinResponder ? Promise.resolve({ data: [] }) : sinChat.order('fecha_asignado', { ascending: false }).limit(30),
+    // Leads de otros asesores que atendí como apoyo o que cubro: salen con etiqueta (solo en mi vista)
+    !asesorFiltro || soloMios ? supabase.rpc('mis_leads_apoyo') : Promise.resolve({ data: [] }),
   ])
+  const etiquetaApoyo = new Map((deApoyo ?? []).map((a) => [a.id, a.cubriendo ? `🧳 Cubres a ${a.asesor ?? 'otro asesor'}` : '🤝 Apoyo']))
+  const vistos = new Set((chats ?? []).map((c) => c.id))
+  const lista = [
+    ...(chats ?? []),
+    ...(deApoyo ?? []).filter((a) => a.ultimo_mensaje_at && !vistos.has(a.id) && (!soloSinResponder || a.sin_responder))
+      .map((a) => ({ ...a, estado: null, ultima_respuesta_at: null, asesor: { nombre: a.asesor ?? '' } })),
+  ].sort((a, b) => Number(!!b.sin_responder) - Number(!!a.sin_responder) || (b.ultimo_mensaje_at ?? '').localeCompare(a.ultimo_mensaje_at ?? ''))
   const nombreAsesor = asesorFiltro && !soloMios ? ((asesores ?? []) as { id: string; nombre: string }[]).find((a) => a.id === asesorFiltro)?.nombre : null
 
   return (
@@ -102,7 +111,7 @@ export default async function PaginaChats(props: PageProps<'/chats'>) {
       )}
 
       <ul className="tarjeta divide-y divide-slate-100">
-        {(chats ?? []).map((c) => {
+        {lista.map((c) => {
           const ultimoEsDelLead = c.ultimo_mensaje_lead_at === c.ultimo_mensaje_at
           return (
             <li key={c.id}>
@@ -123,8 +132,9 @@ export default async function PaginaChats(props: PageProps<'/chats'>) {
                     {ultimoEsDelLead ? '' : 'Tú: '}{c.ultimo_mensaje_texto}
                   </p>
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                    <InsigniaEstado estado={c.estado} />
-                    {esAdmin && !asesorFiltro && <span>{c.asesor?.nombre ?? 'Sin asesor (lo atiende Genesys)'}</span>}
+                    {c.estado && <InsigniaEstado estado={c.estado} />}
+                    {etiquetaApoyo.has(c.id) && <span className="rounded-full bg-violet-100 px-2 py-0.5 font-medium text-violet-700">{etiquetaApoyo.get(c.id)} · de {c.asesor?.nombre || 'otro asesor'}</span>}
+                    {esAdmin && !asesorFiltro && !etiquetaApoyo.has(c.id) && <span>{c.asesor?.nombre ?? 'Sin asesor (lo atiende Genesys)'}</span>}
                     {c.sin_responder && <span className="font-medium text-rose-600">● Sin responder</span>}
                   </div>
                 </div>
@@ -132,7 +142,7 @@ export default async function PaginaChats(props: PageProps<'/chats'>) {
             </li>
           )
         })}
-        {!chats?.length && (
+        {!lista.length && (
           <li className="px-4 py-12 text-center text-sm text-slate-500">
             {soloSinResponder ? 'No hay mensajes sin responder. 🎉' : 'Todavía no hay conversaciones.'}
           </li>

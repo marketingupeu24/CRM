@@ -184,7 +184,8 @@ export async function ocultarApoyo(leadId: string): Promise<Resultado> {
   const supabase = await crearClienteServidor()
   const { error } = await supabase.rpc('ocultar_apoyo', { p_lead_id: leadId })
   if (error) return { error: mensajeError(error) }
-  revalidatePath('/leads')
+  refrescar(leadId)
+  revalidatePath('/chats')
   return { ok: true }
 }
 

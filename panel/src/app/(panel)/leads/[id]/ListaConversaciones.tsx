@@ -17,6 +17,8 @@ export interface Conversacion {
   hace: string
   sinResponder: boolean
   mio: boolean
+  /** "🤝 Apoyo" o "🧳 Cubres a …": lead de otro asesor */
+  etiqueta?: string
 }
 
 type Filtro = PreferenciaBandeja['filtro']
@@ -100,6 +102,8 @@ export function ListaConversaciones({ conversaciones, actualId, preferencia, ase
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline justify-between gap-2">
                     <span className={`truncate text-sm ${c.sinResponder ? 'font-semibold text-slate-900' : 'font-medium text-slate-800'}`}>{c.nombre}</span>
+                    {c.etiqueta && <span className="shrink-0 rounded-full bg-violet-100 px-1.5 text-[10px] font-medium text-violet-700" title="Lead de otro asesor">{c.etiqueta}</span>}
+                    <span className="flex-1" />
                     <span className={`shrink-0 text-[11px] ${c.sinResponder ? 'font-semibold text-rose-600' : 'text-slate-400'}`}>{c.hace}</span>
                   </span>
                   <span className="flex items-center gap-1.5">
