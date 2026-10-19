@@ -178,22 +178,22 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
       </div>
 
       {/* Pantallas grandes: el chat ocupa todo el alto (como en las bandejas de Intercom o Chatwoot) y el panel lateral se desplaza aparte */}
-      <div className="grid gap-4 max-xl:min-h-0 max-xl:flex-1 max-xl:grid-rows-[minmax(0,1fr)] xl:min-h-0 xl:flex-1 xl:grid-cols-[17rem_3.5rem_minmax(0,1fr)] xl:grid-rows-[minmax(0,1fr)] xl:group-has-[#alternar-detalles:checked]:grid-cols-[17rem_3.5rem_minmax(0,1fr)_21rem] 3xl:grid-cols-[19rem_3.5rem_minmax(0,1fr)_23rem] 3xl:group-has-[#alternar-detalles:checked]:grid-cols-[19rem_3.5rem_minmax(0,1fr)]">
+      <div className="grid gap-4 max-xl:min-h-0 max-xl:flex-1 max-xl:grid-rows-[minmax(0,1fr)] xl:min-h-0 xl:flex-1 xl:grid-cols-[17rem_minmax(0,1fr)_3.5rem] xl:grid-rows-[minmax(0,1fr)] xl:group-has-[#alternar-detalles:checked]:grid-cols-[17rem_minmax(0,1fr)_3.5rem_21rem] 3xl:grid-cols-[19rem_minmax(0,1fr)_3.5rem_23rem] 3xl:group-has-[#alternar-detalles:checked]:grid-cols-[19rem_minmax(0,1fr)_3.5rem]">
         {/* Bandeja de conversaciones (pantallas grandes) */}
         {puede('chats') && (
-          <div className="hidden xl:flex xl:min-h-0 xl:flex-col">
+          <div className="hidden xl:order-1 xl:flex xl:min-h-0 xl:flex-col">
             <ListaConversaciones key="bandeja" conversaciones={bandeja} actualId={lead.id} verMios={esAdmin} />
           </div>
         )}
-        {!puede('chats') && <div className="hidden xl:block" />}
-        {/* Pantallas grandes: acciones rápidas en íconos a la izquierda (se despliegan al pasar el mouse) */}
-        <div className="relative hidden xl:z-20 xl:block">
+        {!puede('chats') && <div className="hidden xl:order-1 xl:block" />}
+        {/* Pantallas grandes: acciones rápidas en íconos a la derecha del chat (se despliegan hacia la izquierda al pasar el mouse) */}
+        <div className="relative hidden xl:order-3 xl:z-20 xl:block">
           <AccionesRapidas
             variante="riel" telefono={lead.telefono} proformaHref={puede('costos') ? `/costos?lead=${lead.id}` : undefined}
             alFinal={puede('papelera') && !apoyo ? <BotonPapelera key="papelera" variante="riel" leadId={lead.id} nombre={lead.nombre ?? lead.telefono} /> : undefined}
           />
         </div>
-        <div className="space-y-4 max-xl:flex max-xl:min-h-0 max-xl:flex-col max-xl:gap-2 max-xl:space-y-0 max-xl:group-has-[#pestana-detalles:checked]:hidden xl:flex xl:min-h-0 xl:flex-col xl:gap-4 xl:space-y-0">
+        <div className="space-y-4 max-xl:flex max-xl:min-h-0 max-xl:flex-col max-xl:gap-2 max-xl:space-y-0 max-xl:group-has-[#pestana-detalles:checked]:hidden xl:order-2 xl:flex xl:min-h-0 xl:flex-col xl:gap-4 xl:space-y-0">
           {lead.origen === 'actividad' && !lead.ultimo_mensaje_lead_at && (
             <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
               Este alumno se registró con un QR y <b>aún no escribe al WhatsApp</b>. Para cuidar el número de Genesys, espera su mensaje
@@ -225,7 +225,7 @@ export default async function FichaLead(props: PageProps<'/leads/[id]'>) {
 
         </div>
 
-        <div className="space-y-4 max-xl:hidden max-xl:min-h-0 max-xl:overflow-y-auto max-xl:overscroll-contain max-xl:group-has-[#pestana-detalles:checked]:block xl:hidden space-y-3 xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain xl:pr-1 xl:group-has-[#alternar-detalles:checked]:block 3xl:block 3xl:group-has-[#alternar-detalles:checked]:hidden">
+        <div className="space-y-4 max-xl:hidden max-xl:min-h-0 max-xl:overflow-y-auto max-xl:overscroll-contain max-xl:group-has-[#pestana-detalles:checked]:block xl:hidden space-y-3 xl:order-4 xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain xl:pr-1 xl:group-has-[#alternar-detalles:checked]:block 3xl:block 3xl:group-has-[#alternar-detalles:checked]:hidden">
           {/* Resumen: lo que más se usa, compacto y siempre a la vista */}
           <section className="tarjeta divide-y divide-slate-100">
             <div className="space-y-1.5 p-4">

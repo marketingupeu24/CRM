@@ -56,7 +56,7 @@ export function AccionesRapidas({ telefono, proformaHref, variante = 'barra', al
       <div className="relative w-14">
         <nav
           aria-label="Acciones rápidas"
-          className="absolute top-0 left-0 z-20 flex w-14 flex-col gap-0.5 overflow-hidden rounded-2xl border border-slate-200 bg-superficie p-1.5 shadow-theme-xs transition-[width,box-shadow] duration-150 hover:w-56 hover:shadow-lg focus-within:w-56 focus-within:shadow-lg"
+          className="absolute top-0 right-0 z-20 flex w-14 flex-col gap-0.5 overflow-hidden rounded-2xl border border-slate-200 bg-superficie p-1.5 shadow-theme-xs transition-[width,box-shadow] duration-150 hover:w-56 hover:shadow-lg focus-within:w-56 focus-within:shadow-lg"
         >
           {acciones.map((a) => {
             const contenido = <><span aria-hidden className="w-7 shrink-0 text-center text-lg leading-none">{a.icono}</span><span>{a.texto}</span></>
