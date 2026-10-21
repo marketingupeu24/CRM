@@ -98,7 +98,12 @@ export async function actualizarAsesor(asesorId: string, _previo: Resultado, for
     telefono,
     carreras: listaCarreras(String(formData.get('carreras') ?? '')),
   }).eq('id', asesorId)
-  if (error?.code === '23505') return { error: 'Ese celular ya lo tiene otro asesor.' }
+  if (error?.code === '23505') {
+    // Decir quién lo tiene, para que se pueda corregir
+    const { data: otro } = await supabase.from('asesores').select('nombre')
+      .eq('telefono', telefono ?? '').is('eliminado_at', null).neq('id', asesorId).maybeSingle()
+    return { error: otro ? `Ese celular ya lo tiene ${otro.nombre}. Cámbialo primero en su ficha.` : 'Ese celular ya lo tiene otro usuario.' }
+  }
   if (error) return { error: mensajeError(error) }
   revalidatePath('/usuarios')
   return { ok: 'Datos guardados.' }

@@ -15,4 +15,4 @@ insert into public.asesores (nombre, telefono, email, rol, carreras) values
   ('Asesor Ejemplo 1',       '51900000001', 'asesor1@ejemplo.edu.pe',   'asesor', '{}'),
   ('Asesor Ejemplo 2',       '51900000002', 'asesor2@ejemplo.edu.pe',   'asesor', '{}'),
   ('Supervisor CePre',       '51900000099', 'cepre@ejemplo.edu.pe',     'asesor', '{CEPRE}')
-on conflict (telefono) do nothing;
+on conflict (telefono) where eliminado_at is null do nothing;

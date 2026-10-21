@@ -185,7 +185,7 @@ export async function webhook(cuerpo: Cuerpo): Promise<Respuesta> {
   // Asesor fijo (modo sombra o formulario web con asesor elegido)
   let asesorFijoId: string | null = null
   if (telefonoAsesor) {
-    const { data } = await supabase.from('asesores').select('id').eq('telefono', telefonoAsesor).maybeSingle()
+    const { data } = await supabase.from('asesores').select('id').eq('telefono', telefonoAsesor).is('eliminado_at', null).maybeSingle()
     asesorFijoId = data?.id ?? null
     if (!asesorFijoId) console.warn(`[genesys] telefono_asesor ${telefonoAsesor} no está en la tabla asesores`)
   }
