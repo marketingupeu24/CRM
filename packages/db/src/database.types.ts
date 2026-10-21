@@ -811,6 +811,16 @@ isOneToOne: false
 "carrera_oficial":
 { Args: { "p_texto": string }; Returns: string
                            },
+"conversaciones_iniciadas":
+{ Args: { "p_desde"?: string,"p_hasta"?: string }; Returns: {
+              "asesor": string,"asesor_id": string,"conversaciones": number,"iniciadas": number,"iniciadas_por_alumno": number,"iniciadas_respondidas": number,"mensajes_enviados": number
+            }[]
+                           },
+"conversaciones_iniciadas_detalle":
+{ Args: { "p_asesor": string,"p_desde"?: string,"p_hasta"?: string }; Returns: {
+              "estado": string,"iniciada_at": string,"lead_id": string,"nombre": string,"primer_mensaje": string,"respondio_at": string,"telefono": string
+            }[]
+                           },
 "crear_usuario_panel":
 { Args: { "p_asesor_id": string,"p_clave": string,"p_debe_cambiar"?: boolean,"p_usuario": string }; Returns: string
                            },
@@ -994,6 +1004,11 @@ isOneToOne: false
                            },
 "prerregistro_publico":
 { Args: { "p_codigo": string }; Returns: Json
+                           },
+"primeros_mensajes_chat":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "autor_id": string,"contenido": string,"created_at": string,"lead_id": string,"tipo": string
+            }[]
                            },
 "procesar_lead":
 { Args: { "p_asesor_id"?: string,"p_asignar"?: boolean,"p_carrera"?: string,"p_consulta"?: string,"p_convocatoria"?: string,"p_dni"?: string,"p_modalidad"?: string,"p_nombre"?: string,"p_notificar"?: boolean,"p_origen"?: string,"p_programa"?: string,"p_telefono"?: string }; Returns: Json

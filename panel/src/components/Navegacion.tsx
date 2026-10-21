@@ -49,6 +49,7 @@ export function Navegacion(
         { href: '/campanas', texto: 'Campañas', icono: '📣', modulo: 'campanas' },
         { href: '/enlaces' as Route, texto: 'Enlaces y QR por medio', icono: '🔗', modulo: 'campanas' },
         { href: '/puntaje' as Route, texto: 'Puntaje de interés', icono: '🔥', modulo: 'leads' },
+        { href: '/conversaciones-iniciadas' as Route, texto: 'Conversaciones iniciadas', icono: '💬', soloSuperadmin: true },
       ],
     },
     {
