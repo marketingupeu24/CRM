@@ -1,8 +1,9 @@
 'use client'
 
 // Tarjetas con el QR personal de cada asesor (63 × 88 mm, tamaño naipe: 9 por hoja A4).
-// Se descargan una por una (PNG), todas en una hoja (PDF A4) o se imprimen directo.
-import { useRef, useState } from 'react'
+// Se descargan una por una (tarjeta o solo el QR en PNG), todas en una hoja (PDF A4) o se imprimen directo.
+// Debajo de cada una está el enlace, para copiarlo o compartirlo sin la imagen.
+import { useRef, useState, useSyncExternalStore } from 'react'
 
 export interface TarjetaQr {
   id: string
@@ -52,6 +53,42 @@ function Tarjeta({ t, refNodo }: { t: TarjetaQr; refNodo: (n: HTMLDivElement | n
   )
 }
 
+/** El enlace del QR, para enviarlo solo (sin la imagen): copiar o compartir (en el celular abre WhatsApp y demás). */
+function EnlaceQr({ url, nombre }: { url: string; nombre: string }) {
+  const [copiado, setCopiado] = useState(false)
+  // Solo en el navegador (en el servidor no existe navigator): así no hay diferencia al hidratar
+  const puedeCompartir = useSyncExternalStore(() => () => {}, () => typeof navigator.share === 'function', () => false)
+  async function copiar() {
+    try {
+      await navigator.clipboard.writeText(url)
+    } catch {
+      // Sin permiso de portapapeles: se selecciona para copiar a mano
+      const campo = document.getElementById(`url-${url}`) as HTMLInputElement | null
+      campo?.select()
+      return
+    }
+    setCopiado(true)
+    setTimeout(() => setCopiado(false), 2000)
+  }
+  return (
+    <div className="space-y-1">
+      <input
+        id={`url-${url}`} readOnly value={url} onFocus={(e) => e.target.select()} aria-label={`Enlace del QR de ${nombre}`}
+        className="campo w-full px-2 py-1 font-mono text-[11px] text-slate-600"
+      />
+      <div className={`grid gap-1.5 ${puedeCompartir ? 'grid-cols-2' : 'grid-cols-1'}`}>
+        <button type="button" onClick={copiar} className="boton-secundario px-2 py-1 text-xs">{copiado ? '✓ Copiado' : '📋 Copiar enlace'}</button>
+        {puedeCompartir && (
+          <button type="button" className="boton-secundario px-2 py-1 text-xs"
+            onClick={() => navigator.share({ title: 'Admisión UPeU Juliaca', text: 'Déjanos tus datos aquí y tu asesor(a) de Admisión te contactará:', url }).catch(() => undefined)}>
+            ↗ Compartir
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export function TarjetasQr({ tarjetas, variosAsesores }: { tarjetas: TarjetaQr[]; variosAsesores: boolean }) {
   const nodos = useRef(new Map<string, HTMLDivElement>())
   const [elegidas, setElegidas] = useState<Set<string>>(() => new Set(tarjetas.map((t) => t.id)))
@@ -68,6 +105,26 @@ export function TarjetasQr({ tarjetas, variosAsesores }: { tarjetas: TarjetaQr[]
       a.href = lienzo.toDataURL('image/png')
       a.download = `QR-${nombreArchivo(t.nombre)}.png`
       a.click()
+      setEstado(null)
+    } catch {
+      setEstado('No se pudo generar la imagen. Intenta de nuevo.')
+    }
+  }
+
+  /** Solo el código QR (sin la tarjeta), en PNG grande con borde blanco: para enviarlo por WhatsApp o ponerlo en un afiche. */
+  async function descargarSoloQr(t: TarjetaQr) {
+    setEstado(`Preparando el QR de ${nombreCorto(t.nombre)}…`)
+    try {
+      const url = URL.createObjectURL(new Blob([t.svg], { type: 'image/svg+xml' }))
+      const img = new Image()
+      await new Promise<void>((ok, mal) => { img.onload = () => ok(); img.onerror = mal; img.src = url })
+      const lado = 1024, margen = 64
+      const lienzo = Object.assign(document.createElement('canvas'), { width: lado, height: lado })
+      const ctx = lienzo.getContext('2d')!
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, lado, lado)
+      ctx.drawImage(img, margen, margen, lado - 2 * margen, lado - 2 * margen)
+      URL.revokeObjectURL(url)
+      Object.assign(document.createElement('a'), { href: lienzo.toDataURL('image/png'), download: `QR-solo-${nombreArchivo(t.nombre)}.png` }).click()
       setEstado(null)
     } catch {
       setEstado('No se pudo generar la imagen. Intenta de nuevo.')
@@ -154,7 +211,13 @@ export function TarjetasQr({ tarjetas, variosAsesores }: { tarjetas: TarjetaQr[]
                   </label>
                 )
                 : <span />}
-              <button onClick={() => descargarPng(t)} disabled={!!estado} className="font-medium text-marca-700 hover:underline">⬇ PNG</button>
+            </div>
+            <div className="no-imprimir space-y-1.5" style={{ width: `${ANCHO_MM}mm` }}>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button onClick={() => descargarPng(t)} disabled={!!estado} className="boton-secundario px-2 py-1 text-xs" title="La tarjeta completa (logo, QR y nombre) en PNG">⬇ Tarjeta</button>
+                <button onClick={() => descargarSoloQr(t)} disabled={!!estado} className="boton-secundario px-2 py-1 text-xs" title="Solo el código QR en PNG">⬇ Solo el QR</button>
+              </div>
+              <EnlaceQr url={t.url} nombre={nombreCorto(t.nombre)} />
             </div>
           </div>
         ))}
