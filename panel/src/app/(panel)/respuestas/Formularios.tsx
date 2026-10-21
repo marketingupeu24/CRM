@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState, useOptimistic, useState, useTransition } from 'react'
-import type { RespuestaRapida } from '@crm/db'
+import { CATEGORIAS_RESPUESTA, categoriaRespuesta, type RespuestaRapida } from '@crm/db'
 import { useConfirmar } from '@/components/Confirmacion'
 import { cambiarActiva, cambiarPara, cambiarUso, eliminarRespuesta, guardarRespuesta, type Resultado } from './acciones'
 
@@ -37,9 +37,14 @@ export function FormularioRespuesta({ respuesta, alGuardar, admin, asesores, miI
   )
 
   return (
-    <form action={accion} className={`grid gap-3 ${admin ? 'sm:grid-cols-[1fr_14rem_6rem]' : 'sm:grid-cols-[1fr_6rem]'}`}>
+    <form action={accion} className={`grid gap-3 ${admin ? 'md:grid-cols-[1fr_13rem_13rem_5rem]' : 'md:grid-cols-[1fr_13rem_5rem]'}`}>
       <label className="text-sm text-slate-600">Título
         <input name="titulo" required maxLength={80} defaultValue={respuesta?.titulo} placeholder="Ej.: Costos de pensión" className="campo mt-1" />
+      </label>
+      <label className="text-sm text-slate-600">Categoría
+        <select name="categoria" defaultValue={respuesta?.categoria ?? 'otros'} className="campo mt-1" aria-label="Categoría">
+          {CATEGORIAS_RESPUESTA.map((c) => <option key={c.clave} value={c.clave}>{c.icono} {c.nombre}</option>)}
+        </select>
       </label>
       {admin && (
         <label className="text-sm text-slate-600">Para quién
@@ -49,13 +54,13 @@ export function FormularioRespuesta({ respuesta, alGuardar, admin, asesores, miI
       <label className="text-sm text-slate-600">Orden
         <input name="orden" type="number" defaultValue={respuesta?.orden ?? 100} className="campo mt-1" />
       </label>
-      <label className={`text-sm text-slate-600 ${admin ? 'sm:col-span-3' : 'sm:col-span-2'}`}>Mensaje
+      <label className={`text-sm text-slate-600 ${admin ? 'md:col-span-4' : 'md:col-span-3'}`}>Mensaje
         <textarea
           name="contenido" required maxLength={1500} rows={4} defaultValue={respuesta?.contenido}
           placeholder="Hola {nombre}, la pensión de {carrera} es…" className="campo mt-1"
         />
       </label>
-      <div className={`flex flex-wrap items-center gap-3 ${admin ? 'sm:col-span-3' : 'sm:col-span-2'}`}>
+      <div className={`flex flex-wrap items-center gap-3 ${admin ? 'md:col-span-4' : 'md:col-span-3'}`}>
         <button className="boton" disabled={guardando}>{guardando ? 'Guardando…' : respuesta ? 'Guardar cambios' : 'Crear respuesta'}</button>
         <Mensaje r={r} />
       </div>
@@ -90,6 +95,7 @@ export function FilaRespuesta({ respuesta, usada, puedeEditar, admin, asesores, 
         <div className="min-w-0 flex-1">
           <p className="font-medium">
             {respuesta.titulo}
+            <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-xs font-normal text-slate-600">{categoriaRespuesta(respuesta.categoria).icono} {categoriaRespuesta(respuesta.categoria).nombre}</span>
             {!respuesta.activa && <span className="ml-2 rounded bg-slate-200 px-1.5 py-0.5 text-xs text-slate-600">Inactiva</span>}
             {duenio && <span className="ml-2 rounded bg-violet-100 px-1.5 py-0.5 text-xs text-violet-700">👤 {duenio}</span>}
           </p>

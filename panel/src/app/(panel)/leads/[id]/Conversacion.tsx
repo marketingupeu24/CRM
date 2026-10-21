@@ -3,7 +3,7 @@
 // Chat de WhatsApp del lead: mensajes del lead, respuestas de Genesys y del asesor.
 // Se actualiza en tiempo real (Supabase Realtime respeta el RLS del usuario).
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import type { LeadInteraccion } from '@crm/db'
+import { agruparPorCategoria, CATEGORIAS_RESPUESTA, categoriaRespuesta, type LeadInteraccion } from '@crm/db'
 import { esDelChat } from '@/lib/chat'
 import { crearClienteNavegador, prepararTiempoReal } from '@/lib/supabase/client'
 import { comprimirImagen } from '@/lib/imagen'
@@ -87,7 +87,7 @@ interface Props {
   /** Nombre del alumno para sus mensajes (si no tiene, se muestra su número) */
   nombreAlumno?: string | null
   /** Plantillas del chat; {nombre}, {carrera} y {asesor} se reemplazan con `variables` */
-  respuestas?: { id: number; titulo: string; contenido: string; personal?: boolean }[]
+  respuestas?: { id: number; titulo: string; contenido: string; personal?: boolean; categoria?: string | null }[]
   variables?: { nombre: string; carrera: string; asesor: string }
   /** Barra con el estado del bot y los botones Atendido / Matriculado */
   encabezado?: React.ReactNode
@@ -102,6 +102,10 @@ export function Conversacion(
   const [texto, setTexto] = useState('')
   const tactil = useSyncExternalStore(suscribirTactil, () => matchMedia(TACTIL).matches, () => false)
   const [verRespuestas, setVerRespuestas] = useState(false)
+  // Panel ⚡: por categoría (saludo, carreras, modalidades…) y con buscador
+  const [categoriaPanel, setCategoriaPanel] = useState('')
+  const [buscarPanel, setBuscarPanel] = useState('')
+  const enPanel = buscarRespuestas(respuestas, buscarPanel).filter((r) => !categoriaPanel || categoriaRespuesta(r.categoria).clave === categoriaPanel)
 
   // Atajo: "/" al inicio de una línea abre las respuestas rápidas filtradas por lo que sigue ("/traslado")
   const [atajoCerrado, setAtajoCerrado] = useState<string | null>(null)
@@ -476,19 +480,48 @@ export function Conversacion(
         </div>
       )}
       {verRespuestas && !atajo && (
-        <div className="max-h-56 overflow-y-auto border-t border-slate-200 bg-slate-50 p-2">
-          {respuestas.length === 0 && (
-            <p className="px-2 py-3 text-center text-xs text-slate-500">No hay respuestas rápidas. El administrador las crea en «Respuestas rápidas».</p>
+        <div className="border-t border-slate-200 bg-slate-50">
+          {respuestas.length === 0 ? (
+            <p className="px-4 py-3 text-center text-xs text-slate-500">No hay respuestas rápidas. El administrador las crea en «Respuestas rápidas».</p>
+          ) : (
+            <>
+              <div className="space-y-1.5 border-b border-slate-200 p-2">
+                <input
+                  value={buscarPanel} onChange={(e) => setBuscarPanel(e.target.value)} placeholder="⌕ Buscar respuesta" aria-label="Buscar respuesta rápida"
+                  className="campo py-1 text-sm"
+                />
+                <div className="flex gap-1 overflow-x-auto pb-0.5 text-xs" role="tablist" aria-label="Categorías">
+                  {[{ clave: '', nombre: 'Todas', icono: '' }, ...CATEGORIAS_RESPUESTA.filter((c) => respuestas.some((r) => categoriaRespuesta(r.categoria).clave === c.clave))].map((c) => (
+                    <button
+                      key={c.clave || 'todas'} type="button" role="tab" aria-selected={categoriaPanel === c.clave} onClick={() => setCategoriaPanel(c.clave)}
+                      className={`shrink-0 rounded-full border px-2.5 py-0.5 whitespace-nowrap ${categoriaPanel === c.clave ? 'border-marca-600 bg-marca-600 text-white' : 'border-slate-300 bg-superficie text-slate-700 hover:bg-slate-100'}`}
+                    >
+                      {c.icono} {c.nombre}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="max-h-64 overflow-y-auto p-1">
+                {agruparPorCategoria(enPanel).map((g) => (
+                  <div key={g.categoria.clave}>
+                    {!categoriaPanel && (
+                      <p className="sticky top-0 z-10 bg-slate-50 px-3 pt-2 pb-1 text-[11px] font-semibold tracking-wide text-slate-500 uppercase">{g.categoria.icono} {g.categoria.nombre}</p>
+                    )}
+                    {g.items.map((rr) => (
+                      <button
+                        key={rr.id} type="button" onClick={() => usarRespuesta(rr.contenido)}
+                        className="block w-full rounded-lg px-3 py-1.5 text-left hover:bg-superficie"
+                      >
+                        <span className="text-sm font-medium text-slate-800">{rr.titulo}{rr.personal && <span className="ml-1.5 rounded bg-violet-100 px-1 py-px text-[10px] font-medium text-violet-700">👤 personal</span>}</span>
+                        <span className="block truncate text-xs text-slate-500">{rr.contenido}</span>
+                      </button>
+                    ))}
+                  </div>
+                ))}
+                {!enPanel.length && <p className="px-2 py-3 text-center text-xs text-slate-500">Ninguna respuesta en este filtro.</p>}
+              </div>
+            </>
           )}
-          {respuestas.map((rr) => (
-            <button
-              key={rr.id} type="button" onClick={() => usarRespuesta(rr.contenido)}
-              className="block w-full rounded-lg px-3 py-2 text-left hover:bg-superficie"
-            >
-              <span className="text-sm font-medium text-slate-800">{rr.titulo}{rr.personal && <span className="ml-1.5 rounded bg-violet-100 px-1 py-px text-[10px] font-medium text-violet-700">👤 personal</span>}</span>
-              <span className="block truncate text-xs text-slate-500">{rr.contenido}</span>
-            </button>
-          ))}
         </div>
       )}
       {archivo && (

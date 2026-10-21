@@ -588,13 +588,13 @@ isOneToOne: false
                   ]
                 },"respuestas_rapidas": {
                   Row: {
-                    "activa": boolean,"asesor_id": string | null,"contenido": string,"created_at": string,"id": number,"orden": number,"titulo": string
+                    "activa": boolean,"asesor_id": string | null,"categoria": string,"contenido": string,"created_at": string,"id": number,"orden": number,"titulo": string
                   }
                   Insert: {
-                    "activa"?: boolean,"asesor_id"?: string | null,"contenido": string,"created_at"?: string,"id"?: never,"orden"?: number,"titulo": string
+                    "activa"?: boolean,"asesor_id"?: string | null,"categoria"?: string,"contenido": string,"created_at"?: string,"id"?: never,"orden"?: number,"titulo": string
                   }
                   Update: {
-                    "activa"?: boolean,"asesor_id"?: string | null,"contenido"?: string,"created_at"?: string,"id"?: never,"orden"?: number,"titulo"?: string
+                    "activa"?: boolean,"asesor_id"?: string | null,"categoria"?: string,"contenido"?: string,"created_at"?: string,"id"?: never,"orden"?: number,"titulo"?: string
                   }
                   Relationships: [
                     {

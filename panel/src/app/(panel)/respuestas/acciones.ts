@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { mensajeError } from '@/lib/formato'
 import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
+import { CATEGORIAS_RESPUESTA } from '@crm/db'
 
 export interface Resultado {
   error?: string
@@ -25,13 +26,15 @@ function datos(formData: FormData) {
   const contenido = String(formData.get('contenido') ?? '').trim()
   const orden = Number.parseInt(String(formData.get('orden') ?? '100'), 10) || 100
   const para = String(formData.get('para') ?? '')
-  return { titulo, contenido, orden, para }
+  const elegida = String(formData.get('categoria') ?? '')
+  const categoria = CATEGORIAS_RESPUESTA.some((c) => c.clave === elegida) ? elegida : 'otros'
+  return { titulo, contenido, orden, para, categoria }
 }
 
 /** "para" = 'todos' o el id del asesor dueño. Sin el permiso "respuestas" siempre es personal propia. */
 export async function guardarRespuesta(id: number | null, _previo: Resultado, formData: FormData): Promise<Resultado> {
   const { perfil, puede } = await exigirPermiso('chats')
-  const { titulo, contenido, orden, para } = datos(formData)
+  const { titulo, contenido, orden, para, categoria } = datos(formData)
   if (!titulo || !contenido) return { error: 'Título y mensaje son obligatorios.' }
   if (titulo.length > 80) return { error: 'El título admite máximo 80 caracteres.' }
   if (contenido.length > 1500) return { error: 'El mensaje admite máximo 1500 caracteres.' }
@@ -44,8 +47,8 @@ export async function guardarRespuesta(id: number | null, _previo: Resultado, fo
 
   const supabase = await crearClienteServidor()
   const { data, error } = id
-    ? await supabase.from('respuestas_rapidas').update({ titulo, contenido, orden, asesor_id: asesorId }).eq('id', id).select('id')
-    : await supabase.from('respuestas_rapidas').insert({ titulo, contenido, orden, asesor_id: asesorId }).select('id')
+    ? await supabase.from('respuestas_rapidas').update({ titulo, contenido, orden, categoria, asesor_id: asesorId }).eq('id', id).select('id')
+    : await supabase.from('respuestas_rapidas').insert({ titulo, contenido, orden, categoria, asesor_id: asesorId }).select('id')
   if (error) return { error: mensajeError(error) }
   if (!data.length) return { error: 'No puedes modificar esta respuesta.' }
   refrescar()

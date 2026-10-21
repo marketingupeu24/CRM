@@ -84,7 +84,7 @@ export async function FichaLead({ id, seccion }: { id: string; seccion: 'leads' 
       : Promise.resolve({ data: [] as { id: string; nombre: string; activo: boolean }[] }),
     supabase.from('tareas').select('id, titulo, vence_at').eq('lead_id', id).is('completada_at', null).order('vence_at'),
     // Respuestas rápidas del chat: las "para todos" y las personales mías, menos las que elegí no usar
-    supabase.from('respuestas_rapidas').select('id, titulo, contenido, asesor_id').eq('activa', true)
+    supabase.from('respuestas_rapidas').select('id, titulo, contenido, asesor_id, categoria').eq('activa', true)
       .or(`asesor_id.is.null,asesor_id.eq.${perfil.id}`).order('orden').order('titulo'),
     supabase.from('respuestas_ocultas').select('respuesta_id').eq('asesor_id', perfil.id),
     puede('chats')
@@ -130,7 +130,7 @@ export async function FichaLead({ id, seccion }: { id: string; seccion: 'leads' 
   const noUsa = new Set((ocultas ?? []).map((o) => o.respuesta_id))
   // Las personales primero
   const respuestas = (todasRespuestas ?? []).filter((r) => !noUsa.has(r.id))
-    .map((r) => ({ id: r.id, titulo: r.titulo, contenido: r.contenido, personal: r.asesor_id !== null }))
+    .map((r) => ({ id: r.id, titulo: r.titulo, contenido: r.contenido, personal: r.asesor_id !== null, categoria: r.categoria }))
     .sort((a, b) => Number(b.personal) - Number(a.personal))
   // Asesor de apoyo (atendió en persona al lead de otro): ve la ficha y el chat, el lead sigue siendo del otro
   let lead = propio
