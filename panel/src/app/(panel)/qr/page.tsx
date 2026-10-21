@@ -64,9 +64,20 @@ export default async function PaginaQrAsesor() {
         </p>
       )}
       <RegistroPresencial carreras={CARRERAS} />
-      <section className="no-imprimir tarjeta p-5">
-        <h2 className="font-semibold">Escaneados recientemente</h2>
-        <p className="mb-3 text-xs text-slate-500">Últimos 14 días. Se actualiza solo al llegar un escaneo nuevo.</p>
+      {/* Plegado: se abre con un clic (el número y los que faltan completar se ven sin abrirlo) */}
+      <details className="no-imprimir tarjeta group p-5">
+        <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 font-semibold [&::-webkit-details-marker]:hidden">
+          <span className="text-slate-400 transition group-open:rotate-90">▸</span>
+          👥 Escaneados recientemente
+          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">{recientes?.length ?? 0}</span>
+          {!!recientes?.filter((l) => !l.nombre || !l.carrera_interes).length && (
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+              ✏️ {recientes.filter((l) => !l.nombre || !l.carrera_interes).length} por completar
+            </span>
+          )}
+          <span className="ml-auto text-xs font-normal text-slate-500 group-open:hidden">Ver lista</span>
+        </summary>
+        <p className="mt-3 mb-3 text-xs text-slate-500">Últimos 14 días. Se actualiza solo al llegar un escaneo nuevo.</p>
         {recientes?.length ? (
           <ul className="divide-y divide-slate-100">
             {recientes.map((l) => {
@@ -89,7 +100,7 @@ export default async function PaginaQrAsesor() {
             })}
           </ul>
         ) : <p className="text-sm text-slate-500">Aún nadie escaneó tu QR.</p>}
-      </section>
+      </details>
       <TarjetasQr tarjetas={tarjetas} variosAsesores={todos} />
     </div>
   )
