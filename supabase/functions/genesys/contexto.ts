@@ -33,20 +33,15 @@ export function leadRegistrado(lead: Lead): boolean {
  */
 export async function contextoDelAlumno(lead: Lead): Promise<string> {
   if (!leadRegistrado(lead) && !lead.nombre) return 'Alumno nuevo: todavía no ha dado sus datos.'
+  // Genesys no dice el nombre del asesor: solo sabe que ya tiene uno (y si está ausente, hasta cuándo)
   let asesor: string | null = null
   if (lead.asesor_id) {
     const { data } = await supabase.from('asesores')
-      .select('nombre, ausencia_activa, ausente_hasta, ausente_reemplazo')
+      .select('ausencia_activa, ausente_hasta')
       .eq('id', lead.asesor_id).maybeSingle()
-    const corto = (n?: string | null) => n?.trim().split(/\s+/).slice(0, 2).join(' ') ?? null
-    asesor = corto(data?.nombre)
-    // Ausente (viaje, permiso): Genesys avisa hasta cuándo y quién lo atiende mientras tanto
-    if (asesor && data?.ausencia_activa) {
-      const { data: cubre } = data.ausente_reemplazo
-        ? await supabase.from('asesores').select('nombre').eq('id', data.ausente_reemplazo).maybeSingle()
-        : { data: null }
-      const reemplazo = corto(cubre?.nombre)
-      asesor += ` (ausente hasta el ${fechaCorta(data.ausente_hasta)}; ${reemplazo ? `mientras tanto lo atiende ${reemplazo}` : 'mientras tanto responde el equipo de Admisión de la Universidad Peruana Unión'})`
+    asesor = 'ya tiene un asesor(a) de Admisión asignado'
+    if (data?.ausencia_activa) {
+      asesor += ` (ausente hasta el ${fechaCorta(data.ausente_hasta)}; mientras tanto lo atiende otro asesor(a) del equipo de Admisión)`
     }
   }
   const interes = lead.programa === 'cepre' ? `CEPRE${lead.modalidad ? ` ${lead.modalidad}` : ''}` : lead.carrera_interes

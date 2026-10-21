@@ -35,7 +35,6 @@ export async function asignarPorQrAsesor(lead: Lead, mensaje: string, telefono: 
   if (!(prerregistro ? r.usado : r.asignado)) return null
   const { data: actualizado } = await supabase.from('leads').select('*').eq('id', lead.id).single()
   if (!actualizado) return null
-  const asesor = (r.asesor_nombre ?? '').trim().split(/\s+/)[0]
   const persona = (r.persona ?? '').trim().split(/\s+/)[0]
   if (r.asignado && r.asesor_telefono) {
     EdgeRuntime.waitUntil(notificarAsesor(actualizado, r.asesor_telefono, 'manual', 'asignado', 'tu QR personal · presencial'))
@@ -47,7 +46,7 @@ export async function asignarPorQrAsesor(lead: Lead, mensaje: string, telefono: 
   const destino = esLid ? `${telefono}@lid` : await destinoWhatsApp(supabase, telefono)
   const listo = [
     `¡Listo${persona ? `, ${persona}` : ''}, ya quedaste registrado(a)! 😊 Soy Genesys, de *Admisión de la Universidad Peruana Unión*, campus Juliaca`,
-    `${asesor ? `Tu asesor(a) *${asesor}*` : 'Tu asesor(a)'} te sigue atendiendo, y por este chat te enviaremos la información que necesites.`,
+    'Un asesor(a) de Admisión te seguirá atendiendo, y por este chat te enviaremos la información que necesites.',
   ].join('\n')
   EdgeRuntime.waitUntil(enviarWhatsApp(destino, listo).then((envio) => (envio.ok ? guardarEnChat(lead.id, listo) : undefined)))
   return actualizado
@@ -272,9 +271,8 @@ export async function webhook(cuerpo: Cuerpo): Promise<Respuesta> {
       mensaje: r.asesor_nombre ?? '', telefono_asesor: r.asesor_telefono ?? '',
       lead_id: r.lead_id, notificacion_asesor: notificacion, bot_atiende: botAtiendeLead(r.estado), modo: MODO,
       enviar_mensaje_cliente: true,
-      mensaje_cliente: r.asesor_nombre
-        ? `Recibimos tu nueva consulta. ${r.asesor_nombre} te escribirá pronto.${notaHorario().cliente}`
-        : `Recibimos tu nueva consulta. Un asesor se comunicará contigo pronto.${notaHorario().cliente}`,
+      // Sin el nombre del asesor: "un asesor(a) de Admisión"
+      mensaje_cliente: `Recibimos tu nueva consulta. Un asesor(a) de Admisión se comunicará contigo pronto.${notaHorario().cliente}`,
       instruccion_bot: INSTRUCCION_REGISTRADO + notaHorario().instruccion,
     }
   }
@@ -284,9 +282,7 @@ export async function webhook(cuerpo: Cuerpo): Promise<Respuesta> {
     mensaje: r.asesor_nombre ?? '', telefono_asesor: r.asesor_telefono ?? '',
     lead_id: r.lead_id, notificacion_asesor: notificacion, bot_atiende: botAtiendeLead(r.estado), modo: MODO,
     enviar_mensaje_cliente: true,
-    mensaje_cliente: r.asesor_nombre
-      ? `Tu información fue registrada correctamente. Se te asignó a ${r.asesor_nombre}.${notaHorario().cliente}`
-      : `Tu información fue registrada correctamente. Un asesor se comunicará contigo pronto.${notaHorario().cliente}`,
+    mensaje_cliente: `Tu información fue registrada correctamente. Un asesor(a) de Admisión se comunicará contigo pronto.${notaHorario().cliente}`,
     instruccion_bot: INSTRUCCION_REGISTRADO + notaHorario().instruccion,
   }
 }

@@ -127,12 +127,11 @@ export async function avisarMensajeNuevo(lead: Lead, mensaje: string) {
 export async function avisarFueraDeHorario(lead: Lead, telefono: string) {
   const { data: apertura } = await supabase.rpc('reservar_aviso_horario', { p_lead_id: lead.id })
   if (!apertura) return
-  const { data: asesor } = await supabase.from('asesores').select('nombre').eq('id', lead.asesor_id!).maybeSingle()
-  const nombreAsesor = asesor?.nombre?.trim().split(/\s+/)[0]
   const primerNombre = (lead.nombre ?? '').trim().split(/\s+/)[0]
+  // Sin el nombre del asesor: "un asesor(a) de Admisión"
   const texto = [
     `¡Gracias por escribirnos${primerNombre ? ', ' + primerNombre : ''}! 😊 Nuestro horario de atención es ${HORARIO_ATENCION_TEXTO}`,
-    `${nombreAsesor ? `Tu asesor(a) *${nombreAsesor}*` : 'Tu asesor(a)'} te responderá ${textoProximaAtencion(new Date(apertura))}.`,
+    `Un asesor(a) de Admisión te responderá ${textoProximaAtencion(new Date(apertura))}.`,
   ].join('\n')
   const envio = await enviarWhatsApp(await destinoWhatsApp(supabase, telefono), texto)
   if (envio.ok) await guardarEnChat(lead.id, texto)
@@ -140,13 +139,12 @@ export async function avisarFueraDeHorario(lead: Lead, telefono: string) {
 }
 
 /** Saludo de Genesys al alumno que se registró con el QR de una feria o visita a colegio. */
-export function mensajeBienvenida(lead: Lead, actividad: string | null, asesor: string | null): string {
+export function mensajeBienvenida(lead: Lead, actividad: string | null): string {
   const primerNombre = (lead.nombre ?? '').trim().split(/\s+/)[0]
-  const asesorNombre = asesor?.trim().split(/\s+/).slice(0, 2).join(' ')
   return [
     `¡Hola${primerNombre ? ' ' + primerNombre : ''}! 👋 Gracias por registrarte${actividad ? ` en *${actividad}*` : ''}.`,
     'Soy Genesys, la asesora virtual de *Admisión de la Universidad Peruana Unión*, campus Juliaca 🎓',
-    asesorNombre ? `Tu asesor(a) *${asesorNombre}* te escribirá pronto con toda la información.` : 'Un asesor(a) te escribirá pronto con toda la información.',
+    'Un asesor(a) de Admisión te escribirá pronto con toda la información.',
     'Si tienes alguna pregunta, escríbeme por aquí 😊',
   ].join('\n')
 }
@@ -167,9 +165,8 @@ export async function notificarAsignacion(cuerpo: Cuerpo): Promise<Respuesta> {
   const { data: leads, error } = await supabase.from('leads').select('*').in('id', ids)
   if (error) throw error
   const asesorIds = [...new Set((leads ?? []).map((l) => l.asesor_id).filter((id): id is string => !!id))]
-  const { data: asesores } = await supabase.from('asesores').select('id, telefono, nombre').in('id', asesorIds)
+  const { data: asesores } = await supabase.from('asesores').select('id, telefono').in('id', asesorIds)
   const telefonos = new Map((asesores ?? []).map((a) => [a.id, a.telefono]))
-  const nombres = new Map((asesores ?? []).map((a) => [a.id, a.nombre]))
 
   const porAsesor = new Map<string, Lead[]>()
   for (const l of leads ?? []) {
@@ -210,7 +207,7 @@ export async function notificarAsignacion(cuerpo: Cuerpo): Promise<Respuesta> {
     const deAsesores = await telefonosAsesores()
     for (const lead of leads ?? []) {
       if (!/^\d{10,15}$/.test(lead.telefono) || deAsesores.has(lead.telefono) || lead.eliminado_at) continue
-      const saludo = mensajeBienvenida(lead, actividad, lead.asesor_id ? nombres.get(lead.asesor_id) ?? null : null)
+      const saludo = mensajeBienvenida(lead, actividad)
       const envio = await enviarWhatsApp(lead.telefono, saludo)
       if (envio.ok) { bienvenidas++; await guardarEnChat(lead.id, saludo) }
       else console.error('[genesys] No se pudo enviar la bienvenida:', envio.error)
