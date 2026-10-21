@@ -1,8 +1,11 @@
 'use client'
 
 import { useActionState, useState, useTransition } from 'react'
-import { useConfirmar } from '@/components/Confirmacion'
-import { cambiarActivo, eliminarRecordatorio, guardarRecordatorio, type Resultado } from './acciones'
+import { CARRERAS_OFICIALES } from '@crm/db'
+import { useAviso, useConfirmar } from '@/components/Confirmacion'
+import { cambiarActivo, eliminarRecordatorio, guardarRecordatorio, guardarSeleccion, listarCandidatos, type Candidato, type Resultado } from './acciones'
+
+const OPCIONES_CARRERA = [...CARRERAS_OFICIALES, 'CEPRE']
 
 export interface Recordatorio {
   id: number
@@ -18,12 +21,117 @@ export interface Recordatorio {
   /** Automático: a quien lleva estos días sin contacto (una sola vez por alumno) */
   dias_sin_contacto: number | null
   dias_maximo: number
+  /** null = a todos los que cumplan los filtros; con ids = solo a esos alumnos */
+  solo_leads: string[] | null
 }
 
 function Mensaje({ r }: { r: Resultado }) {
   if (r.error) return <p role="alert" className="text-sm text-rose-600">{r.error}</p>
   if (r.ok) return <p className="text-sm text-emerald-600">{r.ok}</p>
   return null
+}
+
+/** Carreras con casillas: "Todas (excepto las marcadas)" o "Solo las marcadas". */
+function SelectorCarreras({ rec }: { rec?: Recordatorio }) {
+  const [modo, setModo] = useState<'todas' | 'solo'>(rec?.carreras.length ? 'solo' : 'todas')
+  // Los recordatorios antiguos guardaban texto libre ("Medicina"): se marca la carrera oficial que lo contiene
+  const guardadas = rec ? (rec.carreras.length ? rec.carreras : rec.excluir_carreras) : ['Medicina Humana']
+  const marcada = (c: string) => guardadas.some((g) => c.toLowerCase().includes(g.toLowerCase()))
+  const [marcadas, setMarcadas] = useState<string[]>(OPCIONES_CARRERA.filter(marcada))
+  const alternar = (c: string) => setMarcadas((m) => (m.includes(c) ? m.filter((x) => x !== c) : [...m, c]))
+  const chip = 'flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 px-3 py-1.5 has-checked:border-marca-600 has-checked:bg-marca-50'
+  return (
+    <fieldset className="md:col-span-2">
+      <legend className="text-sm text-slate-600">Carreras</legend>
+      <div className="mt-1 flex flex-wrap gap-2 text-sm">
+        <label className={chip}><input type="radio" name="modo_carreras" value="todas" checked={modo === 'todas'} onChange={() => setModo('todas')} /> 👥 Todas las carreras</label>
+        <label className={chip}><input type="radio" name="modo_carreras" value="solo" checked={modo === 'solo'} onChange={() => setModo('solo')} /> 🎯 Solo las que marque</label>
+      </div>
+      <p className="mt-2 text-xs text-slate-500">
+        {modo === 'solo'
+          ? `Le llega solo a quienes tienen como carrera de interés una de las marcadas (${marcadas.length}).`
+          : marcadas.length ? `A todas, excepto las marcadas (${marcadas.length}).` : 'A todas las carreras. Marca alguna si quieres excluirla.'}
+        <button type="button" className="ml-2 text-marca-700 hover:underline" onClick={() => setMarcadas([])}>Desmarcar todas</button>
+      </p>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {OPCIONES_CARRERA.map((c) => (
+          <label key={c} className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs ${marcadas.includes(c)
+            ? modo === 'solo' ? 'border-marca-600 bg-marca-50 text-marca-800' : 'border-rose-300 bg-rose-50 text-rose-700 line-through'
+            : 'border-slate-300 text-slate-700 hover:bg-slate-50'}`}>
+            <input type="checkbox" name="carrera" value={c} checked={marcadas.includes(c)} onChange={() => alternar(c)} className="sr-only" />
+            {marcadas.includes(c) ? (modo === 'solo' ? '✓' : '✕') : '+'} {c}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  )
+}
+
+/** Lista de alumnos que cumplen los filtros: elegir a quiénes se manda (o a todos). */
+function Destinatarios({ rec }: { rec: Recordatorio }) {
+  const [abierto, setAbierto] = useState(false)
+  const [lista, setLista] = useState<Candidato[] | null>(null)
+  const [marcados, setMarcados] = useState<Set<string>>(new Set())
+  const [buscar, setBuscar] = useState('')
+  const [r, setR] = useState<Resultado>({})
+  const [cargando, iniciar] = useTransition()
+  const avisar = useAviso()
+
+  const abrir = () => {
+    setAbierto(!abierto)
+    if (lista || abierto) return
+    iniciar(async () => {
+      const res = await listarCandidatos(rec.id)
+      if (res.error) { void avisar(res.error); return }
+      setLista(res.candidatos ?? [])
+      setMarcados(new Set((res.candidatos ?? []).filter((c) => c.marcado).map((c) => c.id)))
+    })
+  }
+  const normal = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  const q = normal(buscar.trim())
+  const visibles = (lista ?? []).filter((c) => !q || normal(`${c.nombre ?? ''} ${c.telefono} ${c.carrera ?? ''} ${c.asesor ?? ''}`).includes(q))
+  const todos = !!lista && marcados.size === lista.length
+  const poner = (ids: string[], valor: boolean) => setMarcados((m) => { const n = new Set(m); for (const id of ids) { if (valor) n.add(id); else n.delete(id) } return n })
+  const guardar = () => iniciar(async () => setR(await guardarSeleccion(rec.id, todos ? null : [...marcados])))
+
+  return (
+    <div className="mt-3">
+      <button type="button" onClick={abrir} className="text-sm font-medium text-marca-700 hover:underline">
+        👥 {abierto ? 'Ocultar' : 'Elegir'} a quiénes se manda{rec.solo_leads ? ` · ${rec.solo_leads.length} elegidos` : ' · a todos'}
+      </button>
+      {abierto && (
+        <div className="mt-2 rounded-lg border border-slate-200 p-3">
+          {!lista ? <p className="text-sm text-slate-500">Cargando…</p> : (
+            <>
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <input value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="⌕ Buscar nombre, celular, carrera o asesor" className="campo min-w-0 flex-1 basis-56 py-1.5" />
+                <button type="button" className="boton-secundario py-1.5" onClick={() => poner(visibles.map((c) => c.id), true)}>✓ Todos{q ? ' (filtrados)' : ''}</button>
+                <button type="button" className="boton-secundario py-1.5" onClick={() => poner(visibles.map((c) => c.id), false)}>Ninguno{q ? ' (filtrados)' : ''}</button>
+              </div>
+              <p className="mt-2 text-xs text-slate-500">
+                <b>{marcados.size}</b> de {lista.length} marcados{todos ? ' · a todos (también a los que cumplan los filtros más adelante)' : ''}. Solo aparecen los que cumplen los filtros y aún no lo recibieron.
+              </p>
+              <ul className="mt-2 max-h-80 divide-y divide-slate-100 overflow-y-auto text-sm">
+                {visibles.map((c) => (
+                  <li key={c.id}>
+                    <label className="flex cursor-pointer items-center gap-3 px-1 py-1.5 hover:bg-slate-50">
+                      <input type="checkbox" checked={marcados.has(c.id)} onChange={(e) => poner([c.id], e.target.checked)} />
+                      <span className="min-w-0 flex-1 truncate"><b className="font-medium">{c.nombre ?? c.telefono}</b> <span className="text-xs text-slate-500">· {c.carrera ?? 'sin carrera'}{c.asesor ? ` · ${c.asesor}` : ''}</span></span>
+                    </label>
+                  </li>
+                ))}
+                {!visibles.length && <li className="py-4 text-center text-slate-500">Nadie cumple los filtros.</li>}
+              </ul>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <button type="button" onClick={guardar} disabled={cargando || !marcados.size} className="boton">{cargando ? 'Guardando…' : 'Guardar selección'}</button>
+                <Mensaje r={r} />
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export function FormularioRecordatorio({ rec }: { rec?: Recordatorio }) {
@@ -73,12 +181,7 @@ export function FormularioRecordatorio({ rec }: { rec?: Recordatorio }) {
       <label className="text-sm text-slate-600">Desde la hora (solo en horario de atención)
         <input type="time" name="desde_hora" defaultValue={rec?.desde_hora?.slice(0, 5) ?? '09:00'} className="campo mt-1" />
       </label>
-      <label className="text-sm text-slate-600">Solo estas carreras <span className="text-xs text-slate-400">(separadas por comas; vacío = todas)</span>
-        <input name="carreras" defaultValue={rec?.carreras.join(', ')} placeholder="Enfermería, Psicología, Civil" className="campo mt-1" />
-      </label>
-      <label className="text-sm text-slate-600">Excepto estas carreras
-        <input name="excluir_carreras" defaultValue={rec ? rec.excluir_carreras.join(', ') : 'Medicina'} placeholder="Medicina" className="campo mt-1" />
-      </label>
+      <SelectorCarreras rec={rec} />
       <label className="flex items-center gap-2 text-sm text-slate-600 md:col-span-2">
         <input type="checkbox" name="solo_registrados" defaultChecked={rec?.solo_registrados ?? true} /> Solo alumnos registrados (que dieron su documento)
       </label>
@@ -127,6 +230,7 @@ export function TarjetaRecordatorio({ rec, resumen }: { rec: Recordatorio; resum
             <b>{resumen.enviados}</b> enviados · <b>{resumen.pendientes}</b> {automatico ? 'cumplen la condición ahora' : 'por enviar'}{resumen.errores ? <> · <span className="text-rose-600">{resumen.errores} con error</span></> : null}
           </p>
           <p className="mt-2 rounded-lg bg-slate-50 p-3 text-sm whitespace-pre-wrap text-slate-700">{rec.mensaje}</p>
+          {!rec.completado_at && <Destinatarios rec={rec} />}
         </div>
         <div className="flex flex-col items-end gap-2 text-xs">
           <button type="button" onClick={alternar} disabled={pendiente} className={rec.activo ? 'boton-secundario' : 'boton'}>

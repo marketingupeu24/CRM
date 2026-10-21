@@ -10,7 +10,7 @@ export default async function PaginaRecordatorios() {
   await exigirPermiso('conocimiento')
   const supabase = await crearClienteServidor()
   const { data } = await supabase.from('recordatorios_alumnos')
-    .select('id, titulo, mensaje, enviar_el, desde_hora, carreras, excluir_carreras, solo_registrados, activo, completado_at, dias_sin_contacto, dias_maximo')
+    .select('id, titulo, mensaje, enviar_el, desde_hora, carreras, excluir_carreras, solo_registrados, activo, completado_at, dias_sin_contacto, dias_maximo, solo_leads')
     .order('enviar_el').order('id')
   const recordatorios = (data ?? []) as Recordatorio[]
   const resumenes = await Promise.all(recordatorios.map(async (r) => {

@@ -507,13 +507,13 @@ isOneToOne: false
                   ]
                 },"recordatorios_alumnos": {
                   Row: {
-                    "activo": boolean,"carreras": (string)[],"completado_at": string | null,"creado_por": string | null,"created_at": string,"desde_hora": string,"dias_maximo": number,"dias_sin_contacto": number | null,"enviar_el": string,"excluir_carreras": (string)[],"id": number,"mensaje": string,"solo_registrados": boolean,"titulo": string
+                    "activo": boolean,"carreras": (string)[],"completado_at": string | null,"creado_por": string | null,"created_at": string,"desde_hora": string,"dias_maximo": number,"dias_sin_contacto": number | null,"enviar_el": string,"excluir_carreras": (string)[],"id": number,"mensaje": string,"solo_leads": (string)[] | null,"solo_registrados": boolean,"titulo": string
                   }
                   Insert: {
-                    "activo"?: boolean,"carreras"?: (string)[],"completado_at"?: string | null,"creado_por"?: string | null,"created_at"?: string,"desde_hora"?: string,"dias_maximo"?: number,"dias_sin_contacto"?: number | null,"enviar_el": string,"excluir_carreras"?: (string)[],"id"?: never,"mensaje": string,"solo_registrados"?: boolean,"titulo": string
+                    "activo"?: boolean,"carreras"?: (string)[],"completado_at"?: string | null,"creado_por"?: string | null,"created_at"?: string,"desde_hora"?: string,"dias_maximo"?: number,"dias_sin_contacto"?: number | null,"enviar_el": string,"excluir_carreras"?: (string)[],"id"?: never,"mensaje": string,"solo_leads"?: (string)[] | null,"solo_registrados"?: boolean,"titulo": string
                   }
                   Update: {
-                    "activo"?: boolean,"carreras"?: (string)[],"completado_at"?: string | null,"creado_por"?: string | null,"created_at"?: string,"desde_hora"?: string,"dias_maximo"?: number,"dias_sin_contacto"?: number | null,"enviar_el"?: string,"excluir_carreras"?: (string)[],"id"?: never,"mensaje"?: string,"solo_registrados"?: boolean,"titulo"?: string
+                    "activo"?: boolean,"carreras"?: (string)[],"completado_at"?: string | null,"creado_por"?: string | null,"created_at"?: string,"desde_hora"?: string,"dias_maximo"?: number,"dias_sin_contacto"?: number | null,"enviar_el"?: string,"excluir_carreras"?: (string)[],"id"?: never,"mensaje"?: string,"solo_leads"?: (string)[] | null,"solo_registrados"?: boolean,"titulo"?: string
                   }
                   Relationships: [
                     {
@@ -808,6 +808,11 @@ isOneToOne: false
 "canal_entrada_texto":
 { Args: { "p_app": string,"p_fuente": string }; Returns: string
                            },
+"candidatos_recordatorio":
+{ Args: { "p_id": number }; Returns: {
+              "asesor": string,"carrera": string,"id": string,"marcado": boolean,"nombre": string,"telefono": string,"ultimo_mensaje_at": string
+            }[]
+                           },
 "carrera_oficial":
 { Args: { "p_texto": string }; Returns: string
                            },
@@ -825,7 +830,7 @@ isOneToOne: false
 { Args: { "p_asesor_id": string,"p_clave": string,"p_debe_cambiar"?: boolean,"p_usuario": string }; Returns: string
                            },
 "destinatarios_recordatorio":
-{ Args: { "p_id": number }; Returns: {
+{ Args: { "p_id": number,"p_ignorar_seleccion"?: boolean }; Returns: {
               "actividad_id": number | null,
 "anuncio": Json | null,
 "asesor_id": string | null,

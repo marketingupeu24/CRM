@@ -894,6 +894,21 @@ seccion('recordatorio automático: 7 días sin contacto, una sola vez')
   await reset()
 }
 
+seccion('recordatorio en fecha: solo a los alumnos marcados')
+{
+  await reset()
+  const rec = (await uno(`insert into recordatorios_alumnos (titulo, mensaje, enviar_el, excluir_carreras, solo_registrados, activo)
+    values ('Solo marcados', 'Hola {nombre}, te contamos algo', current_date, '{}', false, true) returning id`)).id
+  const [a, b] = (await q(`select id from leads order by id limit 2`)).map((x) => x.id)
+  await q(`update leads set estado = 'lead_contactado', ultimo_mensaje_lead_at = now(), no_recordatorios = false where id = any($1)`, [[a, b]])
+  const dest = async () => (await q(`select id from destinatarios_recordatorio($1)`, [rec])).map((x) => x.id)
+  ok((await dest()).includes(a) && (await dest()).includes(b), 'sin selección: le llega a todos los que cumplen')
+  await q(`update recordatorios_alumnos set solo_leads = $2 where id = $1`, [rec, [a]])
+  ok((await dest()).includes(a) && !(await dest()).includes(b), 'con selección: solo a los marcados')
+  ok((await q(`select id from destinatarios_recordatorio($1, true)`, [rec])).some((x) => x.id === b), 'la lista de candidatos sigue mostrando a los no marcados')
+  await reset()
+}
+
 seccion('carreras con su nombre oficial (sin duplicados)')
 {
   const casos = {
