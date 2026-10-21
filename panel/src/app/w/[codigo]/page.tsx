@@ -15,6 +15,8 @@ export const metadata: Metadata = { title: 'Déjanos tus datos · Admisión de l
  */
 export default async function PaginaQrAsesor(props: PageProps<'/w/[codigo]'>) {
   const { codigo } = await props.params
+  // ?via=enlace: lo abrió desde el enlace que el asesor copió y envió por WhatsApp (no escaneó el QR en persona)
+  const via = (await props.searchParams).via === 'enlace' ? 'enlace' : 'qr'
   const supabase = await crearClienteServidor()
   let asesor: string | null = null
   let aviso = 'Este QR no existe. Pide a tu asesor(a) que te muestre su QR de nuevo.'
@@ -49,7 +51,7 @@ export default async function PaginaQrAsesor(props: PageProps<'/w/[codigo]'>) {
             <>
               <h2 className="text-lg font-semibold text-slate-900">Déjanos tus datos</h2>
               <p className="mt-1 mb-5 text-sm text-slate-500">Así quedas registrado(a) en Admisión de la Universidad Peruana Unión y te enviamos por WhatsApp la información de carreras, costos y fechas.</p>
-              <FormularioRegistro codigo={codigo} carreras={listaCarreras} colegio={null} asesor={asesor} enviar={registrarseConAsesor.bind(null, codigo)} />
+              <FormularioRegistro codigo={codigo} carreras={listaCarreras} colegio={null} asesor={asesor} enviar={registrarseConAsesor.bind(null, codigo, via)} />
             </>
           )}
         </div>

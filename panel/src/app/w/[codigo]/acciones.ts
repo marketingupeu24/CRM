@@ -13,7 +13,8 @@ function temaDeInteres(carrera: string): string {
   return carrera
 }
 
-export async function registrarseConAsesor(codigo: string, _previo: ResultadoRegistro, formData: FormData): Promise<ResultadoRegistro> {
+/** via: "qr" (escaneó el QR en persona) o "enlace" (abrió el enlace que el asesor le envió por WhatsApp). */
+export async function registrarseConAsesor(codigo: string, via: 'qr' | 'enlace', _previo: ResultadoRegistro, formData: FormData): Promise<ResultadoRegistro> {
   if (String(formData.get('sitio_web') ?? '').trim()) return { ok: true }
   if (formData.get('acepto') !== 'on') return { error: 'Marca la casilla para que podamos contactarte por WhatsApp.' }
   const validado = esquemaRegistroPublico.safeParse({ codigo, ...camposDe(formData, CAMPOS_REGISTRO_PUBLICO) })
@@ -29,6 +30,7 @@ export async function registrarseConAsesor(codigo: string, _previo: ResultadoReg
     p_colegio: texto('colegio') || undefined,
     p_grado: texto('grado') || undefined,
     p_carrera: texto('carrera') || undefined,
+    p_via: via,
   })
   if (error) return { error: error.message || 'No pudimos registrarte. Intenta de nuevo.' }
 

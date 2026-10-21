@@ -26,8 +26,8 @@ export default async function PaginaQrAsesor() {
   const consulta = supabase.from('asesores').select('id, nombre, codigo_qr, rol, activo').is('eliminado_at', null).order('nombre')
   // Escaneados en los últimos 14 días (los propios; quien ve todo, los de todos)
   const desde = new Date(Date.now() - 14 * 86_400_000).toISOString()
-  const escaneos = supabase.from('leads').select('id, nombre, telefono, dni, carrera_interes, fecha_asignado, registrado_por')
-    .eq('origen_campana', 'Presencial (QR del asesor)').gte('fecha_asignado', desde).is('eliminado_at', null)
+  const escaneos = supabase.from('leads').select('id, nombre, telefono, dni, carrera_interes, fecha_asignado, registrado_por, origen_campana')
+    .in('origen_campana', ['Presencial (QR del asesor)', 'Enlace del asesor (WhatsApp)']).gte('fecha_asignado', desde).is('eliminado_at', null)
     .order('fecha_asignado', { ascending: false }).limit(30)
   const [{ data: asesores }, { data: ajuste }, { data: recientes }] = await Promise.all([
     todos ? consulta.or(`rol.eq.asesor,activo.eq.true,id.eq.${perfil.id}`) : consulta.eq('id', perfil.id),
@@ -68,7 +68,7 @@ export default async function PaginaQrAsesor() {
       <details className="no-imprimir tarjeta group p-5">
         <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 font-semibold [&::-webkit-details-marker]:hidden">
           <span className="text-slate-400 transition group-open:rotate-90">▸</span>
-          👥 Escaneados recientemente
+          👥 Registrados con tu QR o enlace
           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">{recientes?.length ?? 0}</span>
           {!!recientes?.filter((l) => !l.nombre || !l.carrera_interes).length && (
             <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
@@ -85,7 +85,12 @@ export default async function PaginaQrAsesor() {
               return (
                 <li key={l.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
                   <div className="min-w-0">
-                    <p className="font-medium">{l.nombre ?? <span className="text-amber-700">Sin nombre</span>}</p>
+                    <p className="font-medium">
+                      {l.nombre ?? <span className="text-amber-700">Sin nombre</span>}
+                      <span className={`ml-2 rounded-full px-2 py-0.5 text-[11px] font-medium ${l.origen_campana === 'Enlace del asesor (WhatsApp)' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                        {l.origen_campana === 'Enlace del asesor (WhatsApp)' ? '🔗 Por enlace (WhatsApp)' : '🔳 QR presencial'}
+                      </span>
+                    </p>
                     <p className="text-xs text-slate-500">
                       {l.telefono} · {fechaHora(l.fecha_asignado)}
                       {l.carrera_interes ? ` · ${l.carrera_interes}` : ''}

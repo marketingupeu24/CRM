@@ -835,6 +835,14 @@ seccion('QR personal del asesor (presencial)')
   await uno(`select registrar_lead_asesor($1, 'Mateo Quispe Ramos', '933377704') r`, [codigoA])
   await reset()
   ok((await uno(`select asesor_id from leads where id = $1`, [lf.id])).asesor_id === gb.id, 'si ya era lead de otro asesor, el formulario de otro no lo cambia')
+  ok((await uno(`select origen_campana from leads where id = $1`, [lf.id])).origen_campana === 'Presencial (QR del asesor)', 'por el QR queda como "Presencial (QR del asesor)"')
+  // El mismo formulario abierto desde el enlace que el asesor envió por WhatsApp
+  await db.exec(`set request.jwt.claim.sub = ''; set role anon`)
+  await uno(`select registrar_lead_asesor($1, 'Lucía Mamani Flores', '933377705', p_via => 'enlace') r`, [gb.codigo_qr])
+  await reset()
+  const le = await uno(`select origen_campana, asesor_id, estado from leads where telefono = '51933377705'`)
+  ok(le.origen_campana === 'Enlace del asesor (WhatsApp)' && le.asesor_id === gb.id && le.estado === 'lead_contactado',
+    'por el enlace queda como "Enlace del asesor (WhatsApp)", lo demás igual')
 }
 
 seccion('horario de atención')

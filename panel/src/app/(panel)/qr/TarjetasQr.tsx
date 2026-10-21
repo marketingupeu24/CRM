@@ -217,7 +217,8 @@ export function TarjetasQr({ tarjetas, variosAsesores }: { tarjetas: TarjetaQr[]
                 <button onClick={() => descargarPng(t)} disabled={!!estado} className="boton-secundario px-2 py-1 text-xs" title="La tarjeta completa (logo, QR y nombre) en PNG">⬇ Tarjeta</button>
                 <button onClick={() => descargarSoloQr(t)} disabled={!!estado} className="boton-secundario px-2 py-1 text-xs" title="Solo el código QR en PNG">⬇ Solo el QR</button>
               </div>
-              <EnlaceQr url={t.url} nombre={nombreCorto(t.nombre)} />
+              {/* El enlace lleva ?via=enlace: quien se registra por ahí queda como "Enlace del asesor (WhatsApp)", no como QR presencial */}
+              <EnlaceQr url={`${t.url}?via=enlace`} nombre={nombreCorto(t.nombre)} />
             </div>
           </div>
         ))}
