@@ -2,7 +2,7 @@
 import { botAtiendeLead, leadEnEtapaBot, normalizarOrigen, elegir, type Fuente, FUENTES, HORARIO_ATENCION_TEXTO, normalizarDni, normalizarTelefono, proximaAtencion, textoProximaAtencion, valorResuelto } from '../_shared/dominio.ts'
 import { enviarWhatsApp } from '../_shared/builderbot.ts'
 import { destinoWhatsApp } from '../_shared/lid.ts'
-import { type Lead, type Cuerpo, type Respuesta, type ResultadoProcesar, supabase, MODO, ErrorApi, telefonoDe, buscarLead, registrarEvento, telefonosAsesores, fechaYHorario, FERIADOS } from './comun.ts'
+import { type Lead, type Cuerpo, type Respuesta, type ResultadoProcesar, supabase, MODO, ErrorApi, telefonoDe, buscarLead, registrarEvento, telefonosAsesores, fechaYHorario, FERIADOS, guardarEnChat } from './comun.ts'
 import { type TipoAviso, notificarAsesor, avisarMensajeNuevo, avisarFueraDeHorario } from './avisos.ts'
 import { contextoSinRegistrar, leadRegistrado, contextoDelAlumno } from './contexto.ts'
 
@@ -45,10 +45,11 @@ export async function asignarPorQrAsesor(lead: Lead, mensaje: string, telefono: 
   // (el flujo del bot no indica si es @lid: un número largo que no es de Perú se trata igual)
   // Contacto con número oculto: se le escribe a "<id>@lid" (BuilderBot sí lo entrega)
   const destino = esLid ? `${telefono}@lid` : await destinoWhatsApp(supabase, telefono)
-  EdgeRuntime.waitUntil(enviarWhatsApp(destino, [
+  const listo = [
     `¡Listo${persona ? `, ${persona}` : ''}, ya quedaste registrado(a)! 😊 Soy Genesys, de *Admisión de la Universidad Peruana Unión*, campus Juliaca`,
     `${asesor ? `Tu asesor(a) *${asesor}*` : 'Tu asesor(a)'} te sigue atendiendo, y por este chat te enviaremos la información que necesites.`,
-  ].join('\n')))
+  ].join('\n')
+  EdgeRuntime.waitUntil(enviarWhatsApp(destino, listo).then((envio) => (envio.ok ? guardarEnChat(lead.id, listo) : undefined)))
   return actualizado
 }
 

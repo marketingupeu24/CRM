@@ -3,7 +3,7 @@ import { ESTADOS_AVISO_MENSAJE, type Fuente, FUENTES, HORARIO_ATENCION_TEXTO, te
 import { enviarWhatsApp } from '../_shared/builderbot.ts'
 import { destinoWhatsApp } from '../_shared/lid.ts'
 import { enviarPush } from '../_shared/push.ts'
-import { type Lead, type Cuerpo, type Respuesta, supabase, PANEL_URL, MINUTOS_ENTRE_AVISOS, telefonosAsesores, fechaCorta, oficinaAbierta } from './comun.ts'
+import { type Lead, type Cuerpo, type Respuesta, supabase, PANEL_URL, MINUTOS_ENTRE_AVISOS, telefonosAsesores, fechaCorta, oficinaAbierta, guardarEnChat } from './comun.ts'
 
 // Runtime de Supabase Edge Functions: mantiene viva una tarea después de responder
 declare const EdgeRuntime: { waitUntil(promesa: Promise<unknown>): void }
@@ -135,7 +135,8 @@ export async function avisarFueraDeHorario(lead: Lead, telefono: string) {
     `${nombreAsesor ? `Tu asesor(a) *${nombreAsesor}*` : 'Tu asesor(a)'} te responderá ${textoProximaAtencion(new Date(apertura))}.`,
   ].join('\n')
   const envio = await enviarWhatsApp(await destinoWhatsApp(supabase, telefono), texto)
-  if (!envio.ok) console.error('[genesys] No se pudo enviar el aviso de horario:', envio.error)
+  if (envio.ok) await guardarEnChat(lead.id, texto)
+  else console.error('[genesys] No se pudo enviar el aviso de horario:', envio.error)
 }
 
 /** Saludo de Genesys al alumno que se registró con el QR de una feria o visita a colegio. */
@@ -209,8 +210,9 @@ export async function notificarAsignacion(cuerpo: Cuerpo): Promise<Respuesta> {
     const deAsesores = await telefonosAsesores()
     for (const lead of leads ?? []) {
       if (!/^\d{10,15}$/.test(lead.telefono) || deAsesores.has(lead.telefono) || lead.eliminado_at) continue
-      const envio = await enviarWhatsApp(lead.telefono, mensajeBienvenida(lead, actividad, lead.asesor_id ? nombres.get(lead.asesor_id) ?? null : null))
-      if (envio.ok) bienvenidas++
+      const saludo = mensajeBienvenida(lead, actividad, lead.asesor_id ? nombres.get(lead.asesor_id) ?? null : null)
+      const envio = await enviarWhatsApp(lead.telefono, saludo)
+      if (envio.ok) { bienvenidas++; await guardarEnChat(lead.id, saludo) }
       else console.error('[genesys] No se pudo enviar la bienvenida:', envio.error)
     }
   }

@@ -80,6 +80,21 @@ export async function registrarEvento(leadId: string, contenido: string) {
 }
 
 /**
+ * Un mensaje que el CRM le envió al alumno a nombre de Genesys (recordatorio, bienvenida, aviso de horario…)
+ * queda en su chat, para que el asesor sepa qué se le dijo. El webhook de salientes no lo guarda cuando el
+ * destino es "<id>@lid"; si ya lo guardó (mismo texto en los últimos 2 minutos), no se repite.
+ */
+export async function guardarEnChat(leadId: string, texto: string) {
+  const contenido = texto.slice(0, 4000)
+  const { count } = await supabase.from('lead_interacciones').select('id', { count: 'exact', head: true })
+    .eq('lead_id', leadId).eq('tipo', 'respuesta_bot').eq('contenido', contenido)
+    .gte('created_at', new Date(Date.now() - 120_000).toISOString())
+  if (count) return
+  const { error } = await supabase.from('lead_interacciones').insert({ lead_id: leadId, tipo: 'respuesta_bot', contenido })
+  if (error) console.error('[genesys] No se pudo guardar en el chat el mensaje enviado:', error.message)
+}
+
+/**
  * Todo el que escribe es un lead. Se guarda cada mensaje en su conversación.
  * bot_atiende=false: Genesys no debe responder (espera a su asesor o el asesor está conversando).
  */
