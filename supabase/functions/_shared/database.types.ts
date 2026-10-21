@@ -1118,6 +1118,11 @@ isOneToOne: false
 "registrar_push":
 { Args: { "p_auth": string,"p_dispositivo"?: string,"p_endpoint": string,"p_p256dh": string }; Returns: undefined
                            },
+"reporte_recordatorio":
+{ Args: { "p_id": number }; Returns: {
+              "asesor": string,"baja": boolean,"carrera": string,"enviado_at": string,"error": string,"estado": string,"lead_id": string,"nombre": string,"respondio_at": string,"respuesta": string,"telefono": string
+            }[]
+                           },
 "reservar_aviso_horario":
 { Args: { "p_lead_id": string }; Returns: string
                            },

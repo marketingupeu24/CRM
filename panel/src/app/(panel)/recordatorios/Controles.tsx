@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useActionState, useState, useTransition } from 'react'
 import { CARRERAS_OFICIALES } from '@crm/db'
 import { useAviso, useConfirmar } from '@/components/Confirmacion'
@@ -229,7 +230,7 @@ export function TarjetaRecordatorio({ rec, resumen }: { rec: Recordatorio; resum
             {rec.excluir_carreras.length ? ` (excepto ${rec.excluir_carreras.join(', ')})` : ''} · {rec.solo_registrados ? 'solo registrados' : 'todos los que escribieron'}
           </p>
           <p className="mt-1 text-xs">
-            <b>{resumen.enviados}</b> enviados · <b>{resumen.pendientes}</b> {automatico ? 'cumplen la condición ahora' : 'por enviar'}{resumen.errores ? <> · <span className="text-rose-600">{resumen.errores} con error</span></> : null}
+            <Link href={`/recordatorios/${rec.id}`} className="hover:underline"><b>{resumen.enviados}</b> enviados</Link> · <b>{resumen.pendientes}</b> {automatico ? 'cumplen la condición ahora' : 'por enviar'}{resumen.errores ? <> · <span className="text-rose-600">{resumen.errores} con error</span></> : null}
           </p>
           <p className="mt-2 rounded-lg bg-slate-50 p-3 text-sm whitespace-pre-wrap text-slate-700">{rec.mensaje}</p>
           {!rec.completado_at && <Destinatarios rec={rec} />}
@@ -242,6 +243,9 @@ export function TarjetaRecordatorio({ rec, resumen }: { rec: Recordatorio; resum
                 {pendiente ? 'Guardando…' : rec.activo ? 'Apagar' : 'Activar'}
               </button>
             )}
+          {(resumen.enviados > 0 || resumen.errores > 0 || rec.activo) && (
+            <Link href={`/recordatorios/${rec.id}`} className="font-medium text-marca-700 hover:underline">📊 Ver envíos</Link>
+          )}
           <button type="button" className="text-slate-600 hover:underline" onClick={() => setEditando(!editando)}>{editando ? 'Cerrar' : 'Editar'}</button>
           <button type="button" className="text-rose-600 hover:underline" onClick={async () => {
             if (await confirmar({ titulo: '¿Eliminar este recordatorio?', mensaje: rec.titulo, peligro: true, confirmar: 'Eliminar' })) {
