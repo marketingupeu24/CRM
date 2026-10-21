@@ -276,11 +276,11 @@ export async function reasignar(): Promise<Respuesta> {
  * entrega un lote en horario de atención; se envían de a uno con pausas para cuidar el número.
  */
 export async function recordarAlumnos(): Promise<Respuesta> {
-  const { data: lote, error } = await supabase.rpc('reservar_recordatorios', { p_limite: 10 })
+  const { data: lote, error } = await supabase.rpc('reservar_recordatorios', { p_limite: 4 })
   if (error) throw error
   let enviados = 0
   for (const [i, r] of (lote ?? []).entries()) {
-    if (i > 0) await new Promise((ok) => setTimeout(ok, 6_000 + Math.random() * 4_000))
+    if (i > 0) await new Promise((ok) => setTimeout(ok, 20_000 + Math.random() * 10_000))
     const primer = (t: string | null) => (t ?? '').trim().split(/\s+/)[0] ?? ''
     const texto = r.mensaje
       .replaceAll('{nombre}', primer(r.nombre) || '')

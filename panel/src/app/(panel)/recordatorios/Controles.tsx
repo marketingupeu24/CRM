@@ -92,12 +92,14 @@ function Destinatarios({ rec }: { rec: Recordatorio }) {
   const visibles = (lista ?? []).filter((c) => !q || normal(`${c.nombre ?? ''} ${c.telefono} ${c.carrera ?? ''} ${c.asesor ?? ''}`).includes(q))
   const todos = !!lista && marcados.size === lista.length
   const poner = (ids: string[], valor: boolean) => setMarcados((m) => { const n = new Set(m); for (const id of ids) { if (valor) n.add(id); else n.delete(id) } return n })
-  const guardar = () => iniciar(async () => setR(await guardarSeleccion(rec.id, todos ? null : [...marcados])))
+  // En fecha la lista queda fija (se envía una sola vez a esos); los automáticos con todos marcados siguen sumando a los nuevos
+  const automatico = rec.dias_sin_contacto !== null
+  const guardar = () => iniciar(async () => setR(await guardarSeleccion(rec.id, todos && automatico ? null : [...marcados])))
 
   return (
     <div className="mt-3">
       <button type="button" onClick={abrir} className="text-sm font-medium text-marca-700 hover:underline">
-        👥 {abierto ? 'Ocultar' : 'Elegir'} a quiénes se manda{rec.solo_leads ? ` · ${rec.solo_leads.length} elegidos` : ' · a todos'}
+        👥 {abierto ? 'Ocultar' : 'Elegir'} a quiénes se manda{rec.solo_leads ? ` · ${rec.solo_leads.length} elegidos` : ' · a todos los que cumplen'}
       </button>
       {abierto && (
         <div className="mt-2 rounded-lg border border-slate-200 p-3">
@@ -109,7 +111,7 @@ function Destinatarios({ rec }: { rec: Recordatorio }) {
                 <button type="button" className="boton-secundario py-1.5" onClick={() => poner(visibles.map((c) => c.id), false)}>Ninguno{q ? ' (filtrados)' : ''}</button>
               </div>
               <p className="mt-2 text-xs text-slate-500">
-                <b>{marcados.size}</b> de {lista.length} marcados{todos ? ' · a todos (también a los que cumplan los filtros más adelante)' : ''}. Solo aparecen los que cumplen los filtros y aún no lo recibieron.
+                <b>{marcados.size}</b> de {lista.length} marcados{todos && automatico ? ' · a todos (también a los que cumplan los filtros más adelante)' : ''}. Solo aparecen los que cumplen los filtros y aún no lo recibieron.
               </p>
               <ul className="mt-2 max-h-80 divide-y divide-slate-100 overflow-y-auto text-sm">
                 {visibles.map((c) => (
@@ -206,8 +208,8 @@ export function TarjetaRecordatorio({ rec, resumen }: { rec: Recordatorio; resum
       const ok = await confirmar({
         titulo: '¿Activar este recordatorio?',
         mensaje: automatico
-          ? <>Desde hoy, cada alumno que cumpla <b>{rec.dias_sin_contacto} días sin contacto</b> recibirá este mensaje <b>una sola vez</b>. Ahora mismo cumplen la condición <b>{resumen.pendientes}</b> alumno(s): se les escribirá en horario de atención y de a pocos (10 cada 10 minutos). El número de Genesys está conectado por QR: envíos masivos pueden hacer que WhatsApp lo bloquee.</>
-          : <>Se enviará por WhatsApp a <b>{resumen.pendientes}</b> alumno(s) el {fecha}, desde las {rec.desde_hora.slice(0, 5)}, en horario de atención y de a pocos. El número de Genesys está conectado por QR: envíos masivos pueden hacer que WhatsApp lo bloquee. Úsalo solo para avisos importantes.</>,
+          ? <>Desde hoy, cada alumno que cumpla <b>{rec.dias_sin_contacto} días sin contacto</b> recibirá este mensaje <b>una sola vez</b>. Ahora mismo cumplen la condición <b>{resumen.pendientes}</b> alumno(s): se les escribirá en horario de atención y de a pocos (4 cada 10 minutos). El número de Genesys está conectado por QR: envíos masivos pueden hacer que WhatsApp lo bloquee.</>
+          : <>Se enviará por WhatsApp a <b>{resumen.pendientes}</b> alumno(s) marcados, el {fecha} desde las {rec.desde_hora.slice(0, 5)}, en horario de atención y de a pocos (4 cada 10 minutos). Se envía <b>una sola vez</b> y solo a ellos; al terminar se apaga solo. El número de Genesys está conectado por QR: envíos masivos pueden hacer que WhatsApp lo bloquee. Úsalo solo para avisos importantes.</>,
         confirmar: 'Activar',
       })
       if (!ok) return
@@ -233,9 +235,13 @@ export function TarjetaRecordatorio({ rec, resumen }: { rec: Recordatorio; resum
           {!rec.completado_at && <Destinatarios rec={rec} />}
         </div>
         <div className="flex flex-col items-end gap-2 text-xs">
-          <button type="button" onClick={alternar} disabled={pendiente} className={rec.activo ? 'boton-secundario' : 'boton'}>
-            {pendiente ? 'Guardando…' : rec.activo ? 'Apagar' : 'Activar'}
-          </button>
+          {rec.completado_at
+            ? <span className="rounded-full bg-emerald-100 px-2.5 py-1 font-medium text-emerald-700" title="Se envía una sola vez: crea uno nuevo si necesitas otro aviso">✅ Terminado · se apagó solo</span>
+            : (
+              <button type="button" onClick={alternar} disabled={pendiente} className={rec.activo ? 'boton-secundario' : 'boton'}>
+                {pendiente ? 'Guardando…' : rec.activo ? 'Apagar' : 'Activar'}
+              </button>
+            )}
           <button type="button" className="text-slate-600 hover:underline" onClick={() => setEditando(!editando)}>{editando ? 'Cerrar' : 'Editar'}</button>
           <button type="button" className="text-rose-600 hover:underline" onClick={async () => {
             if (await confirmar({ titulo: '¿Eliminar este recordatorio?', mensaje: rec.titulo, peligro: true, confirmar: 'Eliminar' })) {

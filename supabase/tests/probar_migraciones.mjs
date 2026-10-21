@@ -906,6 +906,14 @@ seccion('recordatorio en fecha: solo a los alumnos marcados')
   await q(`update recordatorios_alumnos set solo_leads = $2 where id = $1`, [rec, [a]])
   ok((await dest()).includes(a) && !(await dest()).includes(b), 'con selección: solo a los marcados')
   ok((await q(`select id from destinatarios_recordatorio($1, true)`, [rec])).some((x) => x.id === b), 'la lista de candidatos sigue mostrando a los no marcados')
+  // Se envía al marcado y, sin nadie más por enviar, se apaga solo
+  await q(`insert into recordatorios_envios (recordatorio_id, lead_id, enviado_at) values ($1, $2, now())`, [rec, a])
+  await q(`update recordatorios_alumnos set desde_hora = '00:00' where id = $1`, [rec])
+  if ((await uno(`select en_horario_atencion() h`)).h) {
+    await q(`select reservar_recordatorios(30)`)
+    const fin = await uno(`select activo, completado_at from recordatorios_alumnos where id = $1`, [rec])
+    ok(!fin.activo && fin.completado_at !== null, 'al terminar de enviar a los marcados, se apaga solo')
+  }
   await reset()
 }
 

@@ -25,7 +25,7 @@ export default async function PaginaRecordatorios() {
         <p className="max-w-3xl text-sm text-slate-500">
           Avisos automáticos por WhatsApp: en una fecha (ej. &quot;faltan 3 días para el cierre de inscripciones&quot;) o de seguimiento,
           a quien lleva varios días sin contacto (ej. 7 días; una sola vez por alumno, aunque no responda). Llegan solo a quienes ya nos escribieron,
-          no se inscribieron y no pidieron dejar de recibirlos; una sola vez por alumno, en horario de atención y de a pocos (10 cada 10 minutos).
+          no se inscribieron y no pidieron dejar de recibirlos; una sola vez por alumno, en horario de atención y de a pocos (4 cada 10 minutos).
           Si el alumno responde &quot;NO&quot;, no recibe más.
         </p>
         <p className="mt-2 max-w-3xl rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
