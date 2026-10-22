@@ -124,7 +124,7 @@ export async function FichaLead({ id, seccion }: { id: string; seccion: 'leads' 
       id: c.id, nombre: c.nombre ?? c.telefono,
       ultimo: c.ultimo_mensaje_at ? c.ultimo_mensaje_texto : 'Aún sin mensajes',
       deMi: !!c.ultimo_mensaje_at && c.ultimo_mensaje_lead_at !== c.ultimo_mensaje_at,
-      hace: haceCuanto(cuando(c) || null), sinResponder: !!c.sin_responder, mio: c.asesor_id === perfil.id,
+      hace: haceCuanto(cuando(c) || null), sinResponder: !!c.sin_responder, mio: c.asesor_id === perfil.id, ultimoAlumno: c.ultimo_mensaje_lead_at,
       etiqueta: etiquetaApoyo.get(c.id) ?? (recienAsignado(c) ? (c.reasignaciones ? '🔁 Reasignado' : '📌 Asignado') : undefined),
     }))
   const noUsa = new Set((ocultas ?? []).map((o) => o.respuesta_id))

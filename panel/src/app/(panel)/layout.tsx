@@ -12,6 +12,7 @@ import { SelectorTema } from '@/components/SelectorTema'
 import { etiquetaRol, obtenerSesion } from '@/lib/sesion'
 import { contarPendientes } from '@/lib/pendientes'
 import { crearClienteServidor } from '@/lib/supabase/server'
+import { fechaHora } from '@/lib/formato'
 import { COOKIE_MENU, COOKIE_TEMA, TEMA_POR_DEFECTO, type Tema } from '@/lib/tema'
 import { AlternarMenu } from '@/components/AlternarMenu'
 import { cerrarSesion } from '../login/acciones'
@@ -21,14 +22,21 @@ export default async function LayoutPanel({ children }: { children: React.ReactN
   const sesion = await obtenerSesion()
   const { perfil, permisos, superadmin, debeCambiarClave } = sesion
   const supabase = await crearClienteServidor()
-  const [{ count: sinResponder }, pendientes, { data: revision }, { data: estadoPrompt }] = await Promise.all([
+  const [{ count: sinResponder }, pendientes, { data: revision }, { data: estadoPrompt }, { data: conexion }] = await Promise.all([
     supabase.from('leads').select('id', { count: 'exact', head: true }).eq('sin_responder', true),
     contarPendientes(supabase),
     // Respuestas del bot sin revisar (solo para quien administra la base de conocimiento)
     sesion.puede('conocimiento') ? supabase.rpc('preguntas_sin_respuesta', { p_dias: 30 }) : Promise.resolve({ data: [] }),
     // Fichas vencidas que BuilderBot aún tiene (hay que pegar el prompt nuevo)
     sesion.puede('conocimiento') ? supabase.rpc('estado_prompt_genesys') : Promise.resolve({ data: null }),
+    // Conexión de WhatsApp de Genesys (la guarda el webhook: status.ready / status.disconnect)
+    supabase.from('ajustes').select('valor').eq('clave', 'whatsapp_estado').maybeSingle(),
   ])
+  let whatsappCaido: string | null = null
+  try {
+    const e = conexion?.valor ? JSON.parse(conexion.valor) as { estado?: string; desde?: string } : null
+    if (e?.estado === 'desconectado') whatsappCaido = e.desde ?? ''
+  } catch { /* sin estado guardado */ }
   const promptVencido = ((estadoPrompt as { vencidas?: unknown[] } | null)?.vencidas ?? []).length
   const revisionBot = (revision ?? []).filter((p: { revisada: boolean }) => !p.revisada).length
   const temaGuardado = ((await cookies()).get(COOKIE_TEMA)?.value ?? TEMA_POR_DEFECTO) as Tema
@@ -111,6 +119,12 @@ export default async function LayoutPanel({ children }: { children: React.ReactN
           </div>
         </header>
 
+        {whatsappCaido !== null && (
+          <div role="alert" className="border-b border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-800 md:px-8">
+            ⚠️ <b>WhatsApp de Genesys desconectado</b>{whatsappCaido ? ` desde el ${fechaHora(whatsappCaido)}` : ''}: no entran ni salen mensajes.
+            Revisa la conexión en BuilderBot. Los avisos pendientes se reenvían solos al reconectarse.
+          </div>
+        )}
         <main className="p-4 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:p-8">
           {debeCambiarClave ? (
             <div className="mx-auto max-w-md">

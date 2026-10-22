@@ -8,6 +8,7 @@ import { esDelChat } from '@/lib/chat'
 import { crearClienteNavegador, prepararTiempoReal } from '@/lib/supabase/client'
 import { comprimirImagen } from '@/lib/imagen'
 import { Adjunto } from './Adjunto'
+import { AvisoVentanaCerrada, VentanaWhatsApp } from '@/components/VentanaWhatsApp'
 
 /** Pantalla táctil (celular): Enter hace salto de línea y se envía con el botón */
 const TACTIL = '(pointer: coarse)'
@@ -359,6 +360,9 @@ export function Conversacion(
   const nombreAutor = (m: MensajeChat) =>
     m.autor_nombre ?? (m.autor_id ? nombresAutores[m.autor_id] : undefined) ?? 'Asesor'
 
+  // Último mensaje del alumno: abre la ventana de 24 h de WhatsApp (se actualiza en vivo)
+  const ultimoAlumno = mensajes.findLast((m) => m.tipo === 'mensaje_lead')?.created_at ?? null
+
   return (
     <section className="@container tarjeta flex min-h-0 flex-1 flex-col overflow-hidden" id="chat">
       {/* Una sola línea: más espacio para los mensajes */}
@@ -370,6 +374,8 @@ export function Conversacion(
             <span className={`h-2 w-2 rounded-full ${enVivo ? 'bg-emerald-500' : 'bg-slate-300'}`} />
             <span className="@max-[46rem]:hidden">{enVivo ? 'En vivo' : 'Conectando…'}</span>
           </span>
+          <span className="@max-[40rem]:hidden"><VentanaWhatsApp ultimoMensajeAlumno={ultimoAlumno} /></span>
+          <span className="hidden @max-[40rem]:inline"><VentanaWhatsApp ultimoMensajeAlumno={ultimoAlumno} variante="mini" /></span>
         </div>
         {encabezado && <div className="ml-auto flex min-w-0 justify-end">{encabezado}</div>}
       </div>
@@ -537,6 +543,7 @@ export function Conversacion(
           <button type="button" onClick={quitarArchivo} disabled={enviando} className="text-sm font-medium text-slate-500 hover:text-rose-600" aria-label="Quitar archivo">✕ Quitar</button>
         </div>
       )}
+      <AvisoVentanaCerrada ultimoMensajeAlumno={ultimoAlumno} />
       <form
         className="flex items-end gap-2 border-t border-slate-200 bg-superficie p-3 @max-[36rem]:gap-1.5 @max-[36rem]:p-2"
         onSubmit={(e) => { e.preventDefault(); enviar(texto, archivo) }}

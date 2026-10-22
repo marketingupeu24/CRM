@@ -5,6 +5,7 @@ import { esContactoLid } from '../_shared/lid.ts'
 import { type Cuerpo, type Respuesta, supabase, PANEL_URL } from './comun.ts'
 import { registrar } from './registro.ts'
 import { alertarError } from './avisos.ts'
+import { registrarConexion } from './conexion.ts'
 
 /** Freno contra bucles: más reenvíos que esto a un mismo contacto @lid en 10 minutos se bloquean y se avisa. */
 const MAXIMO_REENVIOS_10_MIN = 40
@@ -188,6 +189,11 @@ export async function evento(cuerpo: Cuerpo, registroId: number | null): Promise
     registroId ? supabase.from('webhook_eventos').update({ procesado }).eq('id', registroId) : Promise.resolve()
 
   const tipo = (buscarCampo(cuerpo, ['eventName', 'event', 'type', 'evento']) ?? '').toLowerCase()
+  // Conexión de WhatsApp (status.ready / status.disconnect): se guarda el estado y se avisa si se cae
+  if (await registrarConexion(tipo, cuerpo as Record<string, unknown>)) {
+    await marcar(`estado de WhatsApp: ${tipo}`)
+    return { ok: true, procesado: tipo }
+  }
   const saliente = /out|send|sent|bot/.test(tipo) || (cuerpo as { fromMe?: unknown }).fromMe === true
   const telefono = normalizarTelefono(buscarCampo(cuerpo, ['from', 'phone', 'number', 'remoteJid', 'telefono', 'to']))
   const texto = valorResuelto(buscarCampo(cuerpo, ['body', 'message', 'text', 'content', 'mensaje', 'answer']))

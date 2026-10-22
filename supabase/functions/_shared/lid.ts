@@ -22,7 +22,23 @@ export async function esContactoLid(supabase: SupabaseClient, numero: string): P
   return lid
 }
 
-/** Dirección para enviar por la API: "<id>@lid" si es un contacto con número oculto. */
+let proveedor: { valor: string | null; hasta: number } | null = null
+
+/** "meta" si el bot usa la API oficial (ajustes.whatsapp_estado, lo guarda el webhook). */
+async function proveedorWhatsApp(supabase: SupabaseClient): Promise<string | null> {
+  if (proveedor && proveedor.hasta > Date.now()) return proveedor.valor
+  const { data } = await supabase.from('ajustes').select('valor').eq('clave', 'whatsapp_estado').maybeSingle()
+  let valor: string | null = null
+  try { valor = data?.valor ? (JSON.parse(data.valor).proveedor ?? null) : null } catch { /* sin estado */ }
+  proveedor = { valor, hasta: Date.now() + 5 * 60_000 }
+  return valor
+}
+
+/**
+ * Dirección para enviar por la API: "<id>@lid" si es un contacto con número oculto (conexión por QR).
+ * Con la API oficial de Meta no existe "@lid": el número (o el ID de usuario "PE.123…") va tal cual.
+ */
 export async function destinoWhatsApp(supabase: SupabaseClient, numero: string): Promise<string> {
+  if ((await proveedorWhatsApp(supabase)) === 'meta') return numero.replace(/@.*$/, '')
   return (await esContactoLid(supabase, numero)) ? `${numero.replace(/@.*$/, '')}@lid` : numero
 }

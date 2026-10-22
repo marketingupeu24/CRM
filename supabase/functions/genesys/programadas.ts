@@ -3,6 +3,7 @@ import { type Fuente, FUENTES, proximaAtencion, valorResuelto } from '../_shared
 import { cambiarBlacklist, enviarWhatsApp, problemasBuilderBot } from '../_shared/builderbot.ts'
 import { type Cuerpo, type Respuesta, supabase, MODO, MAX_INTENTOS_NOTIFICACION, USAR_BLACKLIST, PANEL_URL, registrarEvento, telefonosAsesores, FERIADOS, SELECCION_CON_ASESOR, oficinaAbierta, guardarEnChat } from './comun.ts'
 import { notificarAsesor } from './avisos.ts'
+import { estadoWhatsApp, puedeReasignar } from './conexion.ts'
 import { destinoWhatsApp } from '../_shared/lid.ts'
 import { enviarPush } from '../_shared/push.ts'
 
@@ -13,6 +14,8 @@ import { enviarPush } from '../_shared/push.ts'
 export async function reintentarAvisos(): Promise<number> {
   // Los reintentos tampoco se envían con la oficina cerrada
   if (!oficinaAbierta()) return 0
+  // Con WhatsApp caído no se reintenta (fallaría igual)
+  if ((await estadoWhatsApp())?.estado === 'desconectado') return 0
   const seleccion = SELECCION_CON_ASESOR
   const pendientes = await supabase.from('leads').select(seleccion)
     .in('notificacion_estado', ['pendiente', 'error'])
@@ -257,6 +260,9 @@ export async function reasignar(): Promise<Respuesta> {
   if (MODO !== 'activo') return { ok: true, omitido: 'Solo en modo activo' }
   const horas = Number(Deno.env.get('REASIGNAR_HORAS') ?? 4) || 4
   const maximo = Number(Deno.env.get('REASIGNAR_MAXIMO') ?? 2) || 2
+  // Con WhatsApp caído (o recién reconectado) no se castiga a los asesores: no les llegaban los avisos
+  const permitido = await puedeReasignar(horas)
+  if (!permitido.ok) return { ok: true, omitido: permitido.motivo }
   const { data, error } = await supabase.rpc('reasignar_sin_contacto', { p_horas: horas, p_maximo: maximo })
   if (error) throw error
   const cambios = (data ?? []) as { lead_id: string; asesor_telefono: string | null }[]

@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { guardarPreferencia, type PreferenciaBandeja } from '@/lib/bandeja'
+import { VentanaWhatsApp } from '@/components/VentanaWhatsApp'
 
 export interface Conversacion {
   id: string
@@ -17,6 +18,8 @@ export interface Conversacion {
   hace: string
   sinResponder: boolean
   mio: boolean
+  /** Último mensaje del alumno: abre la ventana de 24 h de WhatsApp */
+  ultimoAlumno?: string | null
   /** "🤝 Apoyo" / "🧳 Cubres a …" (lead de otro asesor) o "🔁 Reasignado" / "📌 Asignado" (nadie escribió desde entonces) */
   etiqueta?: string
 }
@@ -114,6 +117,7 @@ export function ListaConversaciones({ conversaciones, actualId, preferencia, ase
                     <span className={`min-w-0 flex-1 truncate text-xs ${c.sinResponder ? 'text-slate-700' : 'text-slate-500'}`}>
                       {c.deMi ? 'Tú: ' : ''}{c.ultimo ?? ''}
                     </span>
+                    <VentanaWhatsApp ultimoMensajeAlumno={c.ultimoAlumno} variante="mini" />
                     {c.sinResponder && <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-rose-500" title="Escribió y espera respuesta" />}
                   </span>
                 </span>

@@ -975,7 +975,7 @@ isOneToOne: false
 { Args: { "p_lead_id": string,"p_nota"?: string }; Returns: undefined
                            },
 "marcar_notificacion":
-{ Args: { "p_error"?: string,"p_lead_id": string,"p_ok": boolean }; Returns: undefined
+{ Args: { "p_contar"?: boolean,"p_error"?: string,"p_lead_id": string,"p_ok": boolean }; Returns: undefined
                            },
 "marcar_recordatorio":
 { Args: { "p_error"?: string,"p_lead_id": string,"p_ok": boolean,"p_recordatorio_id": number }; Returns: undefined

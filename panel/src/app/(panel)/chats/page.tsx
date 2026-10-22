@@ -8,6 +8,7 @@ import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { asesorDeLaVista, COOKIE_BANDEJA, leerPreferencia } from '@/lib/bandeja'
 import { VistaChats } from './VistaChats'
+import { VentanaWhatsApp } from '@/components/VentanaWhatsApp'
 
 export const metadata: Metadata = { title: 'Chats' }
 
@@ -138,6 +139,7 @@ export default async function PaginaChats(props: PageProps<'/chats'>) {
                     {etiquetaApoyo.has(c.id) && <span className="rounded-full bg-violet-100 px-2 py-0.5 font-medium text-violet-700">{etiquetaApoyo.get(c.id)} · de {c.asesor?.nombre || 'otro asesor'}</span>}
                     {esAdmin && !asesorFiltro && !etiquetaApoyo.has(c.id) && <span>{c.asesor?.nombre ?? 'Sin asesor (lo atiende Genesys)'}</span>}
                     {c.sin_responder && <span className="font-medium text-rose-600">● Sin responder</span>}
+                    <VentanaWhatsApp ultimoMensajeAlumno={c.ultimo_mensaje_lead_at} variante="mini" />
                   </div>
                 </div>
               </Link>

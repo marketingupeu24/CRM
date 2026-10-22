@@ -3,6 +3,7 @@ import { ESTADOS_AVISO_MENSAJE, type Fuente, FUENTES, HORARIO_ATENCION_TEXTO, te
 import { enviarWhatsApp } from '../_shared/builderbot.ts'
 import { destinoWhatsApp } from '../_shared/lid.ts'
 import { enviarPush } from '../_shared/push.ts'
+import { esCaidaWhatsApp } from './conexion.ts'
 import { type Lead, type Cuerpo, type Respuesta, supabase, PANEL_URL, MINUTOS_ENTRE_AVISOS, telefonosAsesores, fechaCorta, oficinaAbierta, guardarEnChat } from './comun.ts'
 
 // Runtime de Supabase Edge Functions: mantiene viva una tarea después de responder
@@ -68,6 +69,8 @@ export async function notificarAsesor(lead: Lead, telefonoAsesor: string, fuente
     p_lead_id: lead.id,
     p_ok: envio.ok,
     p_error: envio.error,
+    // WhatsApp caído: el intento no cuenta (se reintenta al reconectarse)
+    p_contar: envio.ok || !esCaidaWhatsApp(envio.error),
   })
   if (error) console.error('[genesys] No se pudo guardar el resultado de la notificación:', error.message)
   if (!envio.ok) console.error('[genesys] Error notificando al asesor:', envio.error)
@@ -195,7 +198,7 @@ export async function notificarAsignacion(cuerpo: Cuerpo): Promise<Respuesta> {
     ].filter((linea) => linea !== null).join('\n')
     const envio = await enviarWhatsApp(telefono, texto)
     for (const lead of suyos) {
-      await supabase.rpc('marcar_notificacion', { p_lead_id: lead.id, p_ok: envio.ok, p_error: envio.error })
+      await supabase.rpc('marcar_notificacion', { p_lead_id: lead.id, p_ok: envio.ok, p_error: envio.error, p_contar: envio.ok || !esCaidaWhatsApp(envio.error) })
     }
     if (envio.ok) avisados += suyos.length
     else console.error('[genesys] Error avisando asignación masiva:', envio.error)
