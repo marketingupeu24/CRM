@@ -8,7 +8,8 @@ import { esDelChat } from '@/lib/chat'
 import { crearClienteNavegador, prepararTiempoReal } from '@/lib/supabase/client'
 import { comprimirImagen } from '@/lib/imagen'
 import { Adjunto } from './Adjunto'
-import { AvisoVentanaCerrada, VentanaWhatsApp } from '@/components/VentanaWhatsApp'
+import { BarraVentana, VentanaWhatsApp, ventanaCerrada } from '@/components/VentanaWhatsApp'
+import { useConfirmar } from '@/components/Confirmacion'
 
 /** Pantalla táctil (celular): Enter hace salto de línea y se envía con el botón */
 const TACTIL = '(pointer: coarse)'
@@ -103,6 +104,10 @@ export function Conversacion(
   const [texto, setTexto] = useState('')
   const tactil = useSyncExternalStore(suscribirTactil, () => matchMedia(TACTIL).matches, () => false)
   const [verRespuestas, setVerRespuestas] = useState(false)
+  // Último mensaje del alumno: abre la ventana de 24 h de WhatsApp (se actualiza en vivo)
+  const ultimoAlumno = mensajes.findLast((m) => m.tipo === 'mensaje_lead')?.created_at ?? null
+  const ultimoAlumnoRef = useRef(ultimoAlumno)
+  useEffect(() => { ultimoAlumnoRef.current = ultimoAlumno }, [ultimoAlumno])
   // Panel ⚡: por categoría (saludo, carreras, modalidades…) y con buscador
   const [categoriaPanel, setCategoriaPanel] = useState('')
   const [buscarPanel, setBuscarPanel] = useState('')
@@ -293,6 +298,21 @@ export function Conversacion(
     if (selector.current) selector.current.value = ''
   }
 
+  // Con la ventana de 24 h cerrada, se pide confirmar: WhatsApp (API oficial) no entrega mensajes normales
+  const confirmar = useConfirmar()
+  async function enviarRevisando() {
+    if (!texto.trim() && !archivo) return
+    if (ventanaCerrada(ultimoAlumnoRef.current)) {
+      const ok = await confirmar({
+        titulo: '¿Enviar con la ventana de WhatsApp cerrada?',
+        mensaje: 'Pasaron más de 24 horas desde el último mensaje del alumno (o aún no te escribe). WhatsApp probablemente NO entregará este mensaje. Lo correcto es usar una plantilla aprobada o esperar a que te escriba.',
+        confirmar: 'Enviar de todos modos', peligro: true,
+      })
+      if (!ok) return
+    }
+    void enviar(texto, archivo)
+  }
+
   async function enviar(contenido: string, adjunto: File | null = null, reintentoDe?: number) {
     const limpio = contenido.trim()
     if (!limpio && !adjunto) return
@@ -360,8 +380,6 @@ export function Conversacion(
   const nombreAutor = (m: MensajeChat) =>
     m.autor_nombre ?? (m.autor_id ? nombresAutores[m.autor_id] : undefined) ?? 'Asesor'
 
-  // Último mensaje del alumno: abre la ventana de 24 h de WhatsApp (se actualiza en vivo)
-  const ultimoAlumno = mensajes.findLast((m) => m.tipo === 'mensaje_lead')?.created_at ?? null
 
   return (
     <section className="@container tarjeta flex min-h-0 flex-1 flex-col overflow-hidden" id="chat">
@@ -543,10 +561,10 @@ export function Conversacion(
           <button type="button" onClick={quitarArchivo} disabled={enviando} className="text-sm font-medium text-slate-500 hover:text-rose-600" aria-label="Quitar archivo">✕ Quitar</button>
         </div>
       )}
-      <AvisoVentanaCerrada ultimoMensajeAlumno={ultimoAlumno} />
+      <BarraVentana ultimoMensajeAlumno={ultimoAlumno} />
       <form
         className="flex items-end gap-2 border-t border-slate-200 bg-superficie p-3 @max-[36rem]:gap-1.5 @max-[36rem]:p-2"
-        onSubmit={(e) => { e.preventDefault(); enviar(texto, archivo) }}
+        onSubmit={(e) => { e.preventDefault(); void enviarRevisando() }}
       >
         <input
           ref={selector} type="file" accept={TIPOS_ADJUNTO.join(',')} className="hidden"
@@ -580,7 +598,7 @@ export function Conversacion(
               }
             }
             // En el celular (pantalla táctil) Enter hace salto de línea, como en WhatsApp: se envía con el botón
-            if (e.key === 'Enter' && !e.shiftKey && !tactil) { e.preventDefault(); enviar(texto, archivo) }
+            if (e.key === 'Enter' && !e.shiftKey && !tactil) { e.preventDefault(); void enviarRevisando() }
           }}
           onPaste={(e) => {
             // Pegar una captura de pantalla (Ctrl+V) la deja lista para enviar

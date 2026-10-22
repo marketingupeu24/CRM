@@ -19,6 +19,7 @@ import { AccionesRapidas } from './AccionesRapidas'
 import { ProformaRapida } from './ProformaRapida'
 import { ListaConversaciones, type Conversacion as ItemBandeja } from './ListaConversaciones'
 import { BandejaMovil } from './BandejaMovil'
+import { VentanaDetalle } from '@/components/VentanaWhatsApp'
 import { QuitarApoyo } from './QuitarApoyo'
 import { BotonesTarea, FormularioTarea } from '@/components/Tareas'
 
@@ -292,6 +293,10 @@ export async function FichaLead({ id, seccion }: { id: string; seccion: 'leads' 
               {puede('asignar') && !apoyo && (
                 <ReasignarAsesor key={lead.asesor_id} leadId={lead.id} asesorId={lead.asesor_id} asesores={asesores ?? []} />
               )}
+            </div>
+            <div className="space-y-1.5 p-4">
+              <h2 className="text-xs font-semibold tracking-wide text-slate-500 uppercase">WhatsApp · ventana de 24 h</h2>
+              <VentanaDetalle ultimoMensajeAlumno={lead.ultimo_mensaje_lead_at} />
             </div>
             <div className="p-3">
               <RegistrarContacto leadId={lead.id} />

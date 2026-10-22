@@ -8,6 +8,7 @@ import { exigirPermiso } from '@/lib/sesion'
 import { fechaCorta, mesLima, nombreMes, rangoMes } from '@/lib/periodos'
 import { FiltrosAvanzados } from '@/components/FiltrosAvanzados'
 import { BarraMasiva } from './BarraMasiva'
+import { VentanaWhatsApp } from '@/components/VentanaWhatsApp'
 import { crearClienteServidor } from '@/lib/supabase/server'
 
 export const metadata: Metadata = { title: 'Leads' }
@@ -49,7 +50,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
 
   let consulta = supabase
     .from('leads')
-    .select('id, nombre, telefono, dni, carrera_interes, modalidad, programa, convocatoria, estado, origen, origen_campana, reasignaciones, created_at, ultimo_contacto, reconsultas, sin_responder, puntaje, puntaje_motivos, asesor:asesores!leads_asesor_id_fkey(nombre)', { count: 'exact' })
+    .select('id, nombre, telefono, dni, carrera_interes, modalidad, programa, convocatoria, estado, origen, origen_campana, reasignaciones, created_at, ultimo_contacto, reconsultas, sin_responder, ultimo_mensaje_lead_at, puntaje, puntaje_motivos, asesor:asesores!leads_asesor_id_fkey(nombre)', { count: 'exact' })
 
   if (filtros.q) {
     // Quita caracteres que alteran la sintaxis del filtro de PostgREST
@@ -290,6 +291,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
                   {l.sin_responder && (
                     <Link href={`/chats/${l.id}`} className="ml-2 rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700">✉ Sin responder</Link>
                   )}
+                  <span className="ml-1"><VentanaWhatsApp ultimoMensajeAlumno={l.ultimo_mensaje_lead_at} variante="mini" /></span>
                   <p className="text-xs text-slate-500">
                     {l.telefono}{l.dni ? ` · DNI ${l.dni}` : ''}
                   </p>

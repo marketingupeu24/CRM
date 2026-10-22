@@ -72,16 +72,83 @@ export function VentanaWhatsApp({ ultimoMensajeAlumno, variante = 'chip' }: { ul
   )
 }
 
-/** Aviso sobre el cuadro de texto cuando la ventana está cerrada: el mensaje puede no llegar. */
-export function AvisoVentanaCerrada({ ultimoMensajeAlumno }: { ultimoMensajeAlumno: string | null | undefined }) {
+/** "hoy 10:42 a. m.", "mañana 9:00 a. m." o "lun 27/10, 9:00 a. m." (hora de Lima) */
+export function cuandoCierra(ms: number, ahora: number) {
+  const dia = (t: number) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date(t))
+  const hora = new Intl.DateTimeFormat('es-PE', { timeZone: 'America/Lima', hour: 'numeric', minute: '2-digit' }).format(new Date(ms))
+  if (dia(ms) === dia(ahora)) return `hoy ${hora}`
+  if (dia(ms) === dia(ahora + 86_400_000)) return `mañana ${hora}`
+  if (dia(ms) === dia(ahora - 86_400_000)) return `ayer ${hora}`
+  return `${new Intl.DateTimeFormat('es-PE', { timeZone: 'America/Lima', weekday: 'short', day: '2-digit', month: '2-digit' }).format(new Date(ms))}, ${hora}`
+}
+
+/** true si mandar un mensaje normal ahora puede no llegar (ventana cerrada o el alumno nunca escribió). */
+export function ventanaCerrada(ultimoMensajeAlumno: string | null | undefined) {
+  const e = estadoVentana(ultimoMensajeAlumno, Date.now()).estado
+  return e === 'cerrada' || e === 'sin_mensajes'
+}
+
+/**
+ * Barra destacada sobre el cuadro de texto (siempre visible): estado de la ventana de 24 h con la hora
+ * exacta de cierre y una barra de progreso. Verde (abierta), ámbar que late (menos de 4 h) y roja (cerrada).
+ */
+export function BarraVentana({ ultimoMensajeAlumno }: { ultimoMensajeAlumno: string | null | undefined }) {
   const ahora = useAhora()
   if (!ahora) return null
   const v = estadoVentana(ultimoMensajeAlumno, ahora)
-  if (v.estado !== 'cerrada' && v.estado !== 'sin_mensajes') return null
+  const cierre = ultimoMensajeAlumno ? Date.parse(ultimoMensajeAlumno) + VENTANA_MS : 0
+  const estilos: Record<EstadoVentana, { caja: string; barra: string; icono: string }> = {
+    abierta: { caja: 'border-emerald-400 bg-emerald-50 text-emerald-900', barra: 'bg-emerald-500', icono: '✅' },
+    por_cerrar: { caja: 'border-amber-500 bg-amber-100 text-amber-950', barra: 'bg-amber-500', icono: '⚠️' },
+    cerrada: { caja: 'border-rose-500 bg-rose-100 text-rose-900', barra: 'bg-rose-500', icono: '🔒' },
+    sin_mensajes: { caja: 'border-rose-500 bg-rose-100 text-rose-900', barra: 'bg-rose-500', icono: '🔒' },
+  }
+  const e = estilos[v.estado]
+  const titulo = v.estado === 'abierta' ? 'Puedes responderle por WhatsApp'
+    : v.estado === 'por_cerrar' ? '¡Respóndele pronto! La ventana de WhatsApp se está cerrando'
+    : v.estado === 'cerrada' ? 'Ventana de WhatsApp cerrada: no le escribas un mensaje normal'
+    : 'El alumno aún no te escribe: no le escribas primero un mensaje normal'
+  const detalle = v.estado === 'abierta' || v.estado === 'por_cerrar'
+    ? `Puedes escribirle libremente hasta ${cuandoCierra(cierre, ahora)}. Después solo con plantilla aprobada.`
+    : v.estado === 'cerrada'
+      ? `Se cerró ${cuandoCierra(cierre, ahora)} (24 h después de su último mensaje). WhatsApp no lo entregará: usa una plantilla aprobada o espera a que te escriba.`
+      : 'WhatsApp no entrega mensajes normales a quien no escribió antes: usa una plantilla aprobada o espera a que te escriba.'
   return (
-    <p className="border-t border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-700">
-      🔒 {v.estado === 'cerrada' ? 'Pasaron más de 24 h desde el último mensaje del alumno' : 'El alumno aún no te ha escrito'}: WhatsApp puede no entregar
-      un mensaje normal. Usa una plantilla aprobada o espera a que te escriba.
-    </p>
+    <div role="status" aria-live="polite" title={AYUDA} className={`flex items-center gap-3 border-t-2 px-3 py-2 ${e.caja}`}>
+      <span className={`text-xl leading-none ${v.estado === 'por_cerrar' ? 'animate-pulse' : ''}`} aria-hidden>{e.icono}</span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm leading-tight font-semibold">{titulo}</p>
+        <p className="text-xs leading-snug opacity-90">{detalle}</p>
+        {(v.estado === 'abierta' || v.estado === 'por_cerrar') && (
+          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/70" aria-hidden>
+            <div className={`h-full rounded-full ${e.barra}`} style={{ width: `${Math.max(3, (v.restante / VENTANA_MS) * 100)}%` }} />
+          </div>
+        )}
+      </div>
+      {(v.estado === 'abierta' || v.estado === 'por_cerrar') && (
+        <div className="shrink-0 text-right leading-tight">
+          <p className="text-lg font-bold tabular-nums">{duracion(v.restante)}</p>
+          <p className="text-[10px] tracking-wide uppercase opacity-80">quedan</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Para el panel de detalles de la ficha: chip + hora exacta de cierre. */
+export function VentanaDetalle({ ultimoMensajeAlumno }: { ultimoMensajeAlumno: string | null | undefined }) {
+  const ahora = useAhora()
+  if (!ahora) return null
+  const v = estadoVentana(ultimoMensajeAlumno, ahora)
+  const cierre = ultimoMensajeAlumno ? Date.parse(ultimoMensajeAlumno) + VENTANA_MS : 0
+  return (
+    <div className="space-y-1">
+      <VentanaWhatsApp ultimoMensajeAlumno={ultimoMensajeAlumno} />
+      <p className="text-xs text-slate-500">
+        {v.estado === 'sin_mensajes' ? 'Aún no escribe: no se le puede escribir primero sin plantilla.'
+          : v.estado === 'cerrada' ? `Se cerró ${cuandoCierra(cierre, ahora)}. Se reabre cuando el alumno vuelva a escribir.`
+          : `Puedes escribirle libremente hasta ${cuandoCierra(cierre, ahora)}.`}
+      </p>
+    </div>
   )
 }
