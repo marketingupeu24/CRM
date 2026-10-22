@@ -82,6 +82,9 @@ export function cuandoCierra(ms: number, ahora: number) {
   return `${new Intl.DateTimeFormat('es-PE', { timeZone: 'America/Lima', weekday: 'short', day: '2-digit', month: '2-digit' }).format(new Date(ms))}, ${hora}`
 }
 
+/** "2:34 p. m.." -> "2:34 p. m." (la hora ya termina en punto) */
+const sinPuntoDoble = (texto: string) => texto.replace(/\.\./g, '.')
+
 /** true si mandar un mensaje normal ahora puede no llegar (ventana cerrada o el alumno nunca escribió). */
 export function ventanaCerrada(ultimoMensajeAlumno: string | null | undefined) {
   const e = estadoVentana(ultimoMensajeAlumno, Date.now()).estado
@@ -118,7 +121,7 @@ export function BarraVentana({ ultimoMensajeAlumno }: { ultimoMensajeAlumno: str
       <span className={`text-xl leading-none ${v.estado === 'por_cerrar' ? 'animate-pulse' : ''}`} aria-hidden>{e.icono}</span>
       <div className="min-w-0 flex-1">
         <p className="text-sm leading-tight font-semibold">{titulo}</p>
-        <p className="text-xs leading-snug opacity-90">{detalle}</p>
+        <p className="text-xs leading-snug opacity-90">{sinPuntoDoble(detalle)}</p>
         {(v.estado === 'abierta' || v.estado === 'por_cerrar') && (
           <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/70" aria-hidden>
             <div className={`h-full rounded-full ${e.barra}`} style={{ width: `${Math.max(3, (v.restante / VENTANA_MS) * 100)}%` }} />
@@ -146,8 +149,8 @@ export function VentanaDetalle({ ultimoMensajeAlumno }: { ultimoMensajeAlumno: s
       <VentanaWhatsApp ultimoMensajeAlumno={ultimoMensajeAlumno} />
       <p className="text-xs text-slate-500">
         {v.estado === 'sin_mensajes' ? 'Aún no escribe: no se le puede escribir primero sin plantilla.'
-          : v.estado === 'cerrada' ? `Se cerró ${cuandoCierra(cierre, ahora)}. Se reabre cuando el alumno vuelva a escribir.`
-          : `Puedes escribirle libremente hasta ${cuandoCierra(cierre, ahora)}.`}
+          : v.estado === 'cerrada' ? sinPuntoDoble(`Se cerró ${cuandoCierra(cierre, ahora)}. Se reabre cuando el alumno vuelva a escribir.`)
+          : sinPuntoDoble(`Puedes escribirle libremente hasta ${cuandoCierra(cierre, ahora)}.`)}
       </p>
     </div>
   )
