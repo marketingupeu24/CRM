@@ -52,6 +52,10 @@ export function elegir(...valores: unknown[]): string | null {
  * Un celular peruano de 9 dígitos (9XXXXXXXX) recibe el código de país 51.
  */
 export function normalizarTelefono(valor: unknown): string | null {
+  // API oficial de WhatsApp: quien tiene nombre de usuario y oculta su número llega con un ID de usuario
+  // del negocio (BSUID), ej. "PE.1969219067373593". Se guarda tal cual: así se le responde.
+  const bsuid = /^\s*([A-Za-z]{2})\.(\d{5,30})\s*$/.exec(String(valor ?? ''))
+  if (bsuid) return `${bsuid[1]!.toUpperCase()}.${bsuid[2]}`
   const digitos = String(valor ?? '').replace(/\D/g, '')
   if (/^9\d{8}$/.test(digitos)) return '51' + digitos
   return digitos.length >= 8 && digitos.length <= 15 ? digitos : null

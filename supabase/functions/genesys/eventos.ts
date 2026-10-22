@@ -193,7 +193,9 @@ export async function evento(cuerpo: Cuerpo, registroId: number | null): Promise
   const texto = valorResuelto(buscarCampo(cuerpo, ['body', 'message', 'text', 'content', 'mensaje', 'answer']))
   // Contacto con privacidad de WhatsApp: llega un identificador (@lid) en vez del número
   const jid = buscarCampo(cuerpo, ['remoteJid']) ?? ''
-  const esLid = jid.endsWith('@lid') && !!telefono && jid.replace(/\D/g, '') === telefono
+  // API oficial: usuario con nombre de usuario y número oculto ("PE.123…"): se trata igual (alias del lead)
+  const esUsuarioSinNumero = !!telefono && /^[A-Z]{2}\./.test(telefono)
+  const esLid = esUsuarioSinNumero || (jid.endsWith('@lid') && !!telefono && jid.replace(/\D/g, '') === telefono)
 
   if (!telefono) { await marcar('sin teléfono'); return { ok: true, procesado: 'sin teléfono' } }
   if (saliente) {

@@ -12,6 +12,8 @@ Deno.test('normalizarTelefono', () => {
   igual(normalizarTelefono('34600111222'), '34600111222')    // extranjero se respeta
   igual(normalizarTelefono('abc'), null)
   igual(normalizarTelefono(''), null)
+  igual(normalizarTelefono('PE.1969219067373593'), 'PE.1969219067373593') // usuario sin número visible (API oficial)
+  igual(normalizarTelefono('pe.1969219067373593'), 'PE.1969219067373593')
 })
 
 Deno.test('normalizarDni', () => {

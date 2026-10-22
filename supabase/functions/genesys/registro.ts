@@ -43,7 +43,8 @@ export async function asignarPorQrAsesor(lead: Lead, mensaje: string, telefono: 
   // A un identificador @lid no se envía por la API: no es un número y BuilderBot se queda esperando (504)
   // (el flujo del bot no indica si es @lid: un número largo que no es de Perú se trata igual)
   // Contacto con número oculto: se le escribe a "<id>@lid" (BuilderBot sí lo entrega)
-  const destino = esLid ? `${telefono}@lid` : await destinoWhatsApp(supabase, telefono)
+  // (un ID de usuario de la API oficial, "PE.123…", va tal cual)
+  const destino = esLid && /^\d+$/.test(telefono) ? `${telefono}@lid` : await destinoWhatsApp(supabase, telefono)
   const listo = [
     `¡Listo${persona ? `, ${persona}` : ''}, ya quedaste registrado(a)! 😊 Soy Genesys, de *Admisión de la Universidad Peruana Unión*, campus Juliaca`,
     'Un asesor(a) de Admisión te seguirá atendiendo, y por este chat te enviaremos la información que necesites.',
@@ -140,6 +141,9 @@ export async function registroRepetido(telefono: string | null, dni: string | nu
 }
 
 /** Para el agente de IA de BuilderBot: el registro terminó, no debe repetirlo. */
+/** BuilderBot muestra "mensaje" en su bloque de confirmación: no se da el nombre del asesor. */
+export const ASESOR_SIN_NOMBRE = 'un asesor(a) de Admisión'
+
 export const INSTRUCCION_REGISTRADO = 'REGISTRO COMPLETADO. Confirma al alumno UNA sola vez y no vuelvas a llamar a esta herramienta en esta conversación.'
 
 /** Fuera de horario: lo que se agrega al mensaje y a la instrucción de Genesys tras registrar. */
@@ -204,10 +208,10 @@ export async function webhook(cuerpo: Cuerpo): Promise<Respuesta> {
       : { data: null }
     return {
       status: 'success', accion: 'ya_registrado', registrado: true, duplicado: true,
-      mensaje: asesorRep?.nombre ?? '', telefono_asesor: asesorRep?.telefono ?? '',
+      mensaje: asesorRep ? ASESOR_SIN_NOMBRE : '', telefono_asesor: asesorRep?.telefono ?? '',
       lead_id: repetido.id, notificacion_asesor: 'ya_enviada', bot_atiende: botAtiendeLead(repetido.estado), modo: MODO,
       enviar_mensaje_cliente: false,
-      mensaje_cliente: 'Listo: el registro ya está hecho. No lo repitas ni vuelvas a enviar la confirmación.',
+      mensaje_cliente: '¡Listo! Ya estás registrado(a) 😊 Un asesor(a) de Admisión se comunicará contigo pronto.',
       instruccion_bot: 'REGISTRO YA COMPLETADO. No vuelvas a llamar a esta herramienta ni repitas el mensaje de confirmación.',
     }
   }
@@ -236,10 +240,10 @@ export async function webhook(cuerpo: Cuerpo): Promise<Respuesta> {
   if (r.status === 'duplicate') {
     return {
       status: 'success', accion: 'ya_registrado', registrado: true, duplicado: true,
-      mensaje: r.asesor_nombre ?? '', telefono_asesor: r.asesor_telefono ?? '',
+      mensaje: r.asesor_nombre ? ASESOR_SIN_NOMBRE : '', telefono_asesor: r.asesor_telefono ?? '',
       lead_id: r.lead_id, notificacion_asesor: 'ya_enviada', bot_atiende: botAtiendeLead(r.estado), modo: MODO,
       enviar_mensaje_cliente: false,
-      mensaje_cliente: 'Listo: el registro ya está hecho. No lo repitas ni vuelvas a enviar la confirmación.',
+      mensaje_cliente: '¡Listo! Ya estás registrado(a) 😊 Un asesor(a) de Admisión se comunicará contigo pronto.',
       instruccion_bot: 'REGISTRO YA COMPLETADO. No vuelvas a llamar a esta herramienta ni repitas el mensaje de confirmación.',
     }
   }
@@ -268,7 +272,7 @@ export async function webhook(cuerpo: Cuerpo): Promise<Respuesta> {
   if (r.status === 'updated') {
     return {
       status: 'updated', accion: 'actualizado', registrado: true, duplicado: false,
-      mensaje: r.asesor_nombre ?? '', telefono_asesor: r.asesor_telefono ?? '',
+      mensaje: r.asesor_nombre ? ASESOR_SIN_NOMBRE : '', telefono_asesor: r.asesor_telefono ?? '',
       lead_id: r.lead_id, notificacion_asesor: notificacion, bot_atiende: botAtiendeLead(r.estado), modo: MODO,
       enviar_mensaje_cliente: true,
       // Sin el nombre del asesor: "un asesor(a) de Admisión"
@@ -279,7 +283,7 @@ export async function webhook(cuerpo: Cuerpo): Promise<Respuesta> {
 
   return {
     status: 'success', accion: 'registrado', registrado: true, duplicado: false,
-    mensaje: r.asesor_nombre ?? '', telefono_asesor: r.asesor_telefono ?? '',
+    mensaje: r.asesor_nombre ? ASESOR_SIN_NOMBRE : '', telefono_asesor: r.asesor_telefono ?? '',
     lead_id: r.lead_id, notificacion_asesor: notificacion, bot_atiende: botAtiendeLead(r.estado), modo: MODO,
     enviar_mensaje_cliente: true,
     mensaje_cliente: `Tu información fue registrada correctamente. Un asesor(a) de Admisión se comunicará contigo pronto.${notaHorario().cliente}`,
