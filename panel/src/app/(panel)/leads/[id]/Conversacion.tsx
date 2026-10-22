@@ -457,7 +457,12 @@ export function Conversacion(
                     {/* Hora (y estado del envío) al final del texto, como en WhatsApp */}
                     <span className="float-right mt-1.5 ml-3 text-[10px] leading-none text-slate-500" title={hora(m.created_at)}>
                       {soloHora(m.created_at)}
-                      {propio && (pendiente ? ' 🕓' : fallido ? ' ⚠️' : ' ✓')}
+                      {propio && (pendiente ? ' 🕓' : fallido ? ' ⚠️'
+                        // ✓✓ azul: el alumno escribió después, así que le llegó y lo vio (BuilderBot no envía
+                        // las confirmaciones de entrega de WhatsApp; ✓ = salió del CRM y WhatsApp lo aceptó)
+                        : ultimoAlumno && ultimoAlumno > m.created_at
+                          ? <span className="font-bold text-sky-500" title="Le llegó y lo vio: el alumno respondió después"> ✓✓</span>
+                          : <span title="Enviado. WhatsApp no confirma la entrega hasta que el alumno responda"> ✓</span>)}
                     </span>
                   </p>
                   {fallido && (

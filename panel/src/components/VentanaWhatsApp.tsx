@@ -92,48 +92,32 @@ export function ventanaCerrada(ultimoMensajeAlumno: string | null | undefined) {
 }
 
 /**
- * Barra destacada sobre el cuadro de texto (siempre visible): estado de la ventana de 24 h con la hora
- * exacta de cierre y una barra de progreso. Verde (abierta), ámbar que late (menos de 4 h) y roja (cerrada).
+ * Línea discreta sobre el cuadro de texto (siempre visible): cuánto queda de la ventana de 24 h y hasta qué hora.
+ * Una raya fina arriba muestra el tiempo restante. Verde (abierta), ámbar (menos de 4 h) y roja (cerrada).
  */
 export function BarraVentana({ ultimoMensajeAlumno }: { ultimoMensajeAlumno: string | null | undefined }) {
   const ahora = useAhora()
   if (!ahora) return null
   const v = estadoVentana(ultimoMensajeAlumno, ahora)
   const cierre = ultimoMensajeAlumno ? Date.parse(ultimoMensajeAlumno) + VENTANA_MS : 0
-  const estilos: Record<EstadoVentana, { caja: string; barra: string; icono: string }> = {
-    abierta: { caja: 'border-emerald-400 bg-emerald-50 text-emerald-900', barra: 'bg-emerald-500', icono: '✅' },
-    por_cerrar: { caja: 'border-amber-500 bg-amber-100 text-amber-950', barra: 'bg-amber-500', icono: '⚠️' },
-    cerrada: { caja: 'border-rose-500 bg-rose-100 text-rose-900', barra: 'bg-rose-500', icono: '🔒' },
-    sin_mensajes: { caja: 'border-rose-500 bg-rose-100 text-rose-900', barra: 'bg-rose-500', icono: '🔒' },
+  const estilos: Record<EstadoVentana, { caja: string; barra: string }> = {
+    abierta: { caja: 'bg-emerald-50/70 text-emerald-800', barra: 'bg-emerald-400' },
+    por_cerrar: { caja: 'bg-amber-50 text-amber-900', barra: 'bg-amber-500' },
+    cerrada: { caja: 'bg-rose-50 text-rose-800', barra: 'bg-rose-400' },
+    sin_mensajes: { caja: 'bg-rose-50 text-rose-800', barra: 'bg-rose-400' },
   }
   const e = estilos[v.estado]
-  const titulo = v.estado === 'abierta' ? 'Puedes responderle por WhatsApp'
-    : v.estado === 'por_cerrar' ? '¡Respóndele pronto! La ventana de WhatsApp se está cerrando'
-    : v.estado === 'cerrada' ? 'Ventana de WhatsApp cerrada: no le escribas un mensaje normal'
-    : 'El alumno aún no te escribe: no le escribas primero un mensaje normal'
-  const detalle = v.estado === 'abierta' || v.estado === 'por_cerrar'
-    ? `Puedes escribirle libremente hasta ${cuandoCierra(cierre, ahora)}. Después solo con plantilla aprobada.`
-    : v.estado === 'cerrada'
-      ? `Se cerró ${cuandoCierra(cierre, ahora)} (24 h después de su último mensaje). WhatsApp no lo entregará: usa una plantilla aprobada o espera a que te escriba.`
-      : 'WhatsApp no entrega mensajes normales a quien no escribió antes: usa una plantilla aprobada o espera a que te escriba.'
+  const abierta = v.estado === 'abierta' || v.estado === 'por_cerrar'
+  const texto = v.estado === 'abierta' ? <>⏳ Puedes responder hasta <b>{cuandoCierra(cierre, ahora)}</b> · quedan {duracion(v.restante)}</>
+    : v.estado === 'por_cerrar' ? <>⚠️ <b>Responde pronto:</b> se cierra {cuandoCierra(cierre, ahora)} · quedan <b>{duracion(v.restante)}</b></>
+    : v.estado === 'cerrada' ? <>🔒 <b>Ventana cerrada</b> desde {cuandoCierra(cierre, ahora)}: usa una plantilla o espera a que escriba</>
+    : <>🔒 <b>Aún no te escribe:</b> no le escribas primero un mensaje normal</>
   return (
-    <div role="status" aria-live="polite" title={AYUDA} className={`flex items-center gap-3 border-t-2 px-3 py-2 ${e.caja}`}>
-      <span className={`text-xl leading-none ${v.estado === 'por_cerrar' ? 'animate-pulse' : ''}`} aria-hidden>{e.icono}</span>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm leading-tight font-semibold">{titulo}</p>
-        <p className="text-xs leading-snug opacity-90">{sinPuntoDoble(detalle)}</p>
-        {(v.estado === 'abierta' || v.estado === 'por_cerrar') && (
-          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/70" aria-hidden>
-            <div className={`h-full rounded-full ${e.barra}`} style={{ width: `${Math.max(3, (v.restante / VENTANA_MS) * 100)}%` }} />
-          </div>
-        )}
-      </div>
-      {(v.estado === 'abierta' || v.estado === 'por_cerrar') && (
-        <div className="shrink-0 text-right leading-tight">
-          <p className="text-lg font-bold tabular-nums">{duracion(v.restante)}</p>
-          <p className="text-[10px] tracking-wide uppercase opacity-80">quedan</p>
-        </div>
+    <div role="status" title={AYUDA} className={`relative border-t border-slate-200 px-3 py-1 text-[11px] leading-snug ${e.caja}`}>
+      {abierta && (
+        <span aria-hidden className={`absolute top-0 left-0 h-0.5 ${e.barra}`} style={{ width: `${Math.max(2, (v.restante / VENTANA_MS) * 100)}%` }} />
       )}
+      <p className="truncate">{texto}</p>
     </div>
   )
 }
