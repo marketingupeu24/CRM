@@ -119,13 +119,15 @@ test('procedencia en la ficha: el buscador sugiere Juliaca (sin guardar)', async
   await page.goto('/leads')
   await page.locator('a[href^="/leads/"][href*="-"]').first().click()
   await page.waitForURL(/\/leads\/[0-9a-f-]{36}/)
-  // El formulario de datos está en el panel de detalles (en pantallas grandes se puede ocultar)
-  const detalles = page.locator('label', { hasText: '📋 Detalles' }).filter({ visible: true })
-  if (await detalles.count() && !(await detalles.locator('input').isChecked())) await detalles.click()
-  await page.getByRole('button', { name: /Editar datos/ }).filter({ visible: true }).first().click()
+  // "Editar datos" muestra el panel de detalles si estaba oculto
   const buscador = page.locator('input[role=combobox]').filter({ visible: true })
   const elegido = page.getByRole('button', { name: 'Cambiar' }).filter({ visible: true })
-  await expect(buscador.or(elegido).first()).toBeVisible()
+  // Al abrir el panel la página se refresca: se reintenta hasta que el formulario quede abierto
+  await expect(async () => {
+    const editar = page.getByRole('button', { name: /Editar datos/ }).filter({ visible: true })
+    if (await editar.count()) await editar.first().click()
+    await expect(buscador.or(elegido).first()).toBeVisible({ timeout: 3000 })
+  }).toPass({ timeout: 30_000 })
   if (await buscador.count()) {
     await buscador.fill('julia')
     await expect(page.getByRole('option', { name: /Juliaca/ }).first()).toBeVisible()

@@ -117,6 +117,9 @@ export function EditarDatos({ lead, puedeCelular = false, carreras = [] }: { lea
 
   useEffect(() => {
     const abrir = () => {
+      // El formulario está en el panel de detalles: si estaba oculto, se muestra (si no, no se vería nada)
+      const detalles = document.getElementById('alternar-detalles') as HTMLInputElement | null
+      if (detalles && !detalles.checked) detalles.click()
       setAbierto(true)
       setTimeout(() => {
         formulario.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
