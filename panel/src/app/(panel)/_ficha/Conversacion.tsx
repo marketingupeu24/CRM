@@ -160,6 +160,7 @@ export function Conversacion(
       const temporal: MensajeChat = {
         id: temporales.current--, lead_id: leadId, tipo: 'mensaje_asesor', contenido: limpio, created_at: new Date().toISOString(),
         estado_envio: 'pendiente', error_envio: null, adjunto_url: null, autor_id: null, autor_nombre: miNombre,
+        wamid: null, entregado_at: null, leido_at: null, error_entrega: null,
       }
       setMensajes((previos) => [...previos.filter((p) => p.id !== reintentoDe), temporal])
       if (reintentoDe === undefined) setTexto('')

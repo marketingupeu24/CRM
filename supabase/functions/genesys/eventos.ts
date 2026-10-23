@@ -6,6 +6,7 @@ import { type Cuerpo, type Respuesta, supabase, PANEL_URL } from './comun.ts'
 import { registrar } from './registro.ts'
 import { alertarError } from './avisos.ts'
 import { registrarConexion } from './conexion.ts'
+import { estadosDeEntrega, registrarEstados, vincularWamid, wamidDe } from './entrega.ts'
 
 /** Freno contra bucles: más reenvíos que esto a un mismo contacto @lid en 10 minutos se bloquean y se avisa. */
 const MAXIMO_REENVIOS_10_MIN = 40
@@ -194,7 +195,14 @@ export async function evento(cuerpo: Cuerpo, registroId: number | null): Promise
     await marcar(`estado de WhatsApp: ${tipo}`)
     return { ok: true, procesado: tipo }
   }
-  const saliente = /out|send|sent|bot/.test(tipo) || (cuerpo as { fromMe?: unknown }).fromMe === true
+  // Avisos de entregado / leído / falló de un mensaje enviado (doble check)
+  const estados = estadosDeEntrega(cuerpo)
+  if (estados.length) {
+    const n = await registrarEstados(estados)
+    await marcar(`estado de entrega: ${estados.map((e) => e.estado).join(', ')} (${n} mensaje(s))`)
+    return { ok: true, procesado: 'estado de entrega' }
+  }
+  const saliente =/out|send|sent|bot/.test(tipo) || (cuerpo as { fromMe?: unknown }).fromMe === true
   const telefono = normalizarTelefono(buscarCampo(cuerpo, ['from', 'phone', 'number', 'remoteJid', 'telefono', 'to']))
   const texto = valorResuelto(buscarCampo(cuerpo, ['body', 'message', 'text', 'content', 'mensaje', 'answer']))
   // Contacto con privacidad de WhatsApp: llega un identificador (@lid) en vez del número
@@ -207,6 +215,15 @@ export async function evento(cuerpo: Cuerpo, registroId: number | null): Promise
   if (saliente) {
     const datos = ((cuerpo as { data?: Record<string, unknown> }).data ?? {}) as Record<string, unknown>
     const destinoJid = String(((datos.respMessage as { key?: { remoteJid?: string } } | undefined)?.key?.remoteJid) ?? '')
+    // Id de WhatsApp del mensaje (API oficial): se guarda para el doble check
+    const wamid = wamidDe(datos)
+    // Mensaje de un asesor ("*Nombre:* texto"), enviado desde el CRM: ya está en el chat, solo se le une el id
+    const firmaAsesor = /^\*[^*\n]{1,40}:\* /
+    if (wamid && texto && firmaAsesor.test(texto)) {
+      const unido = await vincularWamid(telefono, texto.replace(firmaAsesor, ''), wamid)
+      await marcar(unido ? 'saliente del asesor: id de WhatsApp guardado' : 'saliente del asesor (sin mensaje para unir)')
+      return { ok: true, procesado: 'saliente asesor' }
+    }
     // Eco de un envío del CRM a "<id>@lid": ya está guardado en el chat
     if (destinoJid.endsWith('@lid')) {
       await marcar('saliente @lid (envío del CRM)')
@@ -238,10 +255,12 @@ export async function evento(cuerpo: Cuerpo, registroId: number | null): Promise
           .eq('lead_id', leadId as string).eq('tipo', 'respuesta_bot').eq('contenido', texto.slice(0, 4000))
           .gte('created_at', new Date(Date.now() - 120_000).toISOString())
         if (repetido) {
+          // Ya la guardó el CRM al enviarla (recordatorio, bienvenida…): se le une el id de WhatsApp
+          if (wamid) await vincularWamid(telefono, texto, wamid)
           await marcar('respuesta del bot repetida (no se guarda)')
           return { ok: true, procesado: 'respuesta repetida' }
         }
-        await supabase.from('lead_interacciones').insert({ lead_id: leadId, tipo: 'respuesta_bot', contenido: texto.slice(0, 4000) })
+        await supabase.from('lead_interacciones').insert({ lead_id: leadId, tipo: 'respuesta_bot', contenido: texto.slice(0, 4000), wamid })
         await marcar('respuesta del bot guardada')
         return { ok: true, procesado: 'respuesta_bot' }
       }

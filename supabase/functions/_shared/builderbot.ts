@@ -26,7 +26,7 @@ export function problemasBuilderBot(): string[] {
  * Envía un WhatsApp (igual que enviarWhatsApp del Apps Script). La API a veces tarda: 45 s de espera.
  * mediaUrl: imagen o PDF público que se adjunta (BuilderBot lo descarga desde la URL).
  */
-export async function enviarWhatsApp(numero: string, texto: string, mediaUrl?: string): Promise<{ ok: boolean; error?: string }> {
+export async function enviarWhatsApp(numero: string, texto: string, mediaUrl?: string): Promise<{ ok: boolean; error?: string; wamid?: string }> {
   if (!BUILDERBOT_URL || !BUILDERBOT_API_KEY) {
     return { ok: false, error: 'Faltan los secretos BUILDERBOT_URL o BUILDERBOT_API_KEY' }
   }
@@ -40,7 +40,9 @@ export async function enviarWhatsApp(numero: string, texto: string, mediaUrl?: s
       body: JSON.stringify({ messages: { content: texto, ...(mediaUrl ? { mediaUrl } : {}) }, number: numero, checkIfExists: false }),
       signal: AbortSignal.timeout(esLid ? 35_000 : 45_000),
     })
-    if (res.ok) return { ok: true }
+    // API oficial de Meta: la respuesta trae el id del mensaje ("wamid…"), con el que luego llegan
+    // los avisos de entregado / leído (doble check)
+    if (res.ok) return { ok: true, wamid: /wamid\.[A-Za-z0-9+/=_-]+/.exec(await res.text().catch(() => ''))?.[0] }
     if (esLid && res.status === 504) return { ok: true }
     return { ok: false, error: `HTTP ${res.status}: ${(await res.text()).slice(0, 300)}` }
   } catch (e) {

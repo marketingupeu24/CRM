@@ -328,13 +328,13 @@ isOneToOne: false
                   ]
                 },"lead_interacciones": {
                   Row: {
-                    "adjunto_url": string | null,"autor_id": string | null,"contenido": string | null,"created_at": string,"error_envio": string | null,"estado_envio": string | null,"id": number,"lead_id": string,"tipo": Database["public"]['Enums']["interaccion_tipo"]
+                    "adjunto_url": string | null,"autor_id": string | null,"contenido": string | null,"created_at": string,"entregado_at": string | null,"error_entrega": string | null,"error_envio": string | null,"estado_envio": string | null,"id": number,"lead_id": string,"leido_at": string | null,"tipo": Database["public"]['Enums']["interaccion_tipo"],"wamid": string | null
                   }
                   Insert: {
-                    "adjunto_url"?: string | null,"autor_id"?: string | null,"contenido"?: string | null,"created_at"?: string,"error_envio"?: string | null,"estado_envio"?: string | null,"id"?: never,"lead_id": string,"tipo": Database["public"]['Enums']["interaccion_tipo"]
+                    "adjunto_url"?: string | null,"autor_id"?: string | null,"contenido"?: string | null,"created_at"?: string,"entregado_at"?: string | null,"error_entrega"?: string | null,"error_envio"?: string | null,"estado_envio"?: string | null,"id"?: never,"lead_id": string,"leido_at"?: string | null,"tipo": Database["public"]['Enums']["interaccion_tipo"],"wamid"?: string | null
                   }
                   Update: {
-                    "adjunto_url"?: string | null,"autor_id"?: string | null,"contenido"?: string | null,"created_at"?: string,"error_envio"?: string | null,"estado_envio"?: string | null,"id"?: never,"lead_id"?: string,"tipo"?: Database["public"]['Enums']["interaccion_tipo"]
+                    "adjunto_url"?: string | null,"autor_id"?: string | null,"contenido"?: string | null,"created_at"?: string,"entregado_at"?: string | null,"error_entrega"?: string | null,"error_envio"?: string | null,"estado_envio"?: string | null,"id"?: never,"lead_id"?: string,"leido_at"?: string | null,"tipo"?: Database["public"]['Enums']["interaccion_tipo"],"wamid"?: string | null
                   }
                   Relationships: [
                     {
@@ -1041,6 +1041,9 @@ isOneToOne: false
                            },
 "registrar_error":
 { Args: { "p_clave": string,"p_detalle": string }; Returns: boolean
+                           },
+"registrar_estado_whatsapp":
+{ Args: { "p_error"?: string,"p_estado": string,"p_momento"?: string,"p_wamid": string }; Returns: number
                            },
 "registrar_lead":
 { Args: { "p_es_lid"?: boolean,"p_mensaje"?: string,"p_telefono": string }; Returns: {

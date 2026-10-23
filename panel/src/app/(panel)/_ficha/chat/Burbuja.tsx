@@ -3,6 +3,20 @@ import { Adjunto } from '../Adjunto'
 import { diaLima } from '@/lib/texto'
 import { etiquetaDia, hora, quien, soloHora, type MensajeChat } from './utilidades'
 
+/**
+ * Estado de entrega de un mensaje enviado, como en WhatsApp:
+ * - con los avisos de Meta (si BuilderBot los reenvía): ✓✓ gris = entregado, ✓✓ azul = leído, ⚠️ = no se entregó;
+ * - sin ellos: ✓✓ azul si el alumno respondió después (le llegó y lo vio), si no ✓ (salió y WhatsApp lo aceptó).
+ */
+function Checks({ m, ultimoAlumno }: { m: MensajeChat; ultimoAlumno: string | null }) {
+  const fecha = (iso: string) => hora(iso)
+  if (m.error_entrega) return <span className="font-bold text-rose-600" title={`WhatsApp no lo entregó: ${m.error_entrega}`}> ⚠️</span>
+  if (m.leido_at) return <span className="font-bold text-sky-500" title={`Leído ${fecha(m.leido_at)}`}> ✓✓</span>
+  if (ultimoAlumno && ultimoAlumno > m.created_at) return <span className="font-bold text-sky-500" title="Le llegó y lo vio: el alumno respondió después"> ✓✓</span>
+  if (m.entregado_at) return <span className="font-bold text-slate-500" title={`Entregado ${fecha(m.entregado_at)}`}> ✓✓</span>
+  return <span title="Enviado. WhatsApp aún no confirma la entrega"> ✓</span>
+}
+
 export function Burbuja({ m, previo, ultimoAlumno, nombreAlumno, nombreAsesor, alReintentar }: {
   m: MensajeChat
   /** Mensaje anterior (para el separador de día y para agrupar mensajes seguidos) */
@@ -57,12 +71,7 @@ export function Burbuja({ m, previo, ultimoAlumno, nombreAlumno, nombreAsesor, a
             {/* Hora (y estado del envío) al final del texto, como en WhatsApp */}
             <span className="float-right mt-1.5 ml-3 text-[10px] leading-none text-slate-500" title={hora(m.created_at)}>
               {soloHora(m.created_at)}
-              {propio && (pendiente ? ' 🕓' : fallido ? ' ⚠️'
-                // ✓✓ azul: el alumno escribió después, así que le llegó y lo vio (BuilderBot no envía
-                // las confirmaciones de entrega de WhatsApp; ✓ = salió del CRM y WhatsApp lo aceptó)
-                : ultimoAlumno && ultimoAlumno > m.created_at
-                  ? <span className="font-bold text-sky-500" title="Le llegó y lo vio: el alumno respondió después"> ✓✓</span>
-                  : <span title="Enviado. WhatsApp no confirma la entrega hasta que el alumno responda"> ✓</span>)}
+              {propio && (pendiente ? ' 🕓' : fallido ? ' ⚠️' : <Checks m={m} ultimoAlumno={ultimoAlumno} />)}
             </span>
           </p>
           {fallido && (

@@ -117,6 +117,8 @@ Deno.serve(async (req) => {
     autor_id: yo.id,
     estado_envio: envio.ok ? 'enviado' : 'error',
     error_envio: envio.ok ? null : envio.error?.slice(0, 300) ?? 'Error desconocido',
+    // Id de WhatsApp: con él llegan los avisos de entregado / leído (doble check)
+    wamid: envio.wamid ?? null,
   }).select('*').single()
   if (error) console.error('[chat] No se pudo guardar el mensaje:', error.message)
 

@@ -123,6 +123,20 @@ await q(`select marcar_notificacion($1, false, 'HTTP 404: Deploy not found', fal
 const lC = await uno(`select * from leads where id=$1`, [l0.id])
 ok(lC.notificacion_estado === 'error' && lC.notificacion_intentos === 2, 'con WhatsApp caído el intento fallido no cuenta')
 
+seccion('doble check de WhatsApp (avisos de estado)')
+{
+  const msj = (await uno(`insert into lead_interacciones (lead_id, tipo, contenido, estado_envio, wamid) values ($1, 'mensaje_asesor', '*Prueba:* hola', 'enviado', 'wamid.PRUEBA1') returning id`, [l0.id])).id
+  await q(`select registrar_estado_whatsapp('wamid.PRUEBA1', 'delivered')`)
+  let e = await uno(`select entregado_at, leido_at from lead_interacciones where id = $1`, [msj])
+  ok(e.entregado_at !== null && e.leido_at === null, 'entregado: ✓✓ gris')
+  await q(`select registrar_estado_whatsapp('wamid.PRUEBA1', 'read')`)
+  await q(`select registrar_estado_whatsapp('wamid.PRUEBA1', 'delivered')`)
+  e = await uno(`select entregado_at, leido_at from lead_interacciones where id = $1`, [msj])
+  ok(e.entregado_at !== null && e.leido_at !== null, 'leído: ✓✓ azul (un aviso atrasado no lo retrocede)')
+  ok((await uno(`select registrar_estado_whatsapp('wamid.NOEXISTE', 'read') n`)).n === 0, 'un id desconocido no toca nada')
+  await q(`delete from lead_interacciones where id = $1`, [msj])
+}
+
 seccion('RLS como asesor (General A)')
 const ga = await asesor('General A')
 const gb = await asesor('General B')
