@@ -122,6 +122,9 @@ export function EditarDatos({ lead, puedeCelular = false, carreras = [] }: { lea
       if (detalles && !detalles.checked) detalles.click()
       setAbierto(true)
       setTimeout(() => {
+        // …y la sección plegable "Datos del lead" que lo contiene
+        const seccion = formulario.current?.closest('details')
+        if (seccion) seccion.open = true
         formulario.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
         formulario.current?.querySelector<HTMLInputElement>('input[name="nombre"]')?.focus()
       }, 50)
