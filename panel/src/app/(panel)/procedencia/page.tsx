@@ -35,7 +35,7 @@ function Tabla({ titulo, descripcion, filas, total }: { titulo: string; descripc
         <p className="py-8 text-center text-sm text-slate-400">Sin datos para estos filtros.</p>
       ) : (
         <div className="mt-3 overflow-x-auto">
-          <table className="w-full min-w-[34rem] text-sm">
+          <table className="w-full min-w-[26rem] text-sm">
             <thead className="text-left text-xs font-semibold tracking-wide text-slate-500 uppercase">
               <tr>
                 <th className="py-2 pr-3">Lugar</th>
@@ -48,12 +48,12 @@ function Tabla({ titulo, descripcion, filas, total }: { titulo: string; descripc
             <tbody className="divide-y divide-slate-100">
               {filas.map((f) => (
                 <tr key={f.clave} className="hover:bg-slate-50">
-                  <td className="max-w-[14rem] truncate py-2 pr-3" title={f.etiqueta}>
+                  <td className="max-w-[11rem] truncate py-2 pr-3" title={f.etiqueta}>
                     {f.enlace
                       ? <Link href={f.enlace as Route} className="font-medium text-marca-700 hover:underline">{f.etiqueta} ›</Link>
                       : <span className={f.clave === 'sin-dato' ? 'text-slate-500 italic' : ''}>{f.etiqueta}</span>}
                   </td>
-                  <td className="w-1/2 py-2 pr-3">
+                  <td className="w-2/5 py-2 pr-3">
                     <div className="flex items-center gap-2">
                       <div
                         className="h-3 rounded-r-[4px]"
@@ -124,7 +124,7 @@ export default async function PaginaProcedencia(props: PageProps<'/procedencia'>
 
   // Países
   const porPais = [...agrupar(filas, (f) => f.pais)].map(([k, v]): Fila => ({
-    clave: k ?? 'sin-dato', etiqueta: k ? nombrePais(k) : 'Sin dato (número oculto por WhatsApp)', ...v,
+    clave: k ?? 'sin-dato', etiqueta: k ? nombrePais(k) : 'Sin dato (número oculto)', ...v,
   })).sort(ordenar)
 
   // Perú: departamentos → provincias → distritos (según lo que se eligió)

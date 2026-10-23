@@ -105,3 +105,29 @@ test('conversaciones iniciadas (super admin): tabla general y por asesor', async
   await expect(page.getByRole('heading', { name: 'Conversaciones iniciadas' })).toBeVisible()
   await expect(page.locator('tfoot')).toContainText('Total general')
 })
+
+test('procedencia: reporte por departamento con detalle de provincias', async ({ page }) => {
+  await page.goto('/procedencia')
+  await expect(page.getByRole('heading', { name: 'Procedencia de los leads' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Perú por departamento' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Por país' })).toBeVisible()
+  await page.goto('/procedencia?dep=21')
+  await expect(page.getByRole('heading', { name: 'Provincias de Puno' })).toBeVisible()
+})
+
+test('procedencia en la ficha: el buscador sugiere Juliaca (sin guardar)', async ({ page }) => {
+  await page.goto('/leads')
+  await page.locator('a[href^="/leads/"][href*="-"]').first().click()
+  await page.waitForURL(/\/leads\/[0-9a-f-]{36}/)
+  // El formulario de datos está en el panel de detalles (en pantallas grandes se puede ocultar)
+  const detalles = page.locator('label', { hasText: '📋 Detalles' }).filter({ visible: true })
+  if (await detalles.count() && !(await detalles.locator('input').isChecked())) await detalles.click()
+  await page.getByRole('button', { name: /Editar datos/ }).filter({ visible: true }).first().click()
+  const buscador = page.locator('input[role=combobox]').filter({ visible: true })
+  const elegido = page.getByRole('button', { name: 'Cambiar' }).filter({ visible: true })
+  await expect(buscador.or(elegido).first()).toBeVisible()
+  if (await buscador.count()) {
+    await buscador.fill('julia')
+    await expect(page.getByRole('option', { name: /Juliaca/ }).first()).toBeVisible()
+  }
+})

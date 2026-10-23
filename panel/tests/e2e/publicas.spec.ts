@@ -16,3 +16,10 @@ test('sin sesión, el panel lleva al login', async ({ page }) => {
   await page.goto('/leads')
   await expect(page).toHaveURL(/\/login/)
 })
+
+test('la lista de lugares (UBIGEO) se descarga sin iniciar sesión', async ({ request }) => {
+  const r = await request.get('/ubigeos.json')
+  expect(r.ok()).toBe(true)
+  const filas = await r.json() as [string, string][]
+  expect(filas.find((f) => f[0] === '211101')?.[1]).toBe('Juliaca')
+})
