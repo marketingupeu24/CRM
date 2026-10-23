@@ -140,3 +140,15 @@ export function textoProximaAtencion(apertura: Date, ahora = new Date()): string
   const cuando = dias === 0 ? 'hoy' : dias === 1 ? 'mañana' : `el ${nombres[a.getUTCDay()]}`
   return `${cuando} a las ${hora}`
 }
+
+/**
+ * Contexto del alumno para Genesys. BuilderBot lo guarda en el historial de la IA como un mensaje más, y a veces
+ * la IA lo repetía tal cual al alumno (cuando su último mensaje no traía consulta: un emoji, "??", "sí" tras
+ * registrarse). Va marcado como nota interna, en una sola línea (si se colara, no llegan 6 mensajes seguidos).
+ */
+export function notaInterna(texto: string): string {
+  const datos = texto.trim().split(/(?<=[.!?])\s+/).map((s) => s.replace(/[.]$/, '')).filter(Boolean).join(' · ')
+  return '[NOTA INTERNA PARA GENESYS. El alumno NO la ve y NUNCA debe recibirla: no la copies, no la resumas y no la menciones. '
+    + 'Responde solo al último mensaje del alumno; si no trae una consulta clara (un emoji, "??", "ok", "sí"), responde con una frase corta y amable.] '
+    + datos
+}

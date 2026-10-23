@@ -1,5 +1,5 @@
 // Pruebas de las reglas de normalización. Uso: deno test supabase/functions/tests
-import { elegir, normalizarDni, normalizarTelefono, valorResuelto } from '../_shared/dominio.ts'
+import { elegir, normalizarDni, normalizarTelefono, notaInterna, valorResuelto } from '../_shared/dominio.ts'
 
 function igual(real: unknown, esperado: unknown) {
   if (real !== esperado) throw new Error(`Se esperaba ${JSON.stringify(esperado)} y llegó ${JSON.stringify(real)}`)
@@ -63,4 +63,11 @@ Deno.test('normalizarOrigen', async () => {
   igual(normalizarOrigen('Colportaje'), 'Colportaje')
   igual(normalizarOrigen('{refsUzHig_Origen}'), null)
   igual(normalizarOrigen('otro canal raro'), 'otro canal raro')
+})
+
+Deno.test('contexto para Genesys: nota interna en una sola línea', () => {
+  const nota = notaInterna('Datos que ya dio: Nombre: Brizet. Aún no está registrado: pide solo lo que falte. Hoy es viernes, 23 de octubre de 2026, 10:50 am (hora de Perú). La oficina está abierta ahora.')
+  igual(nota.startsWith('[NOTA INTERNA PARA GENESYS.'), true)
+  igual(nota.includes('\n'), false)
+  igual(nota.endsWith('Datos que ya dio: Nombre: Brizet · Aún no está registrado: pide solo lo que falte · Hoy es viernes, 23 de octubre de 2026, 10:50 am (hora de Perú) · La oficina está abierta ahora'), true)
 })

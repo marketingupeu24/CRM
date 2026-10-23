@@ -1,5 +1,5 @@
 // Genesys · Lo que el CRM sabe del alumno, para la memoria de Genesys (paso HTTP de BuilderBot).
-import { botAtiendeLead, proximaAtencion, textoProximaAtencion } from '../_shared/dominio.ts'
+import { botAtiendeLead, notaInterna, proximaAtencion, textoProximaAtencion } from '../_shared/dominio.ts'
 import { type Lead, type Respuesta, supabase, fechaCorta, fechaYHorario, FERIADOS } from './comun.ts'
 
 /** Solo lectura: contexto del alumno y si el bot debe responder, sin guardar nada. */
@@ -8,7 +8,7 @@ export async function contextoSinRegistrar(telefono: string): Promise<Respuesta>
   const { data: lead } = leadId ? await supabase.from('leads').select('*').eq('id', leadId as string).maybeSingle() : { data: null }
   const apertura = proximaAtencion(new Date(), FERIADOS)
   if (!lead) {
-    return { ok: true, registrado: false, bot_atiende: true, nombre: '', contexto: `Alumno nuevo: todavía no ha dado sus datos. ${fechaYHorario()}`, fuera_de_horario: !!apertura }
+    return { ok: true, registrado: false, bot_atiende: true, nombre: '', contexto: notaInterna(`Alumno nuevo: todavía no ha dado sus datos. ${fechaYHorario()}`), fuera_de_horario: !!apertura }
   }
   return {
     ok: true,
@@ -16,7 +16,7 @@ export async function contextoSinRegistrar(telefono: string): Promise<Respuesta>
     registrado: leadRegistrado(lead),
     bot_atiende: botAtiendeLead(lead.estado, lead.bot_pausado_hasta),
     nombre: lead.nombre ?? '',
-    contexto: `${await contextoDelAlumno(lead)} ${fechaYHorario()}`,
+    contexto: notaInterna(`${await contextoDelAlumno(lead)} ${fechaYHorario()}`),
     fuera_de_horario: !!apertura,
     proxima_atencion: apertura ? textoProximaAtencion(apertura) : '',
   }

@@ -1,5 +1,5 @@
 // Genesys · Registro de leads desde el bot: registrar, webhook (datos confirmados), QR de asesor, no-interesado y respuesta-bot.
-import { botAtiendeLead, leadEnEtapaBot, normalizarOrigen, elegir, type Fuente, FUENTES, HORARIO_ATENCION_TEXTO, normalizarDni, normalizarTelefono, proximaAtencion, textoProximaAtencion, valorResuelto } from '../_shared/dominio.ts'
+import { botAtiendeLead, leadEnEtapaBot, normalizarOrigen, notaInterna, elegir, type Fuente, FUENTES, HORARIO_ATENCION_TEXTO, normalizarDni, normalizarTelefono, proximaAtencion, textoProximaAtencion, valorResuelto } from '../_shared/dominio.ts'
 import { enviarWhatsApp } from '../_shared/builderbot.ts'
 import { destinoWhatsApp } from '../_shared/lid.ts'
 import { type Lead, type Cuerpo, type Respuesta, type ResultadoProcesar, supabase, MODO, ErrorApi, telefonoDe, buscarLead, registrarEvento, telefonosAsesores, fechaYHorario, FERIADOS, guardarEnChat } from './comun.ts'
@@ -61,7 +61,7 @@ export async function registrar(cuerpo: Cuerpo): Promise<Respuesta> {
   // dejar al bot sin respuesta.
   if (cuerpo.solo_contexto === true || cuerpo.solo_contexto === 'true') {
     const candidato = Object.values(cuerpo).map((v) => (typeof v === 'string' || typeof v === 'number' ? normalizarTelefono(String(v)) : null)).find(Boolean)
-    if (!candidato) return { ok: true, registrado: false, bot_atiende: true, contexto: `Alumno nuevo: todavía no ha dado sus datos. ${fechaYHorario()}`, aviso: 'No llegó un número válido' }
+    if (!candidato) return { ok: true, registrado: false, bot_atiende: true, contexto: notaInterna(`Alumno nuevo: todavía no ha dado sus datos. ${fechaYHorario()}`), aviso: 'No llegó un número válido' }
     return contextoSinRegistrar(candidato)
   }
   const telefono = telefonoDe(cuerpo)
@@ -109,7 +109,7 @@ export async function registrar(cuerpo: Cuerpo): Promise<Respuesta> {
     proxima_atencion: apertura ? textoProximaAtencion(apertura) : '',
     // Lo que el CRM ya sabe del alumno: BuilderBot lo pasa al asistente para no volver a pedir datos
     registrado: leadRegistrado(lead),
-    contexto: await contextoDelAlumno(lead),
+    contexto: notaInterna(await contextoDelAlumno(lead)),
   }
 }
 
