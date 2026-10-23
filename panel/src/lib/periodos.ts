@@ -1,10 +1,11 @@
+import { hoyLima } from '@/lib/texto'
 // Rangos de fechas (hora de Lima) para filtrar leads por mes o por campaña.
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'setiembre', 'octubre', 'noviembre', 'diciembre']
 
 /** "2026-09" de hoy en Lima, desplazado n meses. */
 export function mesLima(desplazar = 0): string {
-  const [a, m] = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date()).split('-').map(Number)
+  const [a, m] = hoyLima().split('-').map(Number)
   const d = new Date(Date.UTC(a, m - 1 + desplazar, 1))
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
 }

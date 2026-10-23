@@ -1,6 +1,7 @@
 // Reglas de las alertas automáticas de seguimiento (página Pendientes y contador del menú).
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@crm/db'
+import { hoyLima } from '@/lib/texto'
 
 /** Lead asignado al que nadie escribió después de estas horas. */
 export const HORAS_SIN_CONTACTAR = 2
@@ -15,7 +16,7 @@ export function limitesAlertas(ahora = Date.now()) {
 }
 
 export function finDeHoyLima(): string {
-  const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date())
+  const hoy = hoyLima()
   return `${hoy}T23:59:59-05:00`
 }
 

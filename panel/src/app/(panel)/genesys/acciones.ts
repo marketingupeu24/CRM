@@ -6,6 +6,7 @@ import { PARTES_GENESYS } from '@crm/db'
 import { mensajeError } from '@/lib/formato'
 import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
+import { hoyLima } from '@/lib/texto'
 
 export interface Resultado {
   error?: string
@@ -43,10 +44,6 @@ export async function guardarFicha(id: number | null, parte: string, _previo: Re
   if (error) return { error: mensajeError(error) }
   revalidatePath('/genesys')
   return { ok: id ? 'Guardado.' : 'Ficha agregada.' }
-}
-
-function hoyLima(): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date())
 }
 
 export async function cambiarActivo(id: number, activo: boolean): Promise<Resultado> {

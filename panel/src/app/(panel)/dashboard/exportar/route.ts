@@ -5,6 +5,7 @@ import ExcelJS from 'exceljs'
 import { ETIQUETAS_ESTADO, type LeadEstado } from '@crm/db'
 import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
+import { hoyLima } from '@/lib/texto'
 
 const FECHA = /^\d{4}-\d{2}-\d{2}$/
 const AZUL = 'FF003865'
@@ -157,7 +158,7 @@ export async function GET(request: Request) {
     ['Total', r.por_motivo.reduce((s, x) => s + x.total, 0), 1])
 
   const archivo = await libro.xlsx.writeBuffer()
-  const nombre = `dashboard-${desde || 'inicio'}-a-${hasta || new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date())}.xlsx`
+  const nombre = `dashboard-${desde || 'inicio'}-a-${hasta || hoyLima()}.xlsx`
   return new Response(archivo as ArrayBuffer, {
     headers: {
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

@@ -5,6 +5,7 @@ import { ESTADOS_LEAD, ETIQUETAS_ESTADO, ETIQUETAS_FUENTE, type Fuente, type Lea
 import { rangoMes } from '@/lib/periodos'
 import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
+import { hoyLima } from '@/lib/texto'
 
 const LOTE = 1000          // la API devuelve máximo 1000 filas por consulta
 const MAXIMO = 20_000
@@ -90,7 +91,7 @@ export async function GET(request: Request) {
 
   // BOM para que Excel reconozca tildes; ";" es el separador que usa Excel en español
   const csv = '﻿' + [encabezados.join(';'), ...lineas].join('\r\n')
-  const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date())
+  const hoy = hoyLima()
   // El nombre del archivo dice qué periodo o campaña contiene
   const sufijo = campana
     ? campana.nombre.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase()

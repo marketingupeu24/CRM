@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { mensajeError } from '@/lib/formato'
 import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
+import { hoyLima } from '@/lib/texto'
 
 export interface Resultado {
   error?: string
@@ -19,7 +20,7 @@ export async function guardarRecordatorio(id: number | null, _previo: Resultado,
   const automatico = formData.get('tipo') === 'inactividad'
   const diasSinContacto = Number.parseInt(String(formData.get('dias_sin_contacto') ?? ''), 10)
   const diasMaximo = Number.parseInt(String(formData.get('dias_maximo') ?? '30'), 10)
-  const enviarEl = automatico ? new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date()) : String(formData.get('enviar_el') ?? '')
+  const enviarEl = automatico ? hoyLima() : String(formData.get('enviar_el') ?? '')
   const desdeHora = String(formData.get('desde_hora') ?? '09:00')
   if (titulo.length < 2) return { error: 'Escribe un título.' }
   if (mensaje.length < 10 || mensaje.length > 1500) return { error: 'El mensaje debe tener entre 10 y 1500 caracteres.' }

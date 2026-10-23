@@ -10,14 +10,11 @@ import { FiltrosAvanzados } from '@/components/FiltrosAvanzados'
 import { BarraMasiva } from './BarraMasiva'
 import { VentanaWhatsApp } from '@/components/VentanaWhatsApp'
 import { crearClienteServidor } from '@/lib/supabase/server'
+import { parametro } from '@/lib/texto'
 
 export const metadata: Metadata = { title: 'Leads' }
 
 const POR_PAGINA = 50
-
-function parametro(valor: string | string[] | undefined): string {
-  return (Array.isArray(valor) ? valor[0] : valor)?.trim() ?? ''
-}
 
 export default async function PaginaLeads(props: PageProps<'/leads'>) {
   const sp = await props.searchParams

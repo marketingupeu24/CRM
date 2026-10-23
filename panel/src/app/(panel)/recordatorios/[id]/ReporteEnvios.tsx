@@ -4,6 +4,7 @@
 // filtrable por estado, con buscador y descarga en CSV.
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
+import { paraBuscar } from '@/lib/texto'
 
 export interface FilaReporte {
   lead_id: string
@@ -24,7 +25,6 @@ type Filtro = 'todos' | 'enviado' | 'respondio' | 'sin_respuesta' | 'baja' | 'er
 const hora = (iso: string | null) => (iso
   ? new Intl.DateTimeFormat('es-PE', { timeZone: 'America/Lima', day: '2-digit', month: '2-digit', hour: 'numeric', minute: '2-digit' }).format(new Date(iso))
   : '')
-const normal = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 const pct = (n: number, d: number) => (d ? `${Math.round((n / d) * 100)} %` : '—')
 
 const CUMPLE: Record<Filtro, (f: FilaReporte) => boolean> = {
@@ -42,10 +42,10 @@ export function ReporteEnvios({ filas, titulo }: { filas: FilaReporte[]; titulo:
   const [buscar, setBuscar] = useState('')
   const n = (f: Filtro) => filas.filter(CUMPLE[f]).length
   const enviados = n('enviado')
-  const q = normal(buscar.trim())
+  const q = paraBuscar(buscar.trim())
   const lista = useMemo(() => filas
     .filter(CUMPLE[filtro])
-    .filter((f) => !q || normal(`${f.nombre ?? ''} ${f.telefono} ${f.carrera ?? ''} ${f.asesor ?? ''}`).includes(q))
+    .filter((f) => !q || paraBuscar(`${f.nombre ?? ''} ${f.telefono} ${f.carrera ?? ''} ${f.asesor ?? ''}`).includes(q))
     .sort((a, b) => (b.enviado_at ?? '').localeCompare(a.enviado_at ?? '')), [filas, filtro, q])
 
   const tarjetas: { f: Filtro; t: string; v: number; d: string; estilo?: string }[] = [

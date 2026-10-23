@@ -7,7 +7,7 @@ import { useAviso, useConfirmar } from '@/components/Confirmacion'
 import { ESTADOS_LEAD, ETIQUETAS_ESTADO, GRADOS, MOTIVOS_PERDIDA, ORIGENES, type Lead, type LeadEstado } from '@crm/db'
 import {
   actualizarDatos, agregarNota, cambiarEstado, eliminarNota, enviarAPapelera, reasignarAsesor, type Resultado,
-} from '../acciones'
+} from '@/app/(panel)/leads/acciones'
 
 function Mensaje({ resultado, textoOk }: { resultado: Resultado; textoOk?: string }) {
   if (resultado.error) return <p role="alert" className="text-sm text-rose-600">{resultado.error}</p>

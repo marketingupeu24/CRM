@@ -5,6 +5,7 @@ import type { FichaGenesys, ParteGenesys } from '@crm/db'
 import { useConfirmar } from '@/components/Confirmacion'
 import type { Aviso } from '@/lib/genesys'
 import { agregarFeriado, cambiarActivo, eliminarFeriado, eliminarFicha, guardarFicha, registrarVersion, type Resultado } from './acciones'
+import { hoyLima } from '@/lib/texto'
 
 function Mensaje({ r }: { r: Resultado }) {
   if (r.error) return <p role="alert" className="text-sm text-rose-600">{r.error}</p>
@@ -65,7 +66,7 @@ export function TarjetaFicha({ parte, ficha, editable }: { parte: ParteGenesys; 
   const [pendiente, iniciar] = useTransition()
   const confirmar = useConfirmar()
   const texto = resumen(parte, ficha)
-  const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date())
+  const hoy = hoyLima()
   const diaMes = (f: string) => new Intl.DateTimeFormat('es-PE', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(`${f}T00:00:00Z`))
   const vencida = !!ficha.vence_el && ficha.vence_el < hoy
   const pronto = !!ficha.vence_el && !vencida && Date.parse(`${ficha.vence_el}T00:00:00Z`) - Date.parse(`${hoy}T00:00:00Z`) <= 7 * 86_400_000

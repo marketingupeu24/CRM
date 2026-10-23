@@ -5,6 +5,7 @@ import { fechasEnFicha } from '@/lib/genesys'
 import { obtenerSesion } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { Vencimientos, type FichaVencimiento } from './Vencimientos'
+import { hoyLima } from '@/lib/texto'
 
 export const metadata: Metadata = { title: 'Vencimientos del prompt' }
 
@@ -13,7 +14,7 @@ export default async function PaginaVencimientos() {
   const { puede } = await obtenerSesion()
   const editable = puede('conocimiento')
   const supabase = await crearClienteServidor()
-  const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date())
+  const hoy = hoyLima()
   const [{ data: filas, error }, { data: version }] = await Promise.all([
     supabase.from('genesys_fichas').select('id, parte, titulo, campos, activo, orden, vence_el, vencida_at').order('orden').order('titulo'),
     supabase.from('genesys_versiones').select('created_at').order('created_at', { ascending: false }).limit(1).maybeSingle(),

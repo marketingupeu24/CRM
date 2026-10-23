@@ -5,6 +5,7 @@ import { fechaCorta, type Campana } from '@/lib/periodos'
 import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { AccionesCampana, FormularioCampana } from './Formularios'
+import { hoyLima } from '@/lib/texto'
 
 export const metadata: Metadata = { title: 'Campañas' }
 
@@ -21,7 +22,7 @@ export default async function PaginaCampanas() {
   const supabase = await crearClienteServidor()
   const { data, error } = await supabase.rpc('resumen_campanas')
   const campanas = (data ?? []) as unknown as ResumenCampana[]
-  const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date())
+  const hoy = hoyLima()
 
   return (
     <div className="space-y-6">

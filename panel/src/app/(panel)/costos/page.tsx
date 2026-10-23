@@ -5,12 +5,9 @@ import { fechaHora, num } from '@/lib/formato'
 import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { GeneradorProforma, type LeadProforma } from './GeneradorProforma'
+import { parametro, hoyLima } from '@/lib/texto'
 
 export const metadata: Metadata = { title: 'Proformas' }
-
-function parametro(v: string | string[] | undefined): string {
-  return (Array.isArray(v) ? v[0] : v)?.trim() ?? ''
-}
 
 export default async function PaginaCostos(props: PageProps<'/costos'>) {
   const sp = await props.searchParams
@@ -50,7 +47,7 @@ export default async function PaginaCostos(props: PageProps<'/costos'>) {
         asesor={perfil.nombre}
         carreraSugerida={carreraParecida(lead?.carrera, 'PRES', 'JUL')}
         emitidaIso={new Date().toISOString()}
-        venceInicial={new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date(Date.now() + 15 * 86_400_000))}
+        venceInicial={hoyLima(15)}
       />
 
       {!!recientes?.length && (

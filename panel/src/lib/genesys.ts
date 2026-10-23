@@ -2,6 +2,7 @@
 // ("Prompt de Genesys", dividido por partes) y lo revisa antes de copiarlo.
 // Los costos no se escriben a mano: salen del tarifario de las proformas.
 import { costoCarreraTexto, PARTES_GENESYS, type FichaGenesys } from '@crm/db'
+import { diaLima } from '@/lib/texto'
 
 /** Igual que el horario de atención del CRM (public.franjas_atencion). */
 const HORARIO_ATENCION = 'Lunes a jueves de 8:00 am a 12:30 pm y de 2:00 pm a 6:00 pm; viernes de 8:00 am a 1:00 pm; sábado y domingo cerrado.'
@@ -45,7 +46,7 @@ function fichaGenerica(f: FichaGenesys, etiquetas: Record<string, string>): stri
 export function promptGenesys(fichas: FichaGenesys[], fecha: Date = new Date(), feriados: { fecha: string; nombre: string }[] = []): string {
   const hoy = new Intl.DateTimeFormat('es-PE', { timeZone: 'America/Lima', day: '2-digit', month: '2-digit', year: 'numeric' }).format(fecha)
   // Las vencidas no van aunque el cron de medianoche aún no las haya desactivado
-  const hoyIso = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(fecha)
+  const hoyIso = diaLima(fecha)
   const activas = fichas.filter((f) => f.activo && !(f.vence_el && f.vence_el < hoyIso))
     .sort((a, b) => a.orden - b.orden || a.titulo.localeCompare(b.titulo))
   const de = (parte: string) => activas.filter((f) => f.parte === parte)
@@ -119,7 +120,7 @@ export function fechasEnFicha(f: FichaGenesys): string[] {
  * Las fechas sin año ("del 14 de septiembre al 6 de noviembre") no se revisan: serían ambiguas.
  */
 export function fechasVencidas(f: FichaGenesys, hoy: Date): string[] {
-  const hoyLima = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(hoy)
+  const hoyLima = diaLima(hoy)
   const texto = Object.values(f.campos).join(' ').toLowerCase().replace('setiembre', 'septiembre')
   const vencidas: string[] = []
   for (const m of texto.matchAll(/\b(\d{1,2}) de (enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre) del? (\d{4})\b/g)) {

@@ -5,6 +5,7 @@ import { useActionState, useState, useTransition } from 'react'
 import { CARRERAS_OFICIALES } from '@crm/db'
 import { useAviso, useConfirmar } from '@/components/Confirmacion'
 import { cambiarActivo, eliminarRecordatorio, guardarRecordatorio, guardarSeleccion, listarCandidatos, type Candidato, type Resultado } from './acciones'
+import { paraBuscar } from '@/lib/texto'
 
 const OPCIONES_CARRERA = [...CARRERAS_OFICIALES, 'CEPRE']
 
@@ -88,9 +89,8 @@ function Destinatarios({ rec }: { rec: Recordatorio }) {
       setMarcados(new Set((res.candidatos ?? []).filter((c) => c.marcado).map((c) => c.id)))
     })
   }
-  const normal = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-  const q = normal(buscar.trim())
-  const visibles = (lista ?? []).filter((c) => !q || normal(`${c.nombre ?? ''} ${c.telefono} ${c.carrera ?? ''} ${c.asesor ?? ''}`).includes(q))
+  const q = paraBuscar(buscar.trim())
+  const visibles = (lista ?? []).filter((c) => !q || paraBuscar(`${c.nombre ?? ''} ${c.telefono} ${c.carrera ?? ''} ${c.asesor ?? ''}`).includes(q))
   const todos = !!lista && marcados.size === lista.length
   const poner = (ids: string[], valor: boolean) => setMarcados((m) => { const n = new Set(m); for (const id of ids) { if (valor) n.add(id); else n.delete(id) } return n })
   // En fecha la lista queda fija (se envía una sola vez a esos); los automáticos con todos marcados siguen sumando a los nuevos

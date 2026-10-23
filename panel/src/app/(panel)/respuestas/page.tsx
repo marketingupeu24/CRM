@@ -4,18 +4,16 @@ import { agruparPorCategoria, CATEGORIAS_RESPUESTA, type RespuestaRapida } from 
 import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { FilaRespuesta, FormularioRespuesta, type AsesorOpcion } from './Formularios'
+import { paraBuscar, parametro } from '@/lib/texto'
 
 export const metadata: Metadata = { title: 'Respuestas rápidas' }
-
-const texto = (v: string | string[] | undefined) => ((Array.isArray(v) ? v[0] : v) ?? '').trim()
-const normalizar = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
 export default async function PaginaRespuestas(props: PageProps<'/respuestas'>) {
   // Todos los que usan el chat ven esta página; quien tiene el permiso "respuestas" administra las de todos
   const { perfil, puede } = await exigirPermiso('chats')
   const sp = await props.searchParams
-  const cat = CATEGORIAS_RESPUESTA.some((c) => c.clave === texto(sp.cat)) ? texto(sp.cat) : ''
-  const q = texto(sp.q).slice(0, 60)
+  const cat = CATEGORIAS_RESPUESTA.some((c) => c.clave === parametro(sp.cat)) ? parametro(sp.cat) : ''
+  const q = parametro(sp.q).slice(0, 60)
   const admin = puede('respuestas')
   const supabase = await crearClienteServidor()
   const [{ data: respuestas, error }, { data: ocultas }, { data: asesoresR }] = await Promise.all([
@@ -29,10 +27,10 @@ export default async function PaginaRespuestas(props: PageProps<'/respuestas'>) 
   const nombreDe = new Map(asesores.map((a) => [a.id, a.nombre]))
   const noUsa = new Set((ocultas ?? []).map((o) => o.respuesta_id))
   const visibles = (respuestas ?? []).filter((r) => admin || r.asesor_id === null || r.asesor_id === perfil.id)
-  const palabras = normalizar(q).split(/\s+/).filter(Boolean)
+  const palabras = paraBuscar(q).split(/\s+/).filter(Boolean)
   const todas = visibles
     .filter((r) => !cat || r.categoria === cat)
-    .filter((r) => palabras.every((p) => normalizar(`${r.titulo} ${r.contenido}`).includes(p)))
+    .filter((r) => palabras.every((p) => paraBuscar(`${r.titulo} ${r.contenido}`).includes(p)))
   const mias = todas.filter((r) => r.asesor_id === perfil.id)
   const paraTodos = todas.filter((r) => r.asesor_id === null)
   const deOtros = todas.filter((r) => r.asesor_id !== null && r.asesor_id !== perfil.id)

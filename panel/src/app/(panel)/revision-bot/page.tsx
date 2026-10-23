@@ -4,12 +4,9 @@ import { haceCuanto } from '@/lib/formato'
 import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { BotonRevisada } from './Controles'
+import { parametro } from '@/lib/texto'
 
 export const metadata: Metadata = { title: 'Revisión del bot' }
-
-function parametro(v: string | string[] | undefined): string {
-  return (Array.isArray(v) ? v[0] : v)?.trim() ?? ''
-}
 
 export default async function PaginaRevisionBot(props: PageProps<'/revision-bot'>) {
   const sp = await props.searchParams

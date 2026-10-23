@@ -9,6 +9,7 @@ import {
 } from '@crm/db'
 import { HojaProforma } from '@/components/proforma/HojaProforma'
 import { enviarProformaPorChat, type TipoAdjunto } from '@/lib/proforma-cliente'
+import { diaLima } from '@/lib/texto'
 
 export interface DatosProformaRapida {
   leadId: string
@@ -37,7 +38,7 @@ export function ProformaRapida({ datos, alEnviar }: { datos: DatosProformaRapida
   const opciones = { modalidad, campus, carrera, beneficio, pago } as const
   const k = useMemo(() => calcularProforma(opciones), [modalidad, campus, carrera, beneficio, pago]) // eslint-disable-line react-hooks/exhaustive-deps
   const vence = useMemo(() => new Date(emitida.getTime() + 15 * 86_400_000), [emitida])
-  const venceIso = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(vence)
+  const venceIso = diaLima(vence)
 
   function enviar() {
     iniciar(async () => {

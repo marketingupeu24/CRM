@@ -8,6 +8,7 @@ import { promptGenesys } from '@/lib/genesys'
 import { evaluar, MAXIMO_MENSAJES, proveedorIA, responderConIA, type Prueba } from '@/lib/pruebas-genesys'
 import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
+import { hoyLima } from '@/lib/texto'
 
 export interface ResultadoPrueba {
   error?: string
@@ -20,7 +21,7 @@ type Cliente = Awaited<ReturnType<typeof crearClienteServidor>>
 
 /** El prompt tal como está ahora en el CRM (el mismo que se copia para BuilderBot). */
 async function armarPrompt(supabase: Cliente): Promise<string> {
-  const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date())
+  const hoy = hoyLima()
   const [{ data: fichas }, { data: feriados }] = await Promise.all([
     supabase.from('genesys_fichas').select('id, parte, titulo, campos, activo, orden, vence_el').order('orden').order('titulo'),
     supabase.from('feriados').select('fecha, nombre').gte('fecha', hoy).order('fecha').limit(30),

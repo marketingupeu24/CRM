@@ -2,7 +2,8 @@
 
 // "📞 Llamé": registra una llamada o un WhatsApp del celular personal del asesor, con el resultado.
 import { useActionState, useEffect, useState } from 'react'
-import { registrarContacto, type Resultado } from '../acciones'
+import { registrarContacto, type Resultado } from '@/app/(panel)/leads/acciones'
+import { diaLima } from '@/lib/texto'
 
 const RESULTADOS = [
   { valor: 'contesto', llamada: '✅ Contestó', whatsapp: '✅ Respondió' },
@@ -13,7 +14,7 @@ const RESULTADOS = [
 /** Mañana a las 9:00 (hora de Perú), para "volver a llamar" */
 function mananaNueve(): string {
   const d = new Date(Date.now() + 86_400_000)
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(d) + 'T09:00'
+  return diaLima(d) + 'T09:00'
 }
 
 export function RegistrarContacto({ leadId }: { leadId: string }) {

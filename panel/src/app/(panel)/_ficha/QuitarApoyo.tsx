@@ -2,7 +2,7 @@
 
 // "🤝 Atendidos como apoyo": quitar de mi lista un lead de otro asesor que ya no necesito ver.
 import { useTransition } from 'react'
-import { ocultarApoyo } from '../acciones'
+import { ocultarApoyo } from '@/app/(panel)/leads/acciones'
 import { useAviso, useConfirmar } from '@/components/Confirmacion'
 
 export function QuitarApoyo({ leadId, nombre }: { leadId: string; nombre: string }) {

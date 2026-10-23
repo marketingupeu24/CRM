@@ -5,7 +5,7 @@ import { useTransition } from 'react'
 import { botAtiendeLead, type LeadEstado } from '@crm/db'
 import { useAviso } from '@/components/Confirmacion'
 import { YaRespondi } from '@/components/YaRespondi'
-import { cambiarEstado, pausarBot, type Resultado } from '../acciones'
+import { cambiarEstado, pausarBot, type Resultado } from '@/app/(panel)/leads/acciones'
 
 function horaLima(iso: string): string {
   return new Intl.DateTimeFormat('es-PE', { timeZone: 'America/Lima', hour: '2-digit', minute: '2-digit' }).format(new Date(iso))

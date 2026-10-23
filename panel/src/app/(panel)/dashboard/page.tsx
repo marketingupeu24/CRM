@@ -8,6 +8,7 @@ import {
 } from './Graficos'
 import { EmbudoPorOrigen } from './EmbudoPorOrigen'
 import { duracion, num, pct } from '@/lib/formato'
+import { hoyLima } from '@/lib/texto'
 
 export const metadata: Metadata = { title: 'Dashboard' }
 
@@ -37,11 +38,6 @@ interface Resumen {
 
 const MAX_CARRERAS = 10
 const FECHA = /^\d{4}-\d{2}-\d{2}$/
-
-function hoyLima(desplazarDias = 0): string {
-  const d = new Date(Date.now() + desplazarDias * 86_400_000)
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(d)
-}
 
 function Indicador({ titulo, valor, detalle }: { titulo: string; valor: string; detalle?: string }) {
   return (

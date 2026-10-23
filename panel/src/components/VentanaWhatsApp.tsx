@@ -4,6 +4,7 @@
 // responder libremente durante 24 horas; pasado ese tiempo solo con una plantilla aprobada.
 // Muestra cuánto tiempo queda (se actualiza cada minuto).
 import { useEffect, useState } from 'react'
+import { diaLima } from '@/lib/texto'
 
 const VENTANA_MS = 24 * 3_600_000
 /** Menos de esto: "por cerrarse" (ámbar) */
@@ -74,7 +75,7 @@ export function VentanaWhatsApp({ ultimoMensajeAlumno, variante = 'chip' }: { ul
 
 /** "hoy 10:42 a. m.", "mañana 9:00 a. m." o "lun 27/10, 9:00 a. m." (hora de Lima) */
 export function cuandoCierra(ms: number, ahora: number) {
-  const dia = (t: number) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date(t))
+  const dia = (t: number) => diaLima(t)
   const hora = new Intl.DateTimeFormat('es-PE', { timeZone: 'America/Lima', hour: 'numeric', minute: '2-digit' }).format(new Date(ms))
   if (dia(ms) === dia(ahora)) return `hoy ${hora}`
   if (dia(ms) === dia(ahora + 86_400_000)) return `mañana ${hora}`

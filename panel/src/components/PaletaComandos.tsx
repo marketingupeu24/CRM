@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ETIQUETAS_ESTADO, type LeadEstado, type Modulo } from '@crm/db'
 import { crearClienteNavegador } from '@/lib/supabase/client'
+import { paraBuscar } from '@/lib/texto'
 
 interface Item {
   id: string
@@ -39,8 +40,6 @@ const PAGINAS_ADMIN: Omit<Item, 'id' | 'grupo'>[] = [
   { titulo: 'Módulos y permisos', icono: '🔐', ir: '/permisos', detalle: 'Qué puede ver cada usuario', soloSuperadmin: true },
   { titulo: 'Papelera', icono: '🗑', ir: '/papelera', detalle: 'Leads y usuarios eliminados', modulo: 'papelera' },
 ]
-
-const normalizar = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
 /** Abre el buscador desde cualquier botón: window.dispatchEvent(new Event('abrir-buscador')) */
 export function abrirBuscador() {
@@ -97,10 +96,10 @@ export function PaletaComandos({ permisos, superadmin = false }: { permisos: Mod
   }, [texto, abierta, permisos])
 
   const items = useMemo(() => {
-    const q = normalizar(texto.trim())
+    const q = paraBuscar(texto.trim())
     const paginas = [...PAGINAS, ...PAGINAS_ADMIN]
       .filter((p) => (p.soloSuperadmin ? superadmin : !p.modulo || permisos.includes(p.modulo)))
-      .filter((p) => !q || normalizar(`${p.titulo} ${p.detalle ?? ''}`).includes(q))
+      .filter((p) => !q || paraBuscar(`${p.titulo} ${p.detalle ?? ''}`).includes(q))
       .map((p, i) => ({ ...p, id: `pag-${i}`, grupo: 'Ir a' as const }))
     return [...leads, ...paginas]
   }, [texto, leads, permisos, superadmin])

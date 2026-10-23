@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { FichaLead } from '../../leads/[id]/page'
+import { FichaLead } from '../../_ficha/FichaLead'
 
 // Chats: la conversación con la bandeja a la izquierda, dentro de la sección Chats (el menú marca "Chats").
 export const metadata: Metadata = { title: 'Chat' }

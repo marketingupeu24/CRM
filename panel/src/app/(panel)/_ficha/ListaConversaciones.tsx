@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { guardarPreferencia, type PreferenciaBandeja } from '@/lib/bandeja'
 import { VentanaWhatsApp } from '@/components/VentanaWhatsApp'
+import { paraBuscar } from '@/lib/texto'
 
 export interface Conversacion {
   id: string
@@ -25,8 +26,6 @@ export interface Conversacion {
 }
 
 type Filtro = PreferenciaBandeja['filtro']
-
-const normalizar = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
 export interface PropsBandeja {
   actualId: string
@@ -55,9 +54,9 @@ export function ListaConversaciones({ conversaciones, actualId, preferencia, ase
   useEffect(() => { actual.current?.scrollIntoView({ block: 'nearest' }) }, [actualId])
 
   const pendientes = conversaciones.filter((c) => c.sinResponder).length
-  const q = normalizar(buscar.trim())
+  const q = paraBuscar(buscar.trim())
   const lista = conversaciones.filter((c) =>
-    (filtro === 'todos' || c.sinResponder) && (!q || normalizar(c.nombre).includes(q)))
+    (filtro === 'todos' || c.sinResponder) && (!q || paraBuscar(c.nombre).includes(q)))
 
   const pestana = (valor: Filtro, texto: React.ReactNode) => (
     <button

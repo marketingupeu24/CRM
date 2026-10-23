@@ -10,6 +10,7 @@ import { comprimirImagen } from '@/lib/imagen'
 import { Adjunto } from './Adjunto'
 import { BarraVentana, VentanaWhatsApp, ventanaCerrada } from '@/components/VentanaWhatsApp'
 import { useConfirmar } from '@/components/Confirmacion'
+import { paraBuscar, diaLima } from '@/lib/texto'
 
 /** Pantalla táctil (celular): Enter hace salto de línea y se envía con el botón */
 const TACTIL = '(pointer: coarse)'
@@ -17,11 +18,6 @@ function suscribirTactil(cambio: () => void) {
   const m = matchMedia(TACTIL)
   m.addEventListener('change', cambio)
   return () => m.removeEventListener('change', cambio)
-}
-
-/** Minúsculas y sin tildes, para buscar respuestas rápidas */
-function normalizar(t: string): string {
-  return t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 }
 
 /** Atajo "/texto" al inicio de la última línea del mensaje: devuelve dónde empieza y lo buscado */
@@ -33,11 +29,13 @@ function atajoEscrito(texto: string): { desde: number; buscado: string } | null 
 
 /** Respuestas que coinciden con lo buscado: primero las que lo tienen en el título */
 function buscarRespuestas<T extends { titulo: string; contenido: string }>(respuestas: T[], buscado: string): T[] {
-  const palabras = normalizar(buscado).split(/\s+/).filter(Boolean)
+  const palabras = paraBuscar(buscado).split(/\s+/).filter(Boolean)
   if (!palabras.length) return respuestas
-  const enTitulo = respuestas.filter((r) => palabras.every((p) => normalizar(r.titulo).includes(p)))
-  const enTexto = respuestas.filter((r) => !enTitulo.includes(r) && palabras.every((p) => normalizar(r.titulo + ' ' + r.contenido).includes(p)))
-  return [...enTitulo, ...enTexto]
+  const normalizadas = respuestas.map((r) => ({ r, titulo: paraBuscar(r.titulo), todo: paraBuscar(r.titulo + ' ' + r.contenido) }))
+  const enTitulo = normalizadas.filter((n) => palabras.every((p) => n.titulo.includes(p)))
+  const yaEnTitulo = new Set(enTitulo)
+  const enTexto = normalizadas.filter((n) => !yaEnTitulo.has(n) && palabras.every((p) => n.todo.includes(p)))
+  return [...enTitulo, ...enTexto].map((n) => n.r)
 }
 
 export type MensajeChat = LeadInteraccion & { autor_nombre?: string | null }
@@ -46,10 +44,7 @@ export type MensajeChat = LeadInteraccion & { autor_nombre?: string | null }
 const TIPOS_ADJUNTO = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
 const MAX_ADJUNTO = 10 * 1024 * 1024
 
-/** Día en Lima (AAAA-MM-DD) para separar la conversación por días. */
-function diaLima(iso: string): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date(iso))
-}
+// Día en Lima (AAAA-MM-DD) para separar la conversación por días: diaLima de @/lib/texto
 
 /** "Hoy", "Ayer" o "lunes 13 de octubre" (con el año si no es el actual). */
 function etiquetaDia(dia: string): string {
@@ -379,7 +374,6 @@ export function Conversacion(
   })()
   const nombreAutor = (m: MensajeChat) =>
     m.autor_nombre ?? (m.autor_id ? nombresAutores[m.autor_id] : undefined) ?? 'Asesor'
-
 
   return (
     <section className="@container tarjeta flex min-h-0 flex-1 flex-col overflow-hidden" id="chat">

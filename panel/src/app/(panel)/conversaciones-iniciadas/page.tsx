@@ -4,6 +4,7 @@ import { InsigniaEstado } from '@/components/InsigniaEstado'
 import { fechaHora, num, pct } from '@/lib/formato'
 import { exigirSuperadmin } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
+import { hoyLima, parametro } from '@/lib/texto'
 
 export const metadata: Metadata = { title: 'Conversaciones iniciadas' }
 
@@ -12,15 +13,13 @@ export const metadata: Metadata = { title: 'Conversaciones iniciadas' }
 
 const FECHA = /^\d{4}-\d{2}-\d{2}$/
 const UUID = /^[0-9a-f-]{36}$/i
-const texto = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? ''
-const hoyLima = (dias = 0) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date(Date.now() + dias * 86_400_000))
 
 export default async function PaginaConversacionesIniciadas(props: PageProps<'/conversaciones-iniciadas'>) {
   await exigirSuperadmin()
   const sp = await props.searchParams
-  const desde = FECHA.test(texto(sp.desde)) ? texto(sp.desde) : ''
-  const hasta = FECHA.test(texto(sp.hasta)) ? texto(sp.hasta) : ''
-  const asesor = UUID.test(texto(sp.asesor)) ? texto(sp.asesor) : ''
+  const desde = FECHA.test(parametro(sp.desde)) ? parametro(sp.desde) : ''
+  const hasta = FECHA.test(parametro(sp.hasta)) ? parametro(sp.hasta) : ''
+  const asesor = UUID.test(parametro(sp.asesor)) ? parametro(sp.asesor) : ''
   const supabase = await crearClienteServidor()
   const fechas = { p_desde: desde || undefined, p_hasta: hasta || undefined }
   const [{ data: filas, error }, { data: detalle }] = await Promise.all([

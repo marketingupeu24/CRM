@@ -7,6 +7,7 @@ import { promptGenesys, revisarPrompt } from '@/lib/genesys'
 import { obtenerSesion } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { Feriados, FormularioFicha, PanelPrompt, TarjetaFicha } from './Fichas'
+import { hoyLima } from '@/lib/texto'
 
 export const metadata: Metadata = { title: 'Prompt de Genesys' }
 
@@ -19,7 +20,7 @@ export default async function PaginaGenesys(props: PageProps<'/genesys'>) {
   const { puede } = await obtenerSesion()
   const editable = puede('conocimiento')
   const supabase = await crearClienteServidor()
-  const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date())
+  const hoy = hoyLima()
   const [{ data: filas, error }, { data: version }, { data: feriados }, { data: estadoR }] = await Promise.all([
     supabase.from('genesys_fichas').select('id, parte, titulo, campos, activo, orden, vence_el, vencida_at').order('orden').order('titulo'),
     supabase.from('genesys_versiones').select('texto, created_at').order('created_at', { ascending: false }).limit(1).maybeSingle(),
