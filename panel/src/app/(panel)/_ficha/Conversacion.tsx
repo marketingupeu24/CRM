@@ -1,79 +1,22 @@
 'use client'
 
 // Chat de WhatsApp del lead: mensajes del lead, respuestas de Genesys y del asesor.
-// Se actualiza en tiempo real (Supabase Realtime respeta el RLS del usuario).
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { agruparPorCategoria, CATEGORIAS_RESPUESTA, categoriaRespuesta, type LeadInteraccion } from '@crm/db'
-import { esDelChat } from '@/lib/chat'
-import { crearClienteNavegador, prepararTiempoReal } from '@/lib/supabase/client'
+// Las piezas están en ./chat: tiempo real (useMensajesEnVivo), cada mensaje (Burbuja),
+// respuestas rápidas (PanelRespuestas) y utilidades de formato.
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { comprimirImagen } from '@/lib/imagen'
-import { Adjunto } from './Adjunto'
+import { crearClienteNavegador } from '@/lib/supabase/client'
 import { BarraVentana, VentanaWhatsApp, ventanaCerrada } from '@/components/VentanaWhatsApp'
 import { useConfirmar } from '@/components/Confirmacion'
-import { paraBuscar, diaLima } from '@/lib/texto'
+import { useMensajesEnVivo } from './chat/useMensajesEnVivo'
+import { Burbuja } from './chat/Burbuja'
+import { PanelRespuestas, SugerenciasAtajo } from './chat/PanelRespuestas'
+import {
+  atajoEscrito, buscarRespuestas, CERCA_DEL_FINAL, MAX_ADJUNTO, suscribirTactil, TACTIL, TIPOS_ADJUNTO,
+  type MensajeChat, type RespuestaChat,
+} from './chat/utilidades'
 
-/** Pantalla táctil (celular): Enter hace salto de línea y se envía con el botón */
-const TACTIL = '(pointer: coarse)'
-function suscribirTactil(cambio: () => void) {
-  const m = matchMedia(TACTIL)
-  m.addEventListener('change', cambio)
-  return () => m.removeEventListener('change', cambio)
-}
-
-/** Atajo "/texto" al inicio de la última línea del mensaje: devuelve dónde empieza y lo buscado */
-function atajoEscrito(texto: string): { desde: number; buscado: string } | null {
-  const m = /(?:^|\n)\/([^\n]{0,40})$/.exec(texto)
-  if (!m) return null
-  return { desde: texto.length - m[1]!.length - 1, buscado: m[1]! }
-}
-
-/** Respuestas que coinciden con lo buscado: primero las que lo tienen en el título */
-function buscarRespuestas<T extends { titulo: string; contenido: string }>(respuestas: T[], buscado: string): T[] {
-  const palabras = paraBuscar(buscado).split(/\s+/).filter(Boolean)
-  if (!palabras.length) return respuestas
-  const normalizadas = respuestas.map((r) => ({ r, titulo: paraBuscar(r.titulo), todo: paraBuscar(r.titulo + ' ' + r.contenido) }))
-  const enTitulo = normalizadas.filter((n) => palabras.every((p) => n.titulo.includes(p)))
-  const yaEnTitulo = new Set(enTitulo)
-  const enTexto = normalizadas.filter((n) => !yaEnTitulo.has(n) && palabras.every((p) => n.todo.includes(p)))
-  return [...enTitulo, ...enTexto].map((n) => n.r)
-}
-
-export type MensajeChat = LeadInteraccion & { autor_nombre?: string | null }
-
-/** Lo que se puede adjuntar en el chat (igual que el bucket "chat-envios"). */
-const TIPOS_ADJUNTO = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
-const MAX_ADJUNTO = 10 * 1024 * 1024
-
-// Día en Lima (AAAA-MM-DD) para separar la conversación por días: diaLima de @/lib/texto
-
-/** "Hoy", "Ayer" o "lunes 13 de octubre" (con el año si no es el actual). */
-function etiquetaDia(dia: string): string {
-  const hoy = diaLima(new Date().toISOString())
-  const ayer = diaLima(new Date(Date.now() - 86_400_000).toISOString())
-  if (dia === hoy) return 'Hoy'
-  if (dia === ayer) return 'Ayer'
-  const fecha = new Date(`${dia}T12:00:00Z`)
-  return new Intl.DateTimeFormat('es-PE', {
-    timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long', ...(dia.slice(0, 4) !== hoy.slice(0, 4) ? { year: 'numeric' } : {}),
-  }).format(fecha)
-}
-
-/** Solo la hora ("07:33 p. m."): el día va en el separador. */
-function soloHora(iso: string): string {
-  return new Intl.DateTimeFormat('es-PE', { timeZone: 'America/Lima', hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
-}
-
-/** Quién habla: alumno, bot o un asesor en particular (para agrupar mensajes seguidos). */
-const quien = (m: MensajeChat) => (m.tipo === 'mensaje_asesor' ? `asesor-${m.autor_id ?? ''}` : m.tipo)
-
-/** Distancia al final (px) para considerar que el asesor está "abajo" leyendo lo último. */
-const CERCA_DEL_FINAL = 150
-
-function hora(iso: string): string {
-  return new Intl.DateTimeFormat('es-PE', {
-    timeZone: 'America/Lima', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
-  }).format(new Date(iso))
-}
+export type { MensajeChat } from './chat/utilidades'
 
 interface Props {
   leadId: string
@@ -84,7 +27,7 @@ interface Props {
   /** Nombre del alumno para sus mensajes (si no tiene, se muestra su número) */
   nombreAlumno?: string | null
   /** Plantillas del chat; {nombre}, {carrera} y {asesor} se reemplazan con `variables` */
-  respuestas?: { id: number; titulo: string; contenido: string; personal?: boolean; categoria?: string | null }[]
+  respuestas?: RespuestaChat[]
   variables?: { nombre: string; carrera: string; asesor: string }
   /** Barra con el estado del bot y los botones Atendido / Matriculado */
   encabezado?: React.ReactNode
@@ -95,7 +38,7 @@ interface Props {
 export function Conversacion(
   { leadId, telefono, inicial, miNombre, nombresAutores, encabezado, acciones, respuestas = [], variables, nombreAlumno }: Props,
 ) {
-  const [mensajes, setMensajes] = useState<MensajeChat[]>(inicial)
+  const { mensajes, setMensajes, enVivo, agregar } = useMensajesEnVivo(leadId, inicial)
   const [texto, setTexto] = useState('')
   const tactil = useSyncExternalStore(suscribirTactil, () => matchMedia(TACTIL).matches, () => false)
   const [verRespuestas, setVerRespuestas] = useState(false)
@@ -103,10 +46,9 @@ export function Conversacion(
   const ultimoAlumno = mensajes.findLast((m) => m.tipo === 'mensaje_lead')?.created_at ?? null
   const ultimoAlumnoRef = useRef(ultimoAlumno)
   useEffect(() => { ultimoAlumnoRef.current = ultimoAlumno }, [ultimoAlumno])
-  // Panel ⚡: por categoría (saludo, carreras, modalidades…) y con buscador
+  // Panel ⚡: el filtro elegido se mantiene aunque se cierre y vuelva a abrir
   const [categoriaPanel, setCategoriaPanel] = useState('')
   const [buscarPanel, setBuscarPanel] = useState('')
-  const enPanel = buscarRespuestas(respuestas, buscarPanel).filter((r) => !categoriaPanel || categoriaRespuesta(r.categoria).clave === categoriaPanel)
 
   // Atajo: "/" al inicio de una línea abre las respuestas rápidas filtradas por lo que sigue ("/traslado")
   const [atajoCerrado, setAtajoCerrado] = useState<string | null>(null)
@@ -135,10 +77,8 @@ export function Conversacion(
   const [enviando, setEnviando] = useState(false)
   // Imagen o PDF para adjuntar (botón 📎 o pegar con Ctrl+V)
   const [archivo, setArchivo] = useState<File | null>(null)
-  const [vistaPrevia, setVistaPrevia] = useState<string | null>(null)
   const selector = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
-  const [enVivo, setEnVivo] = useState(false)
   const fondo = useRef<HTMLDivElement>(null)
   const campoTexto = useRef<HTMLTextAreaElement>(null)
   // Si el asesor subió a leer, los mensajes nuevos no lo bajan: se avisan con un botón
@@ -148,98 +88,6 @@ export function Conversacion(
   const cantidad = useRef(inicial.length)
   // Ids negativos para los mensajes que se están enviando (nunca chocan con los de la base)
   const temporales = useRef(-1)
-
-  /** Agrega mensajes sin repetir y mantiene el orden por fecha. */
-  const agregarVarios = (nuevos: MensajeChat[]) =>
-    setMensajes((previos) => {
-      const ids = new Set(previos.map((p) => p.id))
-      const sumar = nuevos.filter((m) => !ids.has(m.id))
-      if (!sumar.length) return previos
-      return [...previos, ...sumar].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))
-    })
-  const agregar = (m: MensajeChat) => agregarVarios([m])
-
-  // Mensajes nuevos: tiempo real con reconexión automática + revisión periódica de respaldo
-  const ultimaFecha = useRef<string | null>(inicial.at(-1)?.created_at ?? null)
-  useEffect(() => {
-    ultimaFecha.current = mensajes.at(-1)?.created_at ?? ultimaFecha.current
-  }, [mensajes])
-
-  useEffect(() => {
-    const supabase = crearClienteNavegador()
-    let canal: ReturnType<typeof supabase.channel> | null = null
-    let reintento: ReturnType<typeof setTimeout> | undefined
-    let espera = 2_000
-    let activo = true
-
-    /** Trae lo que llegó desde el último mensaje mostrado (por si el tiempo real se cortó). */
-    async function revisar() {
-      let consulta = supabase.from('lead_interacciones').select('*').eq('lead_id', leadId)
-        .order('created_at', { ascending: true }).limit(100)
-      if (ultimaFecha.current) consulta = consulta.gte('created_at', ultimaFecha.current)
-      const { data } = await consulta
-      if (activo && data?.length) agregarVarios((data as MensajeChat[]).filter(esDelChat))
-    }
-
-    async function conectar() {
-      if (!activo) return
-      await prepararTiempoReal(supabase)
-      if (!activo) return
-      canal = supabase
-        .channel(`chat-${leadId}-${Date.now()}`)
-        .on(
-          'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'lead_interacciones', filter: `lead_id=eq.${leadId}` },
-          (payload) => {
-            const m = payload.new as MensajeChat
-            if (esDelChat(m)) agregar(m)
-          },
-        )
-        // El archivo que envió el lead se une al mensaje unos segundos después (lo copia Genesys)
-        .on(
-          'postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'lead_interacciones', filter: `lead_id=eq.${leadId}` },
-          (payload) => {
-            const m = payload.new as MensajeChat
-            setMensajes((previos) => previos.map((p) => (p.id === m.id ? { ...p, adjunto_url: m.adjunto_url } : p)))
-          },
-        )
-        .subscribe((estado, err) => {
-          if (!activo) return
-          if (estado === 'SUBSCRIBED') {
-            setEnVivo(true)
-            espera = 2_000
-            void revisar() // lo que haya llegado mientras estaba desconectado
-          } else if (estado === 'CHANNEL_ERROR' || estado === 'TIMED_OUT' || estado === 'CLOSED') {
-            setEnVivo(false)
-            if (err) console.warn('[chat] tiempo real:', estado, err.message)
-            // Reconexión con espera creciente (2 s, 4 s, 8 s… hasta 30 s)
-            clearTimeout(reintento)
-            reintento = setTimeout(() => {
-              if (canal) void supabase.removeChannel(canal)
-              void conectar()
-            }, espera)
-            espera = Math.min(espera * 2, 30_000)
-          }
-        })
-    }
-
-    void conectar()
-    // Respaldo: cada 10 s con la pestaña visible, y al volver a la pestaña
-    const intervalo = setInterval(() => { if (document.visibilityState === 'visible') void revisar() }, 10_000)
-    const alVolver = () => { if (document.visibilityState === 'visible') void revisar() }
-    document.addEventListener('visibilitychange', alVolver)
-    window.addEventListener('focus', alVolver)
-
-    return () => {
-      activo = false
-      clearTimeout(reintento)
-      clearInterval(intervalo)
-      document.removeEventListener('visibilitychange', alVolver)
-      window.removeEventListener('focus', alVolver)
-      if (canal) void supabase.removeChannel(canal)
-    }
-  }, [leadId])
 
   // Al abrir: directo al último mensaje. Después: baja solo si el asesor ya estaba abajo o si él mismo envió;
   // si estaba leyendo más arriba, se muestra "↓ N mensajes nuevos" en vez de moverle la conversación.
@@ -281,12 +129,8 @@ export function Conversacion(
   }
 
   // Miniatura de la imagen elegida
-  useEffect(() => {
-    if (!archivo || !archivo.type.startsWith('image/')) { setVistaPrevia(null); return }
-    const url = URL.createObjectURL(archivo)
-    setVistaPrevia(url)
-    return () => URL.revokeObjectURL(url)
-  }, [archivo])
+  const vistaPrevia = useMemo(() => (archivo?.type.startsWith('image/') ? URL.createObjectURL(archivo) : null), [archivo])
+  useEffect(() => () => { if (vistaPrevia) URL.revokeObjectURL(vistaPrevia) }, [vistaPrevia])
 
   function quitarArchivo() {
     setArchivo(null)
@@ -345,7 +189,7 @@ export function Conversacion(
     if (adjunto) {
       // Fotos grandes: se reducen a la calidad de WhatsApp antes de subirlas (ocupan menos espacio)
       adjunto = await comprimirImagen(adjunto)
-      const extension =adjunto.type === 'application/pdf' ? 'pdf' : adjunto.type.split('/')[1] === 'jpeg' ? 'jpg' : adjunto.type.split('/')[1]
+      const extension = adjunto.type === 'application/pdf' ? 'pdf' : adjunto.type.split('/')[1] === 'jpeg' ? 'jpg' : adjunto.type.split('/')[1]
       const ruta = `${leadId}/${crypto.randomUUID()}.${extension}`
       const subida = await supabase.storage.from('chat-envios').upload(ruta, adjunto, { contentType: adjunto.type })
       if (subida.error) {
@@ -405,73 +249,13 @@ export function Conversacion(
             Aún no hay mensajes. Escribe abajo para iniciar la conversación.
           </p>
         )}
-        {mensajes.map((m, i) => {
-          const previo = mensajes[i - 1]
-          const dia = diaLima(m.created_at)
-          const nuevoDia = !previo || diaLima(previo.created_at) !== dia
-          const separador = nuevoDia && (
-            <div className="sticky top-0 z-10 my-3 flex justify-center first:mt-0">
-              <span className="rounded-full bg-superficie/90 px-3 py-0.5 text-[11px] font-medium text-slate-600 shadow-sm backdrop-blur first-letter:uppercase">{etiquetaDia(dia)}</span>
-            </div>
-          )
-          if (m.tipo === 'sistema') {
-            return (
-              <div key={m.id}>
-                {separador}
-                <div className="mx-auto my-2 max-w-sm rounded-lg bg-amber-50 px-3 py-1.5 text-center text-xs whitespace-pre-wrap text-amber-900 shadow-sm">
-                  {m.contenido}
-                </div>
-              </div>
-            )
-          }
-          const propio = m.tipo === 'mensaje_asesor'
-          const bot = m.tipo === 'respuesta_bot'
-          const fallido = propio && m.estado_envio === 'error'
-          const pendiente = propio && m.estado_envio === 'pendiente'
-          // Mensajes seguidos del mismo autor (hasta 5 min) van juntos: el nombre solo en el primero
-          const mismoGrupo = !nuevoDia && !!previo && previo.tipo !== 'sistema' && quien(previo) === quien(m)
-            && Date.parse(m.created_at) - Date.parse(previo.created_at) < 5 * 60_000
-          return (
-            <div key={m.id}>
-              {separador}
-              <div className={`flex ${propio ? 'justify-end' : 'justify-start'} ${mismoGrupo ? 'mt-0.5' : 'mt-3'}`}>
-                <div
-                  className={`max-w-[85%] rounded-2xl px-3 py-1.5 text-sm shadow-sm md:max-w-[75%] ${propio ? 'rounded-br-md' : 'rounded-bl-md'} ${
-                    propio ? (fallido ? 'bg-rose-100' : 'bg-burbuja-propia') : bot ? 'bg-slate-100' : 'bg-superficie'
-                  } ${pendiente ? 'opacity-70' : ''}`}
-                >
-                  {!mismoGrupo && (
-                    <p className={`mb-0.5 text-[11px] font-semibold ${propio ? 'text-emerald-800' : bot ? 'text-violet-700' : 'text-marca-700'}`}>
-                      {propio ? nombreAutor(m) : bot ? '🤖 Genesys' : nombreCorto}
-                    </p>
-                  )}
-                  {m.adjunto_url && <Adjunto ruta={m.adjunto_url} propio={propio} />}
-                  <p className="break-words whitespace-pre-wrap text-slate-800">
-                    {m.contenido}
-                    {/* Hora (y estado del envío) al final del texto, como en WhatsApp */}
-                    <span className="float-right mt-1.5 ml-3 text-[10px] leading-none text-slate-500" title={hora(m.created_at)}>
-                      {soloHora(m.created_at)}
-                      {propio && (pendiente ? ' 🕓' : fallido ? ' ⚠️'
-                        // ✓✓ azul: el alumno escribió después, así que le llegó y lo vio (BuilderBot no envía
-                        // las confirmaciones de entrega de WhatsApp; ✓ = salió del CRM y WhatsApp lo aceptó)
-                        : ultimoAlumno && ultimoAlumno > m.created_at
-                          ? <span className="font-bold text-sky-500" title="Le llegó y lo vio: el alumno respondió después"> ✓✓</span>
-                          : <span title="Enviado. WhatsApp no confirma la entrega hasta que el alumno responda"> ✓</span>)}
-                    </span>
-                  </p>
-                  {fallido && (
-                    <div className="mt-1 flex items-center justify-between gap-3 text-xs text-rose-700">
-                      <span>No enviado</span>
-                      <button onClick={() => enviar(m.contenido ?? '', null, m.id < 0 ? m.id : undefined)} className="font-semibold underline">
-                        Reintentar
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )
-        })}
+        {mensajes.map((m, i) => (
+          <Burbuja
+            key={m.id} m={m} previo={mensajes[i - 1]} ultimoAlumno={ultimoAlumno}
+            nombreAlumno={nombreCorto} nombreAsesor={nombreAutor(m)}
+            alReintentar={() => enviar(m.contenido ?? '', null, m.id < 0 ? m.id : undefined)}
+          />
+        ))}
       </div>
       {nuevosSinVer > 0 && (
         <button
@@ -484,68 +268,16 @@ export function Conversacion(
       </div>
 
       {atajo && (
-        <div className="max-h-64 overflow-y-auto border-t border-slate-200 bg-slate-50 p-2" role="listbox" aria-label="Respuestas rápidas">
-          <p className="px-2 pb-1 text-xs text-slate-500">
-            Respuestas rápidas{atajo.buscado ? <> con «<b>{atajo.buscado}</b>»</> : ''} · ↑ ↓ para elegir, Enter o Tab para usarla, Esc para cerrar
-          </p>
-          {sugeridas.map((rr, i) => (
-            <button
-              key={rr.id} type="button" role="option" aria-selected={i === indice}
-              onMouseDown={(e) => { e.preventDefault(); usarRespuesta(rr.contenido, atajo.desde) }}
-              onMouseEnter={() => setElegida(i)}
-              className={`block w-full rounded-lg px-3 py-2 text-left ${i === indice ? 'bg-marca-50 ring-1 ring-marca-200' : 'hover:bg-superficie'}`}
-            >
-              <span className="text-sm font-medium text-slate-800">{rr.titulo}{rr.personal && <span className="ml-1.5 rounded bg-violet-100 px-1 py-px text-[10px] font-medium text-violet-700">👤 personal</span>}</span>
-              <span className="block truncate text-xs text-slate-500">{rr.contenido}</span>
-            </button>
-          ))}
-          {!sugeridas.length && <p className="px-2 py-3 text-center text-xs text-slate-500">Ninguna respuesta rápida coincide con «{atajo.buscado}».</p>}
-        </div>
+        <SugerenciasAtajo
+          buscado={atajo.buscado} sugeridas={sugeridas} indice={indice}
+          alUsar={(contenido) => usarRespuesta(contenido, atajo.desde)} alSeñalar={setElegida}
+        />
       )}
       {verRespuestas && !atajo && (
-        <div className="border-t border-slate-200 bg-slate-50">
-          {respuestas.length === 0 ? (
-            <p className="px-4 py-3 text-center text-xs text-slate-500">No hay respuestas rápidas. El administrador las crea en «Respuestas rápidas».</p>
-          ) : (
-            <>
-              <div className="space-y-1.5 border-b border-slate-200 p-2">
-                <input
-                  value={buscarPanel} onChange={(e) => setBuscarPanel(e.target.value)} placeholder="⌕ Buscar respuesta" aria-label="Buscar respuesta rápida"
-                  className="campo py-1 text-sm"
-                />
-                <div className="flex gap-1 overflow-x-auto pb-0.5 text-xs" role="tablist" aria-label="Categorías">
-                  {[{ clave: '', nombre: 'Todas', icono: '' }, ...CATEGORIAS_RESPUESTA.filter((c) => respuestas.some((r) => categoriaRespuesta(r.categoria).clave === c.clave))].map((c) => (
-                    <button
-                      key={c.clave || 'todas'} type="button" role="tab" aria-selected={categoriaPanel === c.clave} onClick={() => setCategoriaPanel(c.clave)}
-                      className={`shrink-0 rounded-full border px-2.5 py-0.5 whitespace-nowrap ${categoriaPanel === c.clave ? 'border-marca-600 bg-marca-600 text-white' : 'border-slate-300 bg-superficie text-slate-700 hover:bg-slate-100'}`}
-                    >
-                      {c.icono} {c.nombre}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="max-h-64 overflow-y-auto p-1">
-                {agruparPorCategoria(enPanel).map((g) => (
-                  <div key={g.categoria.clave}>
-                    {!categoriaPanel && (
-                      <p className="sticky top-0 z-10 bg-slate-50 px-3 pt-2 pb-1 text-[11px] font-semibold tracking-wide text-slate-500 uppercase">{g.categoria.icono} {g.categoria.nombre}</p>
-                    )}
-                    {g.items.map((rr) => (
-                      <button
-                        key={rr.id} type="button" onClick={() => usarRespuesta(rr.contenido)}
-                        className="block w-full rounded-lg px-3 py-1.5 text-left hover:bg-superficie"
-                      >
-                        <span className="text-sm font-medium text-slate-800">{rr.titulo}{rr.personal && <span className="ml-1.5 rounded bg-violet-100 px-1 py-px text-[10px] font-medium text-violet-700">👤 personal</span>}</span>
-                        <span className="block truncate text-xs text-slate-500">{rr.contenido}</span>
-                      </button>
-                    ))}
-                  </div>
-                ))}
-                {!enPanel.length && <p className="px-2 py-3 text-center text-xs text-slate-500">Ninguna respuesta en este filtro.</p>}
-              </div>
-            </>
-          )}
-        </div>
+        <PanelRespuestas
+          respuestas={respuestas} categoria={categoriaPanel} buscar={buscarPanel}
+          alCambiarCategoria={setCategoriaPanel} alBuscar={setBuscarPanel} alUsar={(contenido) => usarRespuesta(contenido)}
+        />
       )}
       {archivo && (
         <div className="flex items-center gap-3 border-t border-slate-200 bg-slate-50 px-3 py-2">

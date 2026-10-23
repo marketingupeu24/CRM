@@ -109,6 +109,7 @@ export function TarjetaEnlace({ enlace, base, resultado, editable }: { enlace: E
 
   return (
     <li className={`tarjeta flex flex-wrap gap-4 p-4 ${enlace.activo ? '' : 'opacity-60'}`}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- QR generado en el navegador (data URL) */}
       {qr && <img src={qr} alt={`QR de ${enlace.nombre}`} className="h-32 w-32 rounded-lg border border-slate-200" />}
       <div className="min-w-0 flex-1 space-y-1">
         <p className="font-semibold">{enlace.nombre} <span className="ml-1 rounded-full bg-marca-50 px-2 py-0.5 text-xs font-medium text-marca-700">{enlace.origen}</span>{!enlace.activo && <span className="ml-1 text-xs text-slate-500">(desactivado)</span>}</p>

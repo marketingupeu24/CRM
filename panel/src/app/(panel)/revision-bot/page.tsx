@@ -4,7 +4,7 @@ import { haceCuanto } from '@/lib/formato'
 import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { BotonRevisada } from './Controles'
-import { parametro } from '@/lib/texto'
+import { parametro, ahoraMs } from '@/lib/texto'
 
 export const metadata: Metadata = { title: 'Revisión del bot' }
 
@@ -18,7 +18,7 @@ export default async function PaginaRevisionBot(props: PageProps<'/revision-bot'
   const todas = data ?? []
   const pendientes = todas.filter((p) => !p.revisada)
   const lista = verTodas ? todas : pendientes
-  const ahora = Date.now()
+  const ahora = ahoraMs()
   const enlace = (cambios: Record<string, string>) => {
     const p = new URLSearchParams({ ...(verTodas ? { ver: 'todas' } : {}), ...(dias !== 30 ? { dias: String(dias) } : {}), ...cambios })
     for (const [k, v] of [...p.entries()]) if (!v) p.delete(k)

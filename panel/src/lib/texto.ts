@@ -19,3 +19,11 @@ export function diaLima(valor: Date | number | string): string {
 export function hoyLima(dias = 0): string {
   return diaLima(Date.now() + dias * 86_400_000)
 }
+
+/**
+ * Hora actual en milisegundos. Las páginas del servidor se dibujan una vez por solicitud, así que leer la hora
+ * ahí es correcto; usar esta función lo deja explícito (y evita el aviso de "función impura" del linter).
+ */
+export function ahoraMs(): number {
+  return Date.now()
+}

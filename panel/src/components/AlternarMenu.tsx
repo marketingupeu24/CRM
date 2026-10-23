@@ -3,6 +3,7 @@
 // Plegar el menú lateral a solo íconos (más espacio para el chat y las tablas). Se recuerda en este navegador.
 import { useRouter } from 'next/navigation'
 import { COOKIE_MENU } from '@/lib/tema'
+import { guardarCookie } from '@/lib/cookies'
 
 export function AlternarMenu({ compacto }: { compacto: boolean }) {
   const router = useRouter()
@@ -10,7 +11,7 @@ export function AlternarMenu({ compacto }: { compacto: boolean }) {
     <button
       type="button"
       onClick={() => {
-        document.cookie = `${COOKIE_MENU}=${compacto ? '0' : '1'}; path=/; max-age=31536000; samesite=lax`
+        guardarCookie(COOKIE_MENU, compacto ? '0' : '1')
         router.refresh()
       }}
       title={compacto ? 'Mostrar el menú completo' : 'Plegar el menú (solo íconos)'}

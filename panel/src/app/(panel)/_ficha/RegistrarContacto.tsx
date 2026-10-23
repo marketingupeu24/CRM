@@ -1,7 +1,7 @@
 'use client'
 
 // "📞 Llamé": registra una llamada o un WhatsApp del celular personal del asesor, con el resultado.
-import { useActionState, useEffect, useState } from 'react'
+import { useActionState, useState } from 'react'
 import { registrarContacto, type Resultado } from '@/app/(panel)/leads/acciones'
 import { diaLima } from '@/lib/texto'
 
@@ -21,10 +21,12 @@ export function RegistrarContacto({ leadId }: { leadId: string }) {
   const [abierto, setAbierto] = useState(false)
   const [medio, setMedio] = useState<'llamada' | 'whatsapp'>('llamada')
   const [resultado, setResultado] = useState<'contesto' | 'no_contesto' | 'volver'>('contesto')
-  const [r, accion, guardando] = useActionState<Resultado, FormData>(registrarContacto.bind(null, leadId), {})
-
   // Guardado: se cierra y queda listo para el siguiente
-  useEffect(() => { if (r.ok) { setAbierto(false); setResultado('contesto') } }, [r])
+  const [r, accion, guardando] = useActionState<Resultado, FormData>(async (previo, datos) => {
+    const res = await registrarContacto(leadId, previo, datos)
+    if (res.ok) { setAbierto(false); setResultado('contesto') }
+    return res
+  }, {})
 
   if (!abierto) {
     return (

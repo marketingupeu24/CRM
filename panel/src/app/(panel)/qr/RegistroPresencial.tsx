@@ -15,19 +15,21 @@ interface Registrado {
 }
 
 export function RegistroPresencial({ carreras }: { carreras: string[] }) {
-  const [resultado, accion, enviando] = useActionState<ResultadoPrerregistro, FormData>(crearPrerregistro, {})
   const [qr, setQr] = useState<string | null>(null)
   const [registrado, setRegistrado] = useState<Registrado | null>(null)
   const [mostrarQr, setMostrarQr] = useState(false)
   const formulario = useRef<HTMLFormElement>(null)
 
-  // Nuevo QR para la persona recién escrita
-  useEffect(() => {
-    if (!resultado.url) return
-    setRegistrado(null)
-    setMostrarQr(true)
-    QRCode.toDataURL(resultado.url, { width: 520, margin: 1, errorCorrectionLevel: 'M', color: { dark: '#003865', light: '#ffffff' } }).then(setQr)
-  }, [resultado.url])
+  // Nuevo QR para la persona recién escrita (se arma al recibir el resultado del formulario)
+  const [resultado, accion, enviando] = useActionState<ResultadoPrerregistro, FormData>(async (previo, datos) => {
+    const res = await crearPrerregistro(previo, datos)
+    if (res.url) {
+      setRegistrado(null)
+      setMostrarQr(true)
+      QRCode.toDataURL(res.url, { width: 520, margin: 1, errorCorrectionLevel: 'M', color: { dark: '#003865', light: '#ffffff' } }).then(setQr)
+    }
+    return res
+  }, {})
 
   // Espera a que la persona envíe el mensaje (revisa cada 3 s)
   useEffect(() => {

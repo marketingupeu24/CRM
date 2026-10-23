@@ -3,6 +3,7 @@
 // Tema del panel: Claro / Oscuro / Automático (sigue al sistema). Se recuerda en este navegador (cookie).
 import { useState } from 'react'
 import { atributoTema, COOKIE_TEMA, type Tema } from '@/lib/tema'
+import { guardarCookie } from '@/lib/cookies'
 
 const OPCIONES: { valor: Tema; icono: string; texto: string }[] = [
   { valor: 'claro', icono: '☀', texto: 'Claro' },
@@ -15,10 +16,10 @@ export function SelectorTema({ inicial }: { inicial: Tema }) {
 
   const elegir = (valor: Tema) => {
     setTema(valor)
-    document.cookie = `${COOKIE_TEMA}=${valor}; path=/; max-age=31536000; samesite=lax`
+    guardarCookie(COOKIE_TEMA, valor)
     const atributo = atributoTema(valor)
-    if (atributo) document.documentElement.dataset.theme = atributo
-    else delete document.documentElement.dataset.theme
+    if (atributo) document.documentElement.setAttribute('data-theme', atributo)
+    else document.documentElement.removeAttribute('data-theme')
   }
 
   return (

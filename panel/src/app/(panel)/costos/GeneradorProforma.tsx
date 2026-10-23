@@ -60,7 +60,8 @@ export function GeneradorProforma({ lead, asesor, carreraSugerida, emitidaIso, v
   const [dni, setDni] = useState(lead?.dni ?? '')
   const [vence, setVence] = useState(venceInicial)
   const [celular, setCelular] = useState(lead?.telefono ?? '')
-  const [explore, setExplore] = useState<'' | 'si' | 'no'>('')
+  // Resultado de EXPLORE para un DNI (solo cuenta si es el DNI que está escrito ahora)
+  const [exploreDe, setExploreDe] = useState<{ dni: string; valor: 'si' | 'no' } | null>(null)
   const [adjunto, setAdjunto] = useState<Adjunto>('imagen')
   const [estado, setEstado] = useState<{ texto: string; tipo?: 'ok' | 'error' } | null>(null)
   const [pendiente, iniciar] = useTransition()
@@ -71,28 +72,43 @@ export function GeneradorProforma({ lead, asesor, carreraSugerida, emitidaIso, v
   const [emitida] = useState(() => new Date(emitidaIso))
 
   // EXPLORE: el DNI se verifica en el servidor (la lista no viaja al navegador)
+  const dniDigitos = dni.replace(/\D/g, '')
+  const explore: '' | 'si' | 'no' = dniDigitos.length >= 8 && exploreDe?.dni === dniDigitos ? exploreDe.valor : ''
+  // Sin EXPLORE verificado no se puede elegir ese beneficio: vuelve a la promoción general
+  const quitarExplore = () => setBeneficio((b) => (b === 'EXPLORE' ? 'PROMO' : b))
   useEffect(() => {
-    const d = dni.replace(/\D/g, '')
-    if (d.length < 8) { setExplore(''); return }
+    if (dniDigitos.length < 8) return
     let vigente = true
     const t = setTimeout(async () => {
-      const ok = await verificarExplore(d)
-      if (vigente) setExplore(ok ? 'si' : 'no')
+      const ok = await verificarExplore(dniDigitos)
+      if (!vigente) return
+      setExploreDe({ dni: dniDigitos, valor: ok ? 'si' : 'no' })
+      if (!ok) quitarExplore()
     }, 400)
     return () => { vigente = false; clearTimeout(t) }
-  }, [dni])
-  useEffect(() => { if (beneficio === 'EXPLORE' && explore !== 'si') setBeneficio('PROMO') }, [explore, beneficio])
+  }, [dniDigitos])
+  const cambiarDni = (valor: string) => {
+    setDni(valor)
+    if (valor.replace(/\D/g, '') !== exploreDe?.dni || exploreDe?.valor !== 'si') quitarExplore()
+  }
 
   const opciones = { modalidad, campus, carrera, beneficio, institucionales: inst, adicionales: adic, exploreVerificado: explore === 'si', pago }
-  const k = useMemo(() => calcularProforma(opciones), [JSON.stringify(opciones)]) // eslint-disable-line react-hooks/exhaustive-deps
+  const k = useMemo(
+    () => calcularProforma({ modalidad, campus, carrera, beneficio, institucionales: inst, adicionales: adic, exploreVerificado: explore === 'si', pago }),
+    [modalidad, campus, carrera, beneficio, inst, adic, explore, pago],
+  )
+  // Si la carrera no existe en la nueva modalidad/campus, se ajusta al cambiar (como el original)
+  const cambiarLugar = (nuevaModalidad: Modalidad, nuevoCampus: CampusId) => {
+    setModalidad(nuevaModalidad)
+    setCampus(nuevoCampus)
+    setCarrera(calcularProforma({ ...opciones, modalidad: nuevaModalidad, campus: nuevoCampus }).opciones.carrera)
+  }
   const numero = numeroProforma(k, emitida)
   const venceFecha = vence ? new Date(`${vence}T12:00:00-05:00`) : null
   const lista = carreras(modalidad, campus).filter((c) => !(soloPromo && modalidad === 'PRES' && beneficio === 'PROMO') || c[3] > 0)
   const texto = textoWhatsApp(k, { nombre, asesor, vence: venceFecha })
   const conBeneficios = modalidad === 'PRES'
 
-  // Si la carrera no existe en la nueva modalidad/campus, se ajusta (como el original)
-  useEffect(() => { if (k.opciones.carrera !== carrera) setCarrera(k.opciones.carrera) }, [k.opciones.carrera, carrera])
 
   // Vista previa escalada al ancho disponible
   useLayoutEffect(() => {
@@ -150,12 +166,12 @@ export function GeneradorProforma({ lead, asesor, carreraSugerida, emitidaIso, v
       <div className="tarjeta space-y-4 p-5 xl:sticky xl:top-20">
         <div className="space-y-1.5">
           <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">Modalidad</p>
-          <Segmentos valor={modalidad} alCambiar={(v) => { setModalidad(v); if (v !== 'PRES') setCampus('LIM') }}
+          <Segmentos valor={modalidad} alCambiar={(v) => cambiarLugar(v, v !== 'PRES' ? 'LIM' : campus)}
             opciones={[['PRES', 'Presencial'], ['EAD', 'A distancia'], ['SEMI', 'Semipresencial']]} />
         </div>
         <div className="space-y-1.5">
           <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">Campus</p>
-          <Segmentos valor={campus} alCambiar={setCampus} deshabilitadas={modalidad === 'PRES' ? [] : ['JUL', 'TAR']}
+          <Segmentos valor={campus} alCambiar={(c) => cambiarLugar(modalidad, c)} deshabilitadas={modalidad === 'PRES' ? [] : ['JUL', 'TAR']}
             opciones={(Object.keys(CAMPUS) as CampusId[]).map((c) => [c, CAMPUS[c].corto])} />
         </div>
         <label className="block space-y-1.5">
@@ -233,7 +249,7 @@ export function GeneradorProforma({ lead, asesor, carreraSugerida, emitidaIso, v
         <div className="grid grid-cols-2 gap-3">
           <label className="block space-y-1.5">
             <span className="text-xs font-semibold tracking-wide text-slate-500 uppercase">DNI</span>
-            <input value={dni} onChange={(e) => setDni(e.target.value)} inputMode="numeric" placeholder="Opcional" className="campo" />
+            <input value={dni} onChange={(e) => cambiarDni(e.target.value)} inputMode="numeric" placeholder="Opcional" className="campo" />
             {explore && (
               <span className={`block text-xs ${explore === 'si' ? 'font-semibold text-emerald-700' : 'text-slate-500'}`}>
                 {explore === 'si' ? '✓ Participó en EXPLORE 2026' : 'No figura en EXPLORE 2026'}

@@ -7,6 +7,7 @@ import { fechaHora, haceCuanto } from '@/lib/formato'
 import { exigirPermiso } from '@/lib/sesion'
 import { DIAS_SIN_ACTIVIDAD, finDeHoyLima, HORAS_SIN_CONTACTAR, limitesAlertas } from '@/lib/pendientes'
 import { crearClienteServidor } from '@/lib/supabase/server'
+import { ahoraMs } from '@/lib/texto'
 
 export const metadata: Metadata = { title: 'Pendientes' }
 
@@ -84,7 +85,7 @@ export default async function PaginaPendientes(props: PageProps<'/pendientes'>) 
     const c = supabase.from('leads').select(campos)
     return soloMios ? c.eq('asesor_id', perfil.id) : c
   }
-  const ahora = Date.now()
+  const ahora = ahoraMs()
   const { contacto: limiteContacto, actividad: limiteActividad } = limitesAlertas(ahora)
   const en7Dias = new Date(ahora + 7 * 86_400_000).toISOString()
   const camposLead = 'id, nombre, telefono, estado, asesor:asesores!leads_asesor_id_fkey(nombre)'
@@ -120,7 +121,8 @@ export default async function PaginaPendientes(props: PageProps<'/pendientes'>) 
   const enlaceDe = (de: string | null) => (de ? `/pendientes?de=${de}` : '/pendientes?') as `/pendientes?${string}`
   const error = tareasR.error ?? sinContactarR.error ?? sinResponderR.error ?? inactivosR.error ?? futurasR.error
 
-  const GrupoTareas = ({ titulo, lista, estilo }: { titulo: string; lista: typeof tareas; estilo: string }) => (
+  // Se llama como función (no como componente): así no se crea un componente nuevo en cada render
+  const grupoTareas = (titulo: string, lista: typeof tareas, estilo: string) => (
     <div>
       <h3 className={`px-5 pt-3 pb-1 text-xs font-semibold tracking-wide uppercase ${estilo}`}>{titulo} · {lista.length}</h3>
       <ul className="divide-y divide-slate-100">
@@ -166,10 +168,10 @@ export default async function PaginaPendientes(props: PageProps<'/pendientes'>) 
           <p className="text-xs text-slate-500">Se agendan desde la ficha del lead (tarjeta «Próxima acción»).</p>
         </div>
         {!tareas.length && <p className="px-5 py-6 text-center text-sm text-slate-400">No tienes tareas en los próximos 7 días.</p>}
-        {!!vencidas.length && <GrupoTareas titulo="Vencidas" lista={vencidas} estilo="text-rose-600" />}
-        {!!hoy.length && <GrupoTareas titulo="Hoy" lista={hoy} estilo="text-amber-600" />}
-        {!!manana.length && <GrupoTareas titulo="Mañana" lista={manana} estilo="text-sky-700" />}
-        {!!proximas.length && <GrupoTareas titulo="Próximos 7 días" lista={proximas} estilo="text-slate-500" />}
+        {!!vencidas.length && grupoTareas('Vencidas', vencidas, 'text-rose-600')}
+        {!!hoy.length && grupoTareas('Hoy', hoy, 'text-amber-600')}
+        {!!manana.length && grupoTareas('Mañana', manana, 'text-sky-700')}
+        {!!proximas.length && grupoTareas('Próximos 7 días', proximas, 'text-slate-500')}
       </section>
 
       <div className="grid gap-6 lg:grid-cols-3 [&>*]:min-w-0">

@@ -4,6 +4,7 @@ import { fechaHora, haceCuanto } from '@/lib/formato'
 import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { AccionesLeads, AccionesUsuario } from './Controles'
+import { ahoraMs } from '@/lib/texto'
 
 export const metadata: Metadata = { title: 'Papelera' }
 
@@ -36,7 +37,7 @@ export default async function PaginaPapelera() {
   const supabase = await crearClienteServidor()
   const { data, error } = await supabase.rpc('papelera')
   const { leads = [], asesores = [] } = (data ?? {}) as unknown as { leads?: LeadPapelera[]; asesores?: UsuarioPapelera[] }
-  const ahora = Date.now()
+  const ahora = ahoraMs()
 
   return (
     <div className="space-y-6">

@@ -22,6 +22,7 @@ import { BandejaMovil } from './BandejaMovil'
 import { VentanaDetalle } from '@/components/VentanaWhatsApp'
 import { QuitarApoyo } from './QuitarApoyo'
 import { BotonesTarea, FormularioTarea } from '@/components/Tareas'
+import { ahoraMs } from '@/lib/texto'
 
 /** Sugerencias de carrera al editar los datos (presencial, campus Juliaca) */
 const CARRERAS_EDITAR = [...CARRERAS_OFICIALES]
@@ -91,7 +92,7 @@ export async function FichaLead({ id, seccion }: { id: string; seccion: 'leads' 
     // Asignados o reasignados en la última semana (con o sin mensajes): suben arriba hasta que alguien escriba
     puede('chats')
       ? deLaVista(supabase.from('leads').select(camposBandeja).not('asesor_id', 'is', null)
-        .gte('fecha_asignado', new Date(Date.now() - 7 * 86_400_000).toISOString())).order('fecha_asignado', { ascending: false }).limit(40)
+        .gte('fecha_asignado', new Date(ahoraMs() - 7 * 86_400_000).toISOString())).order('fecha_asignado', { ascending: false }).limit(40)
       : Promise.resolve({ data: [] }),
     // Leads de otros asesores que atendí como apoyo o que cubro por su ausencia: salen con etiqueta
     puede('chats') ? supabase.rpc('mis_leads_apoyo') : Promise.resolve({ data: [] }),
@@ -105,7 +106,7 @@ export async function FichaLead({ id, seccion }: { id: string; seccion: 'leads' 
   const vistos = new Set<string>()
   type ConFechas = { ultimo_mensaje_at: string | null; fecha_asignado: string | null; asesor_id: string | null }
   // Recién asignado o reasignado: nadie escribió desde que se lo dieron a su asesor (en la última semana)
-  const haceSemana = new Date(Date.now() - 7 * 86_400_000).toISOString()
+  const haceSemana = new Date(ahoraMs() - 7 * 86_400_000).toISOString()
   const recienAsignado = (c: ConFechas) => !!c.asesor_id && !!c.fecha_asignado && c.fecha_asignado > haceSemana && c.fecha_asignado > (c.ultimo_mensaje_at ?? '')
   const cuando = (c: ConFechas) => (recienAsignado(c) ? c.fecha_asignado! : c.ultimo_mensaje_at ?? c.fecha_asignado ?? '')
   // De apoyo: solo en la vista propia (no al mirar los chats de otro asesor)
@@ -259,7 +260,7 @@ export async function FichaLead({ id, seccion }: { id: string; seccion: 'leads' 
             encabezado={apoyo ? undefined : (
               <ControlesChat key="controles"
                 leadId={lead.id} estado={lead.estado} botPausadoHasta={lead.bot_pausado_hasta}
-                tieneAsesor={!!lead.asesor_id} ahora={Date.now()} sinResponder={!!lead.sin_responder}
+                tieneAsesor={!!lead.asesor_id} ahora={ahoraMs()} sinResponder={!!lead.sin_responder}
               />
             )}
           />
@@ -303,7 +304,7 @@ export async function FichaLead({ id, seccion }: { id: string; seccion: 'leads' 
             {!!tareas?.length && (
               <ul className="mb-4 space-y-2">
                 {tareas.map((t) => {
-                  const vencida = Date.parse(t.vence_at) < Date.now()
+                  const vencida = Date.parse(t.vence_at) < ahoraMs()
                   return (
                     <li key={t.id} className={`rounded-lg border p-2 text-sm ${vencida ? 'border-rose-200 bg-rose-50' : 'border-slate-200'}`}>
                       <p className="font-medium">{t.titulo}</p>

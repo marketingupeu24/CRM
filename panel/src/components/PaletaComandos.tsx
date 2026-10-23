@@ -55,30 +55,35 @@ export function PaletaComandos({ permisos, superadmin = false }: { permisos: Mod
   const [buscando, setBuscando] = useState(false)
   const entrada = useRef<HTMLInputElement>(null)
 
+  // Abrir siempre limpio (sin la búsqueda anterior) y con el cursor en el campo
+  const abiertaRef = useRef(false)
+  useEffect(() => { abiertaRef.current = abierta }, [abierta])
+  const abrir = useCallback(() => {
+    setTexto(''); setLeads([]); setSeleccion(0); setAbierta(true)
+    setTimeout(() => entrada.current?.focus(), 10)
+  }, [])
+
   // Atajos: Ctrl/Cmd + K en cualquier lugar; "/" si no se está escribiendo en un campo
   useEffect(() => {
     const alTeclear = (e: KeyboardEvent) => {
       const escribiendo = e.target instanceof HTMLElement && (e.target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName))
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setAbierta((a) => !a) }
-      else if (e.key === '/' && !escribiendo) { e.preventDefault(); setAbierta(true) }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); if (abiertaRef.current) setAbierta(false); else abrir() }
+      else if (e.key === '/' && !escribiendo) { e.preventDefault(); abrir() }
     }
-    const alPedir = () => setAbierta(true)
     window.addEventListener('keydown', alTeclear)
-    window.addEventListener('abrir-buscador', alPedir)
-    return () => { window.removeEventListener('keydown', alTeclear); window.removeEventListener('abrir-buscador', alPedir) }
-  }, [])
+    window.addEventListener('abrir-buscador', abrir)
+    return () => { window.removeEventListener('keydown', alTeclear); window.removeEventListener('abrir-buscador', abrir) }
+  }, [abrir])
 
+  // Búsqueda de leads (con espera breve para no consultar en cada tecla). Buscar leads requiere el módulo Leads.
+  const q = texto.replace(/[,()*%\\]/g, ' ').trim()
+  const puedeBuscar = abierta && q.length >= 2 && permisos.includes('leads')
+  // Con menos de 2 letras no se muestran leads (sin guardar una lista vacía)
+  const leadsVisibles = useMemo(() => (puedeBuscar ? leads : []), [puedeBuscar, leads])
   useEffect(() => {
-    if (abierta) { setTexto(''); setLeads([]); setSeleccion(0); setTimeout(() => entrada.current?.focus(), 10) }
-  }, [abierta])
-
-  // Búsqueda de leads (con espera breve para no consultar en cada tecla)
-  useEffect(() => {
-    const q = texto.replace(/[,()*%\\]/g, ' ').trim()
-    // Buscar leads requiere el módulo Leads
-    if (!abierta || q.length < 2 || !permisos.includes('leads')) { setLeads([]); return }
-    setBuscando(true)
+    if (!puedeBuscar) return
     const t = setTimeout(async () => {
+      setBuscando(true)
       const supabase = crearClienteNavegador()
       const { data } = await supabase.from('leads')
         .select('id, nombre, telefono, dni, estado, carrera_interes')
@@ -93,7 +98,7 @@ export function PaletaComandos({ permisos, superadmin = false }: { permisos: Mod
       setSeleccion(0)
     }, 200)
     return () => clearTimeout(t)
-  }, [texto, abierta, permisos])
+  }, [q, puedeBuscar])
 
   const items = useMemo(() => {
     const q = paraBuscar(texto.trim())
@@ -101,8 +106,8 @@ export function PaletaComandos({ permisos, superadmin = false }: { permisos: Mod
       .filter((p) => (p.soloSuperadmin ? superadmin : !p.modulo || permisos.includes(p.modulo)))
       .filter((p) => !q || paraBuscar(`${p.titulo} ${p.detalle ?? ''}`).includes(q))
       .map((p, i) => ({ ...p, id: `pag-${i}`, grupo: 'Ir a' as const }))
-    return [...leads, ...paginas]
-  }, [texto, leads, permisos, superadmin])
+    return [...leadsVisibles, ...paginas]
+  }, [texto, leadsVisibles, permisos, superadmin])
 
   const ir = useCallback((item?: Item) => {
     if (!item) return
@@ -129,7 +134,7 @@ export function PaletaComandos({ permisos, superadmin = false }: { permisos: Mod
               else if (e.key === 'Escape') setAbierta(false)
             }}
           />
-          {buscando && <span className="text-xs text-slate-400">Buscando…</span>}
+          {buscando && puedeBuscar && <span className="text-xs text-slate-400">Buscando…</span>}
           <kbd className="tecla">Esc</kbd>
         </div>
         <ul className="max-h-[50vh] overflow-y-auto p-2" role="listbox">

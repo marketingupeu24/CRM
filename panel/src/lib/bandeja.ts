@@ -1,3 +1,4 @@
+import { guardarCookie } from '@/lib/cookies'
 // Preferencias de la bandeja de chats (se recuerdan en una cookie para que el servidor cargue directo la vista elegida).
 // de: 'todos' (todo el equipo), 'mios' o el id de un asesor · filtro: 'todos' o 'sin_responder'.
 export const COOKIE_BANDEJA = 'crm-bandeja'
@@ -18,7 +19,7 @@ export function leerPreferencia(valor: string | undefined): PreferenciaBandeja {
 }
 
 export function guardarPreferencia(p: PreferenciaBandeja) {
-  document.cookie = `${COOKIE_BANDEJA}=${encodeURIComponent(`${p.de}|${p.filtro}`)}; path=/; max-age=31536000; samesite=lax`
+  guardarCookie(COOKIE_BANDEJA, encodeURIComponent(`${p.de}|${p.filtro}`))
 }
 
 /** Id del asesor por el que filtrar (o null = todos), según quién puede ver todo el equipo. */

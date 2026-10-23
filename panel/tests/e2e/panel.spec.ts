@@ -6,7 +6,7 @@ const USUARIO = process.env.E2E_USUARIO
 const CLAVE = process.env.E2E_CLAVE
 test.skip(!USUARIO || !CLAVE, 'Falta E2E_USUARIO / E2E_CLAVE')
 
-const PAGINAS = ['/pendientes', '/chats', '/leads', '/kanban', '/leads/nuevo', '/dashboard', '/usuarios', '/respuestas', '/cuenta', '/qr', '/genesys', '/genesys/pruebas', '/flujos-bot', '/recordatorios', '/enlaces', '/puntaje']
+const PAGINAS = ['/pendientes', '/chats', '/chats?lista', '/leads', '/kanban', '/leads/nuevo', '/dashboard', '/usuarios', '/respuestas', '/cuenta', '/qr', '/genesys', '/genesys/pruebas', '/genesys/vencimientos', '/flujos-bot', '/recordatorios', '/enlaces', '/puntaje', '/conversaciones-iniciadas', '/revision-bot', '/costos', '/papelera']
 
 async function ingresar(page: Page) {
   await page.goto('/login')

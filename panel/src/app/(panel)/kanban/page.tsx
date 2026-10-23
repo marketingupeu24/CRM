@@ -4,6 +4,7 @@ import { ESTADOS_LEAD, type LeadEstado } from '@crm/db'
 import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { TableroKanban, type TarjetaLead } from './TableroKanban'
+import { ahoraMs } from '@/lib/texto'
 
 export const metadata: Metadata = { title: 'Kanban' }
 
@@ -65,7 +66,7 @@ export default async function PaginaKanban(props: PageProps<'/kanban'>) {
         <p className="text-xs text-amber-700">Se muestran los {LIMITE} leads movidos más recientemente. Usa los filtros para acotar.</p>
       )}
 
-      <TableroKanban leads={leads} estados={estados} mostrarAsesor={esAdmin} ahora={Date.now()} />
+      <TableroKanban leads={leads} estados={estados} mostrarAsesor={esAdmin} ahora={ahoraMs()} />
     </div>
   )
 }

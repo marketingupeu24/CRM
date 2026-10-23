@@ -8,6 +8,7 @@ import { crearClienteServidor } from '@/lib/supabase/server'
 import { CARRERAS_OFICIALES } from '@crm/db'
 import { RegistroPresencial } from './RegistroPresencial'
 import { TarjetasQr, type TarjetaQr } from './TarjetasQr'
+import { ahoraMs } from '@/lib/texto'
 
 export const metadata: Metadata = { title: 'Mi QR (presencial)' }
 
@@ -25,7 +26,7 @@ export default async function PaginaQrAsesor() {
 
   const consulta = supabase.from('asesores').select('id, nombre, codigo_qr, rol, activo').is('eliminado_at', null).order('nombre')
   // Escaneados en los últimos 14 días (los propios; quien ve todo, los de todos)
-  const desde = new Date(Date.now() - 14 * 86_400_000).toISOString()
+  const desde = new Date(ahoraMs() - 14 * 86_400_000).toISOString()
   const escaneos = supabase.from('leads').select('id, nombre, telefono, dni, carrera_interes, fecha_asignado, registrado_por, origen_campana')
     .in('origen_campana', ['Presencial (QR del asesor)', 'Enlace del asesor (WhatsApp)']).gte('fecha_asignado', desde).is('eliminado_at', null)
     .order('fecha_asignado', { ascending: false }).limit(30)

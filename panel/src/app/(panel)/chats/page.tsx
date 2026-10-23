@@ -9,6 +9,7 @@ import { redirect } from 'next/navigation'
 import { asesorDeLaVista, COOKIE_BANDEJA, leerPreferencia } from '@/lib/bandeja'
 import { VistaChats } from './VistaChats'
 import { VentanaWhatsApp } from '@/components/VentanaWhatsApp'
+import { ahoraMs } from '@/lib/texto'
 
 export const metadata: Metadata = { title: 'Chats' }
 
@@ -52,7 +53,7 @@ export default async function PaginaChats(props: PageProps<'/chats'>) {
 
   // Asignados o reasignados en la última semana a los que nadie escribió desde entonces: salen arriba, para encontrarlos
   let sinChat = supabase.from('leads').select('id, nombre, telefono, estado, fecha_asignado, ultimo_mensaje_at, reasignaciones, asesor:asesores!leads_asesor_id_fkey(nombre)')
-    .not('asesor_id', 'is', null).gte('fecha_asignado', new Date(Date.now() - 7 * 86_400_000).toISOString())
+    .not('asesor_id', 'is', null).gte('fecha_asignado', new Date(ahoraMs() - 7 * 86_400_000).toISOString())
   if (asesorFiltro) sinChat = sinChat.eq('asesor_id', asesorFiltro)
 
   const [{ data: chats, error }, { count: totalSinResponder }, { data: asesores }, { data: nuevos }, { data: deApoyo }] = await Promise.all([

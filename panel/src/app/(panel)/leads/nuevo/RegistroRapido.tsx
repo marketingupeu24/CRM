@@ -39,7 +39,7 @@ export function RegistroRapido({ carreras, actividades, asignacion, convocatoria
   const [tanda, setTanda] = useState<DatosTanda & { colegio: string; grado: string }>({ actividadId: '', asesorId: '', origen: '', convocatoria: '', colegio: '', grado: '' })
   const [verTanda, setVerTanda] = useState(false)
   const [ficha, setFicha] = useState<Ficha>(fichaVacia({ colegio: '', grado: '' }))
-  const [existente, setExistente] = useState<Existente | null>(null)
+  const [existenteEncontrado, setExistente] = useState<Existente | null>(null)
   const [registros, setRegistros] = useState<Registro[]>([])
   const [aviso, setAviso] = useState<{ texto: string; error?: boolean } | null>(null)
   // Estado propio (no useTransition): así el botón se libera apenas responde el servidor,
@@ -47,10 +47,11 @@ export function RegistroRapido({ carreras, actividades, asignacion, convocatoria
   const [pendiente, setPendiente] = useState(false)
   const nombreRef = useRef<HTMLInputElement>(null)
 
-  // Datos de la tanda: se recuerdan en este navegador
+  // Datos de la tanda: se recuerdan en este navegador. Se leen al montar (en el servidor no hay localStorage)
   useEffect(() => {
     try {
       const guardada = JSON.parse(localStorage.getItem(CLAVE_TANDA) ?? 'null')
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sincroniza con localStorage una sola vez, después de hidratar
       if (guardada) { setTanda((t) => ({ ...t, ...guardada })); setFicha((f) => ({ ...f, colegio: guardada.colegio ?? '', grado: guardada.grado ?? '' })) }
     } catch { /* sin almacenamiento */ }
     nombreRef.current?.focus()
@@ -69,10 +70,12 @@ export function RegistroRapido({ carreras, actividades, asignacion, convocatoria
     cambiarTanda({ actividadId: id, ...(act?.tipo === 'colegio' && act.lugar ? { colegio: act.lugar } : {}) })
   }
 
-  // ¿Ya existe? (se consulta mientras se escribe el celular o el DNI)
+  // ¿Ya existe? (se consulta mientras se escribe el celular o el DNI; con datos incompletos no se muestra)
+  const datosIncompletos = ficha.celular.replace(/\D/g, '').length < 9 && ficha.dni.replace(/\D/g, '').length < 8
+  const existente = datosIncompletos ? null : existenteEncontrado
   useEffect(() => {
     const tel = ficha.celular.replace(/\D/g, ''), dni = ficha.dni.replace(/\D/g, '')
-    if (tel.length < 9 && dni.length < 8) { setExistente(null); return }
+    if (tel.length < 9 && dni.length < 8) return
     let vigente = true
     const t = setTimeout(async () => { const r = await buscarExistente(tel, dni); if (vigente) setExistente(r) }, 350)
     return () => { vigente = false; clearTimeout(t) }
