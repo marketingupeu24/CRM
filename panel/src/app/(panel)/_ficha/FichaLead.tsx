@@ -22,6 +22,8 @@ import { BandejaMovil } from './BandejaMovil'
 import { VentanaDetalle } from '@/components/VentanaWhatsApp'
 import { QuitarApoyo } from './QuitarApoyo'
 import { BotonesTarea, FormularioTarea } from '@/components/Tareas'
+import { textoProcedencia } from '@/lib/ubigeos'
+import { UBIGEOS } from '@/lib/ubigeos-servidor'
 import { ahoraMs } from '@/lib/texto'
 
 /** Sugerencias de carrera al editar los datos (presencial, campus Juliaca) */
@@ -167,6 +169,7 @@ export async function FichaLead({ id, seccion }: { id: string; seccion: 'leads' 
       ? <Link key="act" href={`/leads?actividad=${lead.actividad.id}`} className="text-marca-700 hover:underline">{lead.actividad.nombre}</Link>
       : null],
     ['Colegio', [lead.colegio, lead.grado].filter(Boolean).join(' · ') || null],
+    ['Procedencia', textoProcedencia(lead, UBIGEOS)],
     ['Consulta', lead.resumen],
     ['Mensajes al bot', lead.total_mensajes],
     ['Primer contacto', fechaHora(lead.primer_contacto)],

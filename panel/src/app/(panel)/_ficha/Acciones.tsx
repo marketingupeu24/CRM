@@ -4,6 +4,8 @@
 import { useActionState, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAviso, useConfirmar } from '@/components/Confirmacion'
+import { SelectorProcedencia } from '@/components/SelectorProcedencia'
+import { paisDeTelefono } from '@/lib/ubigeos'
 import { ESTADOS_LEAD, ETIQUETAS_ESTADO, GRADOS, MOTIVOS_PERDIDA, ORIGENES, type Lead, type LeadEstado } from '@crm/db'
 import {
   actualizarDatos, agregarNota, cambiarEstado, eliminarNota, enviarAPapelera, reasignarAsesor, type Resultado,
@@ -187,6 +189,10 @@ export function EditarDatos({ lead, puedeCelular = false, carreras = [] }: { lea
           )}
         </select>
       </label>
+      <fieldset className="grid gap-3 sm:col-span-2 sm:grid-cols-2">
+        <legend className="mb-1 text-sm font-medium text-slate-700">Procedencia</legend>
+        <SelectorProcedencia ubigeo={lead.ubigeo} pais={lead.pais} paisDelCelular={paisDeTelefono(lead.telefono)} />
+      </fieldset>
       <div className="flex items-center gap-2 sm:col-span-2">
         <button className="boton" disabled={enviando}>{enviando ? 'Guardando…' : 'Guardar'}</button>
         <button type="button" onClick={() => setAbierto(false)} className="boton-secundario">Cerrar</button>

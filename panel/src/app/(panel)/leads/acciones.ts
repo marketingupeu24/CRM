@@ -91,7 +91,7 @@ export async function actualizarDatos(leadId: string, _previo: Resultado, formDa
   const { puede, perfil } = await obtenerSesion()
   const supabase = await crearClienteServidor()
   let telefono: string | undefined
-  const { data: actual } = await supabase.from('leads').select('registrado_por').eq('id', leadId).maybeSingle()
+  const { data: actual } = await supabase.from('leads').select('registrado_por, pais, ubigeo').eq('id', leadId).maybeSingle()
   if (!actual) return { error: 'No tienes acceso a este lead.' }
   if ((puede('editar_celular') || actual.registrado_por === perfil.id) && formData.has('telefono')) {
     const digitos = String(formData.get('telefono') ?? '').replace(/\D/g, '')
@@ -99,8 +99,18 @@ export async function actualizarDatos(leadId: string, _previo: Resultado, formDa
     if (!/^\d{9,15}$/.test(telefono)) return { error: 'Revisa el celular (9 dígitos, o con código de país).' }
   }
 
+  // Procedencia: país (vacío = el del celular) y UBIGEO; si cambió, queda como indicada por el asesor
+  const pais = texto('pais')
+  const ubigeo = texto('ubigeo')
+  if (pais && !/^[A-Z]{2}$/.test(pais)) return { error: 'País no válido.' }
+  if (ubigeo && !/^\d{6}$/.test(ubigeo)) return { error: 'Lugar no válido.' }
+  const procedencia = formData.has('ubigeo') && (pais !== actual.pais || ubigeo !== actual.ubigeo)
+    ? { pais, ubigeo, procedencia_por: 'asesor' }
+    : {}
+
   const { error } = await supabase.from('leads').update({
     ...(telefono ? { telefono } : {}),
+    ...procedencia,
     nombre: texto('nombre'),
     colegio: texto('colegio'),
     grado: texto('grado'),

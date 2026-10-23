@@ -28,6 +28,7 @@ const PAGINAS: Omit<Item, 'id' | 'grupo'>[] = [
   { titulo: 'Actividades y QR', icono: '🎪', ir: '/actividades', detalle: 'Ferias y colegios: QR de registro', modulo: 'actividades' },
   { titulo: 'Proformas de costos', icono: '💰', ir: '/costos', detalle: 'Calcular costos 2027-1, PDF e imagen', modulo: 'costos' },
   { titulo: 'Dashboard', icono: '◔', ir: '/dashboard', modulo: 'dashboard', detalle: 'Indicadores y gráficos' },
+  { titulo: 'Procedencia', icono: '📍', ir: '/procedencia', modulo: 'dashboard', detalle: 'De dónde vienen los leads (país, departamento, provincia, distrito)' },
   { titulo: 'Campañas', icono: '📣', ir: '/campanas', modulo: 'campanas', detalle: 'Resultados y Excel por campaña' },
   { titulo: 'Leads sin responder', icono: '●', ir: '/chats?filtro=sin_responder', modulo: 'chats', detalle: 'Escribieron y esperan respuesta' },
   { titulo: 'Respuestas rápidas', icono: '⚡', ir: '/respuestas', modulo: 'chats', detalle: 'Mis respuestas personales y las de todos' },

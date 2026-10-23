@@ -31,6 +31,7 @@ export async function registrarseConAsesor(codigo: string, via: 'qr' | 'enlace',
     p_grado: texto('grado') || undefined,
     p_carrera: texto('carrera') || undefined,
     p_via: via,
+    p_ubigeo: texto('ubigeo') || undefined,
   })
   if (error) return { error: error.message || 'No pudimos registrarte. Intenta de nuevo.' }
 

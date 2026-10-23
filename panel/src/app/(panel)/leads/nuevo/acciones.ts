@@ -22,6 +22,8 @@ export interface DatosTanda {
   asesorId: string
   origen: string
   convocatoria: string
+  /** UBIGEO de donde vienen (ej. visita a un colegio de Ilave) */
+  ubigeo?: string
 }
 
 export interface ResultadoFicha {
@@ -50,6 +52,11 @@ export async function registrarFicha(ficha: Ficha, tanda: DatosTanda): Promise<R
   if (r.estado === 'omitido') {
     const { data: avisado } = await supabase.rpc('avisar_visita_registro', { p_telefono: ficha.celular || undefined, p_dni: ficha.dni || undefined })
     if (avisado) return { estado: 'omitido', mensaje: 'Ya es lead de otro asesor: sigue siendo suyo y se le avisó que lo atendiste.', leadId: null }
+  }
+
+  // Procedencia de la tanda: solo si el lead aún no tenía una
+  if (r.lead_id && tanda.ubigeo && /^\d{6}$/.test(tanda.ubigeo)) {
+    await supabase.from('leads').update({ ubigeo: tanda.ubigeo, procedencia_por: 'asesor' }).eq('id', r.lead_id).is('ubigeo', null)
   }
 
   // Observación y convocatoria (opcionales) sobre el lead recién registrado

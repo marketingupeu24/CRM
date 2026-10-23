@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react'
 import { registrarseEnActividad, type ResultadoRegistro } from './acciones'
+import { SelectorProcedencia } from '@/components/SelectorProcedencia'
 
 const GRADOS = ['5.° de secundaria', '4.° de secundaria', '3.° de secundaria o menos', 'Ya terminé el colegio', 'Universitario / traslado', 'Otro']
 
@@ -71,6 +72,9 @@ export function FormularioRegistro({ codigo, carreras, colegio, enviar, asesor }
       <label className="block text-sm font-medium text-slate-700">Colegio
         <input name="colegio" maxLength={120} defaultValue={colegio ?? ''} placeholder="Nombre de tu colegio" className={campo} />
       </label>
+      <div className="[&_label]:font-medium [&_label]:text-slate-700">
+        <SelectorProcedencia ubigeo={null} conPais={false} claseCampo={campo.replace('mt-1 ', '')} etiqueta="¿De dónde eres?" ayuda="Tu distrito o provincia (opcional)." />
+      </div>
       {/* Campo trampa para bots (oculto para las personas) */}
       <input name="sitio_web" tabIndex={-1} autoComplete="off" aria-hidden className="absolute -left-[9999px] h-0 w-0 opacity-0" />
       <label className="flex items-start gap-3 text-sm text-slate-600">

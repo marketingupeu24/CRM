@@ -44,12 +44,18 @@ export async function contextoDelAlumno(lead: Lead): Promise<string> {
       asesor += ` (ausente hasta el ${fechaCorta(data.ausente_hasta)}; mientras tanto lo atiende otro asesor(a) del equipo de Admisión)`
     }
   }
+  // De dónde es (distrito, provincia o departamento): así Genesys no se lo vuelve a preguntar
+  const { data: lugar } = lead.ubigeo
+    ? await supabase.from('ubigeos').select('nombre, provincia, departamento, nivel').eq('codigo', lead.ubigeo).maybeSingle()
+    : { data: null }
+  const procedencia = lugar ? [lugar.nombre, lugar.nivel === 3 ? lugar.provincia : null, lugar.nivel > 1 ? lugar.departamento : null].filter(Boolean).join(', ') : null
   const interes = lead.programa === 'cepre' ? `CEPRE${lead.modalidad ? ` ${lead.modalidad}` : ''}` : lead.carrera_interes
   const datos = [
     lead.nombre && `Nombre: ${lead.nombre}`,
     lead.dni && `Documento: ${lead.dni}`,
     interes && `Interés: ${interes}`,
     lead.colegio && `Colegio: ${lead.colegio}`,
+    procedencia && `De: ${procedencia}`,
     asesor && `Su asesor(a): ${asesor}`,
   ].filter(Boolean).join(' · ')
   if (!leadRegistrado(lead)) return `Datos que ya dio: ${datos}. Aún no está registrado: pide solo lo que falte.`

@@ -39,6 +39,7 @@ export async function registrarseEnActividad(codigo: string, _previo: ResultadoR
     p_colegio: texto('colegio') || undefined,
     p_grado: texto('grado') || undefined,
     p_carrera: texto('carrera') || undefined,
+    p_ubigeo: texto('ubigeo') || undefined,
   })
   // Los mensajes de la base ya están escritos para el alumno ("Escribe tu DNI (8 dígitos)", etc.)
   if (error) return { error: error.message || 'No pudimos registrarte. Intenta de nuevo.' }

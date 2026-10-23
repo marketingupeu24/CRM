@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { ORIGENES } from '@crm/db'
 import { SelectorAsignacion, type PermisosAsignacion } from '@/components/SelectorAsignacion'
+import { SelectorProcedencia } from '@/components/SelectorProcedencia'
 import { buscarExistente, registrarFicha, type DatosTanda, type Existente, type Ficha, type ResultadoFicha } from './acciones'
 
 const CLAVE_TANDA = 'crm-fichas-tanda'
@@ -36,7 +37,7 @@ export function RegistroRapido({ carreras, actividades, asignacion, convocatoria
   asignacion: PermisosAsignacion
   convocatorias: string[]
 }) {
-  const [tanda, setTanda] = useState<DatosTanda & { colegio: string; grado: string }>({ actividadId: '', asesorId: '', origen: '', convocatoria: '', colegio: '', grado: '' })
+  const [tanda, setTanda] = useState<DatosTanda & { colegio: string; grado: string }>({ actividadId: '', asesorId: '', origen: '', convocatoria: '', colegio: '', grado: '', ubigeo: '' })
   const [verTanda, setVerTanda] = useState(false)
   const [ficha, setFicha] = useState<Ficha>(fichaVacia({ colegio: '', grado: '' }))
   const [existenteEncontrado, setExistente] = useState<Existente | null>(null)
@@ -164,6 +165,9 @@ export function RegistroRapido({ carreras, actividades, asignacion, convocatoria
                 <input value={tanda.convocatoria} onChange={(e) => cambiarTanda({ convocatoria: e.target.value })} list="convocatorias-fichas" placeholder="2027-1" className={campo} />
                 <datalist id="convocatorias-fichas">{convocatorias.map((c) => <option key={c} value={c} />)}</datalist>
               </label>
+              <div className="sm:col-span-2">
+                <SelectorProcedencia key={tanda.ubigeo || 'sin-lugar'} ubigeo={tanda.ubigeo || null} conPais={false} etiqueta="Procedencia (para todas)" alCambiar={(v) => cambiarTanda({ ubigeo: v })} />
+              </div>
             </div>
           )}
         </section>

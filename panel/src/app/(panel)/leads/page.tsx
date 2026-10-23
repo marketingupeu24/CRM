@@ -10,6 +10,8 @@ import { FiltrosAvanzados } from '@/components/FiltrosAvanzados'
 import { BarraMasiva } from './BarraMasiva'
 import { VentanaWhatsApp } from '@/components/VentanaWhatsApp'
 import { crearClienteServidor } from '@/lib/supabase/server'
+import { rutaUbigeo } from '@/lib/ubigeos'
+import { UBIGEOS } from '@/lib/ubigeos-servidor'
 import { parametro } from '@/lib/texto'
 
 export const metadata: Metadata = { title: 'Leads' }
@@ -29,6 +31,8 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
     origen: parametro(sp.origen),
     campana: parametro(sp.campana),
     actividad: /^\d+$/.test(parametro(sp.actividad)) ? parametro(sp.actividad) : '',
+    // Procedencia (desde el reporte): UBIGEO de 2 (departamento), 4 (provincia) o 6 dígitos (distrito)
+    ubigeo: /^(\d{2}|\d{4}|\d{6})$/.test(parametro(sp.ubigeo)) ? parametro(sp.ubigeo) : '',
     desde: mes?.desde ?? parametro(sp.desde),
     hasta: mes?.hasta ?? parametro(sp.hasta),
     // "interes": primero los más interesados (puntaje); por defecto, los que escribieron último
@@ -63,6 +67,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
   if (filtros.origen === 'Sin dato') consulta = consulta.is('origen_campana', null)
   else if (filtros.origen) consulta = consulta.eq('origen_campana', filtros.origen)
   if (filtros.actividad) consulta = consulta.eq('actividad_id', Number(filtros.actividad))
+  if (filtros.ubigeo) consulta = consulta.like('ubigeo', `${filtros.ubigeo}%`)
   // Campaña: sus fechas y, si tiene, su origen
   if (campana) {
     consulta = consulta.gte('created_at', `${campana.inicio}T00:00:00-05:00`).lte('created_at', `${campana.fin}T23:59:59.999-05:00`)
@@ -227,9 +232,10 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
           </div>
         </FiltrosAvanzados>
         {actividad && <input type="hidden" name="actividad" value={actividad.id} />}
+        {filtros.ubigeo && <input type="hidden" name="ubigeo" value={filtros.ubigeo} />}
 
         {/* Filtros aplicados: se ven de un vistazo y se quitan con ✕ */}
-        {(aplicados.length > 0 || campana || actividad) && (
+        {(aplicados.length > 0 || campana || actividad || filtros.ubigeo) && (
           <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
             {campana && (
               <span className="rounded-full bg-marca-50 px-2.5 py-1 text-marca-700">
@@ -241,6 +247,12 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
               <span className="rounded-full bg-dorado-50 px-2.5 py-1 text-dorado-700">
                 QR de <b>{actividad.nombre}</b>{actividad.lugar ? ` (${actividad.lugar})` : ''}
                 <Link href={sinFiltro('actividad')} className="ml-1.5 font-semibold hover:text-rose-600" aria-label="Quitar actividad">✕</Link>
+              </span>
+            )}
+            {filtros.ubigeo && (
+              <span className="rounded-full bg-marca-50 px-2.5 py-1 text-marca-700">
+                📍 De <b>{rutaUbigeo(filtros.ubigeo.padEnd(6, '0'), UBIGEOS)}</b>
+                <Link href={sinFiltro('ubigeo')} className="ml-1.5 font-semibold hover:text-rose-600" aria-label="Quitar procedencia">✕</Link>
               </span>
             )}
             {aplicados.filter((a) => a.clave !== 'campana').map((a) => (

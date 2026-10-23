@@ -19,10 +19,11 @@ export const esquemaRegistroPublico = z.object({
   colegio: campo(200),
   grado: campo(60),
   carrera: campo(200),
+  ubigeo: campo(6),
   sitio_web: campo(500),
 })
 export type RegistroPublico = z.infer<typeof esquemaRegistroPublico>
-export const CAMPOS_REGISTRO_PUBLICO = ['nombre', 'celular', 'dni', 'colegio', 'grado', 'carrera', 'sitio_web'] as const
+export const CAMPOS_REGISTRO_PUBLICO = ['nombre', 'celular', 'dni', 'colegio', 'grado', 'carrera', 'ubigeo', 'sitio_web'] as const
 
 /** Ausencia temporal (Mi cuenta / Usuarios). */
 export const esquemaAusencia = z.object({

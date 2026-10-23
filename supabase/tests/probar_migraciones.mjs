@@ -137,6 +137,24 @@ seccion('doble check de WhatsApp (avisos de estado)')
   await q(`delete from lead_interacciones where id = $1`, [msj])
 }
 
+seccion('procedencia (país y UBIGEO)')
+{
+  const pais = async t => (await uno(`select pais_de_telefono($1) p`, [t])).p
+  ok(await pais('51951301933') === 'PE' && await pais('59171234567') === 'BO' && await pais('PE.1969219067373593') === 'PE', 'país según el celular (+51, +591, BSUID)')
+  ok(await pais('123456789012345') === null, 'un @lid no se adivina')
+  const ub = async t => (await uno(`select ubigeo_de_texto($1) u`, [t])).u
+  ok(await ub('Juliaca') === '211101', 'Juliaca → distrito de San Román')
+  ok(await ub('soy de San Román') === '211100', '"soy de San Román" → provincia')
+  ok(await ub('Ilave, Puno') === '210501', '"Ilave, Puno" → distrito de El Collao')
+  ok(await ub('San Miguel, Lima') === '150136', 'nombre repetido: manda el departamento mencionado')
+  ok(await ub('Arequipa') === '040100', 'una ciudad capital queda como provincia')
+  ok(await ub('Narnia') === null, 'texto desconocido: sin procedencia')
+  await q(`update leads set ubigeo = '211101' where id = $1`, [l0.id])
+  const r = await q(`select * from procedencia_leads() where ubigeo = '211101'`)
+  ok(r.length === 1 && Number(r[0].total) >= 1 && r[0].pais === 'PE', 'reporte de procedencia agrupa por país y UBIGEO')
+  await q(`update leads set ubigeo = null where id = $1`, [l0.id])
+}
+
 seccion('RLS como asesor (General A)')
 const ga = await asesor('General A')
 const gb = await asesor('General B')

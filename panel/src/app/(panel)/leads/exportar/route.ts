@@ -6,6 +6,8 @@ import { rangoMes } from '@/lib/periodos'
 import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { hoyLima } from '@/lib/texto'
+import { textoProcedencia } from '@/lib/ubigeos'
+import { UBIGEOS } from '@/lib/ubigeos-servidor'
 
 const LOTE = 1000          // la API devuelve máximo 1000 filas por consulta
 const MAXIMO = 20_000
@@ -37,7 +39,7 @@ export async function GET(request: Request) {
   for (let desde = 0; desde < MAXIMO; desde += LOTE) {
     let consulta = supabase
       .from('leads')
-      .select('nombre, telefono, dni, programa, carrera_interes, modalidad, resumen, convocatoria, estado, origen, origen_campana, canal_entrada, anuncio, colegio, grado, reasignaciones, motivo_no_interes, actividad:actividades(nombre), created_at, ultimo_contacto, fecha_asignado, primer_contacto_asesor_at, reconsultas, total_mensajes, asesor:asesores!leads_asesor_id_fkey(nombre)')
+      .select('nombre, telefono, dni, programa, carrera_interes, modalidad, resumen, convocatoria, estado, origen, origen_campana, canal_entrada, anuncio, colegio, grado, pais, ubigeo, reasignaciones, motivo_no_interes, actividad:actividades(nombre), created_at, ultimo_contacto, fecha_asignado, primer_contacto_asesor_at, reconsultas, total_mensajes, asesor:asesores!leads_asesor_id_fkey(nombre)')
 
     if (f('q')) {
       const q = f('q').replace(/[,()*%\\]/g, ' ').trim()
@@ -52,6 +54,7 @@ export async function GET(request: Request) {
     if (f('origen') === 'Sin dato') consulta = consulta.is('origen_campana', null)
     else if (f('origen')) consulta = consulta.eq('origen_campana', f('origen'))
     if (/^\d+$/.test(f('actividad'))) consulta = consulta.eq('actividad_id', Number(f('actividad')))
+    if (/^(\d{2}|\d{4}|\d{6})$/.test(f('ubigeo'))) consulta = consulta.like('ubigeo', `${f('ubigeo')}%`)
     if (campana) {
       consulta = consulta.gte('created_at', `${campana.inicio}T00:00:00-05:00`).lte('created_at', `${campana.fin}T23:59:59.999-05:00`)
       if (campana.origen) consulta = consulta.eq('origen_campana', campana.origen)
@@ -67,7 +70,7 @@ export async function GET(request: Request) {
 
   const encabezados = [
     'Nombre', 'Celular', 'DNI', 'Programa', 'Carrera', 'Modalidad', 'Consulta', 'Convocatoria', 'Estado',
-    'Asesor', 'Fuente', 'Nos conoció por', 'Llegó por', 'Anuncio', 'Actividad (QR)', 'Colegio', 'Grado', 'Motivo de pérdida', 'Registrado', 'Último contacto', 'Asignado', 'Primer contacto del asesor',
+    'Asesor', 'Fuente', 'Nos conoció por', 'Llegó por', 'Anuncio', 'Actividad (QR)', 'Colegio', 'Grado', 'Procedencia', 'Motivo de pérdida', 'Registrado', 'Último contacto', 'Asignado', 'Primer contacto del asesor',
     'Veces que volvió a consultar', 'Mensajes al bot', 'Reasignaciones automáticas',
   ]
   const lineas = filas.map((l) => {
@@ -76,14 +79,14 @@ export async function GET(request: Request) {
       modalidad: string | null; resumen: string | null; convocatoria: string | null; estado: LeadEstado; origen: string
       origen_campana: string | null; reasignaciones: number
       canal_entrada: string | null; anuncio: { titulo?: string; id?: string } | null
-      colegio: string | null; grado: string | null; actividad: { nombre: string } | null
+      colegio: string | null; grado: string | null; pais: string | null; ubigeo: string | null; actividad: { nombre: string } | null
       motivo_no_interes: string | null; created_at: string; ultimo_contacto: string; fecha_asignado: string | null
       primer_contacto_asesor_at: string | null; reconsultas: number; total_mensajes: number; asesor: { nombre: string } | null
     }
     return [
       lead.nombre, lead.telefono, lead.dni, lead.programa === 'cepre' ? 'CePre' : 'Pregrado', lead.carrera_interes,
       lead.modalidad, lead.resumen, lead.convocatoria, ETIQUETAS_ESTADO[lead.estado] ?? lead.estado,
-      lead.asesor?.nombre, ETIQUETAS_FUENTE[lead.origen as Fuente] ?? lead.origen, lead.origen_campana, lead.canal_entrada, lead.anuncio ? (lead.anuncio.titulo ?? lead.anuncio.id ?? 'Sí') : null, lead.actividad?.nombre, lead.colegio, lead.grado, lead.motivo_no_interes,
+      lead.asesor?.nombre, ETIQUETAS_FUENTE[lead.origen as Fuente] ?? lead.origen, lead.origen_campana, lead.canal_entrada, lead.anuncio ? (lead.anuncio.titulo ?? lead.anuncio.id ?? 'Sí') : null, lead.actividad?.nombre, lead.colegio, lead.grado, textoProcedencia(lead, UBIGEOS), lead.motivo_no_interes,
       fechaLima(lead.created_at), fechaLima(lead.ultimo_contacto), fechaLima(lead.fecha_asignado),
       fechaLima(lead.primer_contacto_asesor_at), lead.reconsultas, lead.total_mensajes, lead.reasignaciones,
     ].map(celda).join(';')

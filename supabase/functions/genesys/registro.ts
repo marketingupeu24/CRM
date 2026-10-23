@@ -166,6 +166,8 @@ export async function webhook(cuerpo: Cuerpo): Promise<Respuesta> {
   const modalidad = elegir(cuerpo.Modalidad, cuerpo.modalidad)
   const carrera = elegir(cuerpo.Carrera, cuerpo.carrera)
   const consulta = elegir(cuerpo.Consulta, cuerpo.consulta, cuerpo.interes)
+  // De dónde es el alumno (texto libre: "Juliaca", "Ilave, Puno"): se traduce a UBIGEO
+  const lugar = elegir(cuerpo.Procedencia, cuerpo.procedencia, cuerpo.Ciudad, cuerpo.ciudad, cuerpo.Distrito, cuerpo.distrito, cuerpo.Lugar, cuerpo.lugar)
   const convocatoria = elegir(cuerpo.NombreHoja, cuerpo.nombreHoja, cuerpo.hoja, cuerpo.convocatoria)
   const origenCampana = normalizarOrigen(elegir(cuerpo.Origen, cuerpo.origen, cuerpo.ComoNosConocio, cuerpo.Campana, cuerpo.campana, cuerpo.utm_source))
   const fuenteTexto = elegir(cuerpo.fuente)
@@ -248,13 +250,19 @@ export async function webhook(cuerpo: Cuerpo): Promise<Respuesta> {
     }
   }
 
+  // Procedencia (si el alumno la dijo): solo si aún no tenía una (la del formulario o del asesor manda)
+  if (lugar) {
+    const { data: ubigeo } = await supabase.rpc('ubigeo_de_texto', { p_texto: lugar })
+    if (ubigeo) await supabase.from('leads').update({ ubigeo, procedencia_por: 'bot' }).eq('id', r.lead_id).is('ubigeo', null)
+  }
+
   // Cómo nos conoció (si BuilderBot lo envía): se guarda el último valor recibido
   if (origenCampana) await supabase.from('leads').update({ origen_campana: origenCampana }).eq('id', r.lead_id)
 
   // Lo que el lead respondió a Genesys queda visible en la conversación del CRM
   const datosBot = [
     ['Nombre', nombre], ['DNI', dni], ['Carrera', carrera], ['Modalidad', modalidad],
-    ['Consulta', consulta], ['Convocatoria', convocatoria], ['Nos conoció por', origenCampana],
+    ['Consulta', consulta], ['De', lugar], ['Convocatoria', convocatoria], ['Nos conoció por', origenCampana],
   ].filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`).join('\n')
   await registrarEvento(r.lead_id, `Datos entregados a Genesys:\n${datosBot}`)
 
