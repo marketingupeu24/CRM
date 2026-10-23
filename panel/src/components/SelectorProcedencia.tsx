@@ -97,8 +97,8 @@ export function SelectorProcedencia({ ubigeo, pais, paisDelCelular, conPais = tr
                   onMouseEnter={() => setActivo(i)}
                   className={`cursor-pointer px-3 py-2 ${i === activo ? 'bg-marca-50' : ''}`}
                 >
-                  <span className="font-medium text-slate-800">{f[1]}</span>
-                  <span className="ml-1.5 text-xs text-slate-500">
+                  <span className="block font-medium text-slate-800">{f[1]}</span>
+                  <span className="block text-xs text-slate-500">
                     {NIVEL[nivelUbigeo(f[0])]}{nivelUbigeo(f[0]) > 1 && mapa ? ` · ${rutaUbigeo(f[0], mapa).split(' · ').slice(1).join(', ')}` : ''}
                   </span>
                 </li>

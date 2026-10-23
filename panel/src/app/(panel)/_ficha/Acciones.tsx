@@ -195,7 +195,7 @@ export function EditarDatos({ lead, puedeCelular = false, carreras = [] }: { lea
           )}
         </select>
       </label>
-      <fieldset className="grid gap-3 sm:col-span-2 sm:grid-cols-2">
+      <fieldset className="sm:col-span-2">
         <legend className="mb-1 text-sm font-medium text-slate-700">Procedencia</legend>
         <SelectorProcedencia ubigeo={lead.ubigeo} pais={lead.pais} paisDelCelular={paisDeTelefono(lead.telefono)} />
       </fieldset>
