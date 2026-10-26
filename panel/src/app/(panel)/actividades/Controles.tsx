@@ -5,6 +5,8 @@ import { useActionState, useEffect, useState, useTransition } from 'react'
 import QRCode from 'qrcode'
 import { useConfirmar } from '@/components/Confirmacion'
 import { cambiarActiva, eliminarActividad, guardarActividad, guardarWhatsappGenesys, type Resultado } from './acciones'
+import { EditorFormulario } from './EditorFormulario'
+import { leerFormulario } from '@/lib/formulario-actividad'
 
 export interface Actividad {
   id: number
@@ -17,6 +19,9 @@ export interface Actividad {
   asignacion: string
   bienvenida: boolean
   responsable_id: string | null
+  formulario: unknown
+  /** Alumnos que respondieron las preguntas propias */
+  conRespuestas: number
   responsable: string | null
   responsableRecibe: boolean
   registrados: number
@@ -73,6 +78,7 @@ export function FormularioActividad({ actividad, asesores, alGuardar }: {
           </select>
         </label>
       ) : <span />}
+      <div className="sm:col-span-2 lg:col-span-4"><EditorFormulario inicial={leerFormulario(actividad?.formulario)} /></div>
       <p className="text-xs text-slate-500 sm:col-span-2 lg:col-span-4">
         Al terminar el formulario, el alumno toca <b>“Escríbenos por WhatsApp”</b> y envía un mensaje ya escrito con su carrera: así él inicia la conversación y Genesys solo responde (sin riesgo de bloqueo del número).
       </p>
@@ -170,6 +176,9 @@ export function TarjetaActividad({ actividad, base, asesores }: { actividad: Act
             </button>
             <a href={url} target="_blank" rel="noreferrer" className="text-sm font-medium text-marca-700 hover:underline">Ver formulario ↗</a>
             <Link href={`/leads?actividad=${actividad.id}`} className="text-sm font-medium text-marca-700 hover:underline">Ver leads →</Link>
+            {(leerFormulario(actividad.formulario).preguntas.length > 0 || actividad.conRespuestas > 0) && (
+              <Link href={`/actividades/${actividad.id}/respuestas`} className="text-sm font-medium text-marca-700 hover:underline">📝 Respuestas ({actividad.conRespuestas})</Link>
+            )}
           </div>
           {actividad.editable && (
             <div className="flex flex-wrap gap-3 text-xs font-medium">

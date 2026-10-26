@@ -11,7 +11,7 @@ export default async function PaginaActividades() {
   const supabase = await crearClienteServidor()
   const [{ data, error }, { data: resumen }, { data: asesores }, base, { data: ajuste }] = await Promise.all([
     supabase.from('actividades')
-      .select('id, codigo, nombre, tipo, lugar, fecha, activa, asignacion, bienvenida, responsable_id, responsable:asesores!actividades_responsable_id_fkey(nombre, rol, activo)')
+      .select('id, codigo, nombre, tipo, lugar, fecha, activa, asignacion, bienvenida, responsable_id, formulario, responsable:asesores!actividades_responsable_id_fkey(nombre, rol, activo)')
       .order('activa', { ascending: false }).order('fecha', { ascending: false, nullsFirst: true }).order('id', { ascending: false }),
     supabase.rpc('resumen_actividades'),
     puede('asignar')
@@ -20,12 +20,17 @@ export default async function PaginaActividades() {
     urlBase(),
     supabase.from('ajustes').select('valor').eq('clave', 'whatsapp_genesys').maybeSingle(),
   ])
+  // Cuántos respondieron las preguntas propias de cada actividad (el RLS cuenta solo los leads que ve el usuario)
+  const { data: respuestas } = await supabase.from('actividad_respuestas').select('actividad_id')
+  const conRespuestas = new Map<number, number>()
+  for (const r of respuestas ?? []) conRespuestas.set(r.actividad_id, (conRespuestas.get(r.actividad_id) ?? 0) + 1)
   const porActividad = new Map((resumen ?? []).map((r) => [r.actividad_id, r]))
   const actividades: Actividad[] = (data ?? []).map((a) => ({
     ...a,
     responsable: a.responsable?.nombre ?? null,
     // Solo un asesor activo recibe leads; si no, la base reparte por rotación
     responsableRecibe: !!a.responsable?.activo,
+    conRespuestas: conRespuestas.get(a.id) ?? 0,
     registrados: porActividad.get(a.id)?.registrados ?? 0,
     contactados: porActividad.get(a.id)?.contactados ?? 0,
     matriculados: porActividad.get(a.id)?.matriculados ?? 0,

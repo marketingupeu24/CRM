@@ -3,6 +3,7 @@
 import { useActionState } from 'react'
 import { registrarseEnActividad, type ResultadoRegistro } from './acciones'
 import { SelectorProcedencia } from '@/components/SelectorProcedencia'
+import { modoDe, type CampoFormulario, type FormularioActividad, type PreguntaActividad } from '@/lib/formulario-actividad'
 
 const GRADOS = ['5.° de secundaria', '4.° de secundaria', '3.° de secundaria o menos', 'Ya terminé el colegio', 'Universitario / traslado', 'Otro']
 
@@ -12,9 +13,14 @@ type Enviar = (previo: ResultadoRegistro, formData: FormData) => Promise<Resulta
  * Formulario público del QR. Por defecto registra en una actividad (feria, colegio); con `enviar`
  * y `asesor` sirve para el QR de un asesor (atención presencial).
  */
-export function FormularioRegistro({ codigo, carreras, colegio, enviar, asesor }: {
+export function FormularioRegistro({ codigo, carreras, colegio, enviar, asesor, formulario }: {
   codigo: string; carreras: string[]; colegio: string | null; enviar?: Enviar; asesor?: string
+  /** Campos y preguntas propias de la actividad (sin él, el formulario de siempre) */
+  formulario?: FormularioActividad
 }) {
+  const f = formulario ?? { campos: {}, preguntas: [] }
+  const pide = (c: CampoFormulario) => modoDe(f, c) !== 'oculto'
+  const exige = (c: CampoFormulario) => modoDe(f, c) === 'obligatorio'
   const [r, accion, enviando] = useActionState<ResultadoRegistro, FormData>(enviar ?? registrarseEnActividad.bind(null, codigo), {})
 
   if (r.ok) {
@@ -51,30 +57,47 @@ export function FormularioRegistro({ codigo, carreras, colegio, enviar, asesor }
       <label className="block text-sm font-medium text-slate-700">Celular (WhatsApp) *
         <input name="celular" required inputMode="tel" autoComplete="tel" placeholder="987 654 321" className={campo} />
       </label>
-      <label className="block text-sm font-medium text-slate-700">Carrera que te interesa
-        <select name="carrera" defaultValue="" className={campo}>
-          <option value="">Aún no lo decido</option>
-          <option value="CEPRE">CEPRE (preuniversitario)</option>
-          {carreras.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-      </label>
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block text-sm font-medium text-slate-700">DNI
-          <input name="dni" inputMode="numeric" pattern="[0-9]{8}" maxLength={8} title="8 dígitos" placeholder="Opcional" className={campo} />
-        </label>
-        <label className="block text-sm font-medium text-slate-700">Grado
-          <select name="grado" defaultValue="" className={campo}>
-            <option value="">—</option>
-            {GRADOS.map((g) => <option key={g}>{g}</option>)}
+      {pide('carrera') && (
+        <label className="block text-sm font-medium text-slate-700">Carrera que te interesa{exige('carrera') && ' *'}
+          <select name="carrera" defaultValue="" required={exige('carrera')} className={campo}>
+            <option value="">{exige('carrera') ? 'Elige una opción' : 'Aún no lo decido'}</option>
+            <option value="CEPRE">CEPRE (preuniversitario)</option>
+            {carreras.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </label>
-      </div>
-      <label className="block text-sm font-medium text-slate-700">Colegio
-        <input name="colegio" maxLength={120} defaultValue={colegio ?? ''} placeholder="Nombre de tu colegio" className={campo} />
-      </label>
-      <div className="[&_label]:font-medium [&_label]:text-slate-700">
-        <SelectorProcedencia ubigeo={null} conPais={false} claseCampo={campo.replace('mt-1 ', '')} etiqueta="¿De dónde eres?" ayuda="Tu distrito o provincia (opcional)." />
-      </div>
+      )}
+      {(pide('dni') || pide('grado')) && (
+        <div className={`grid gap-3 ${pide('dni') && pide('grado') ? 'grid-cols-2' : ''}`}>
+          {pide('dni') && (
+            <label className="block text-sm font-medium text-slate-700">DNI{exige('dni') && ' *'}
+              <input name="dni" inputMode="numeric" pattern="[0-9]{8}" maxLength={8} title="8 dígitos" required={exige('dni')} placeholder={exige('dni') ? '8 dígitos' : 'Opcional'} className={campo} />
+            </label>
+          )}
+          {pide('grado') && (
+            <label className="block text-sm font-medium text-slate-700">Grado{exige('grado') && ' *'}
+              <select name="grado" defaultValue="" required={exige('grado')} className={campo}>
+                <option value="">—</option>
+                {GRADOS.map((g) => <option key={g}>{g}</option>)}
+              </select>
+            </label>
+          )}
+        </div>
+      )}
+      {pide('colegio') && (
+        <label className="block text-sm font-medium text-slate-700">Colegio{exige('colegio') && ' *'}
+          <input name="colegio" maxLength={120} defaultValue={colegio ?? ''} required={exige('colegio')} placeholder="Nombre de tu colegio" className={campo} />
+        </label>
+      )}
+      {pide('procedencia') && (
+        <div className="[&_label]:font-medium [&_label]:text-slate-700">
+          <SelectorProcedencia
+            ubigeo={null} conPais={false} claseCampo={campo.replace('mt-1 ', '')}
+            etiqueta={exige('procedencia') ? '¿De dónde eres? *' : '¿De dónde eres?'}
+            ayuda={exige('procedencia') ? 'Tu distrito o provincia.' : 'Tu distrito o provincia (opcional).'}
+          />
+        </div>
+      )}
+      {f.preguntas.map((p) => <Pregunta key={p.id} p={p} campo={campo} />)}
       {/* Campo trampa para bots (oculto para las personas) */}
       <input name="sitio_web" tabIndex={-1} autoComplete="off" aria-hidden className="absolute -left-[9999px] h-0 w-0 opacity-0" />
       <label className="flex items-start gap-3 text-sm text-slate-600">
@@ -86,5 +109,37 @@ export function FormularioRegistro({ codigo, carreras, colegio, enviar, asesor }
         {enviando ? 'Enviando…' : asesor ? 'Enviar mis datos' : 'Quiero recibir información'}
       </button>
     </form>
+  )
+}
+
+/** Pregunta propia de la actividad. Se envía como "p_<id>" (varias opciones: "pv_<id>", una por casilla). */
+function Pregunta({ p, campo }: { p: PreguntaActividad; campo: string }) {
+  const titulo = <>{p.texto}{p.obligatoria && ' *'}</>
+  if (p.tipo === 'texto') {
+    return (
+      <label className="block text-sm font-medium text-slate-700">{titulo}
+        <textarea name={`p_${p.id}`} rows={2} maxLength={500} required={p.obligatoria} className={campo} />
+      </label>
+    )
+  }
+  const opciones = p.tipo === 'si_no' ? ['Sí', 'No'] : (p.opciones ?? [])
+  const varias = p.tipo === 'varias'
+  return (
+    <fieldset className="text-sm">
+      <legend className="font-medium text-slate-700">{titulo}{varias && <span className="font-normal text-slate-500"> (puedes marcar varias)</span>}</legend>
+      <div className={`mt-2 grid gap-2 ${p.tipo === 'si_no' ? 'grid-cols-2' : ''}`}>
+        {opciones.map((o, i) => (
+          <label key={o} className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-base text-slate-800 has-checked:border-[#003865] has-checked:bg-[#003865]/5">
+            <input
+              type={varias ? 'checkbox' : 'radio'} name={varias ? `pv_${p.id}` : `p_${p.id}`} value={o}
+              // En las de una opción, "required" en la primera basta para que el navegador pida elegir
+              required={!varias && p.obligatoria && i === 0}
+              className="h-5 w-5 shrink-0 accent-[#003865]"
+            />
+            {o}
+          </label>
+        ))}
+      </div>
+    </fieldset>
   )
 }

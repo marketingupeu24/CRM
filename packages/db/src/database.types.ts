@@ -5,15 +5,40 @@ export type Database = {
   
   "public": {
           Tables: {
-            "actividades": {
+            "actividad_respuestas": {
                   Row: {
-                    "activa": boolean,"asignacion": string,"bienvenida": boolean,"codigo": string,"created_at": string,"fecha": string | null,"id": number,"lugar": string | null,"nombre": string,"responsable_id": string | null,"tipo": string
+                    "actividad_id": number,"created_at": string,"id": number,"lead_id": string,"respuestas": NonNullable<Json>,"updated_at": string
                   }
                   Insert: {
-                    "activa"?: boolean,"asignacion"?: string,"bienvenida"?: boolean,"codigo"?: string,"created_at"?: string,"fecha"?: string | null,"id"?: never,"lugar"?: string | null,"nombre": string,"responsable_id"?: string | null,"tipo"?: string
+                    "actividad_id": number,"created_at"?: string,"id"?: never,"lead_id": string,"respuestas"?: NonNullable<Json>,"updated_at"?: string
                   }
                   Update: {
-                    "activa"?: boolean,"asignacion"?: string,"bienvenida"?: boolean,"codigo"?: string,"created_at"?: string,"fecha"?: string | null,"id"?: never,"lugar"?: string | null,"nombre"?: string,"responsable_id"?: string | null,"tipo"?: string
+                    "actividad_id"?: number,"created_at"?: string,"id"?: never,"lead_id"?: string,"respuestas"?: NonNullable<Json>,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "actividad_respuestas_actividad_id_fkey"
+      columns: ["actividad_id"]
+isOneToOne: false
+      referencedRelation: "actividades"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "actividad_respuestas_lead_id_fkey"
+      columns: ["lead_id"]
+isOneToOne: false
+      referencedRelation: "leads"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"actividades": {
+                  Row: {
+                    "activa": boolean,"asignacion": string,"bienvenida": boolean,"codigo": string,"created_at": string,"fecha": string | null,"formulario": NonNullable<Json>,"id": number,"lugar": string | null,"nombre": string,"responsable_id": string | null,"tipo": string
+                  }
+                  Insert: {
+                    "activa"?: boolean,"asignacion"?: string,"bienvenida"?: boolean,"codigo"?: string,"created_at"?: string,"fecha"?: string | null,"formulario"?: NonNullable<Json>,"id"?: never,"lugar"?: string | null,"nombre": string,"responsable_id"?: string | null,"tipo"?: string
+                  }
+                  Update: {
+                    "activa"?: boolean,"asignacion"?: string,"bienvenida"?: boolean,"codigo"?: string,"created_at"?: string,"fecha"?: string | null,"formulario"?: NonNullable<Json>,"id"?: never,"lugar"?: string | null,"nombre"?: string,"responsable_id"?: string | null,"tipo"?: string
                   }
                   Relationships: [
                     {
@@ -1143,7 +1168,7 @@ isOneToOne: false
         isSetofReturn: false
       } },
 "registrar_lead_actividad":
-{ Args: { "p_carrera"?: string,"p_codigo": string,"p_colegio"?: string,"p_dni"?: string,"p_grado"?: string,"p_nombre": string,"p_telefono": string,"p_ubigeo"?: string }; Returns: Json
+{ Args: { "p_carrera"?: string,"p_codigo": string,"p_colegio"?: string,"p_dni"?: string,"p_grado"?: string,"p_nombre": string,"p_respuestas"?: Json,"p_telefono": string,"p_ubigeo"?: string }; Returns: Json
                            },
 "registrar_lead_asesor":
 { Args: { "p_carrera"?: string,"p_codigo": string,"p_colegio"?: string,"p_dni"?: string,"p_grado"?: string,"p_nombre": string,"p_telefono": string,"p_ubigeo"?: string,"p_via"?: string }; Returns: Json

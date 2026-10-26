@@ -679,6 +679,30 @@ seccion('actividades con QR')
   const fus = await uno(`select (select count(*)::int from leads where telefono = '64085240614950') sueltos,
     (select count(*)::int from lead_interacciones i join leads l on l.id = i.lead_id where l.nombre = 'Ana Ticona Mamani' and i.tipo = 'mensaje_lead') msjs`)
   ok(fus.sueltos === 0 && fus.msjs === 2, 'el lead sin datos de un LID se fusiona con su registro del QR')
+  // Formulario personalizado: campos obligatorios u ocultos y preguntas propias
+  const form = {
+    campos: { dni: 'obligatorio', colegio: 'oculto', carrera: 'opcional' },
+    preguntas: [
+      { id: 'p1', texto: '¿Asistirás al simulacro?', tipo: 'si_no', obligatoria: true },
+      { id: 'p2', texto: '¿Qué te interesa?', tipo: 'varias', opciones: ['Becas', 'Costos', 'Internado'] },
+      { id: 'p3', texto: 'Turno', tipo: 'opcion', opciones: ['Mañana', 'Tarde'] },
+    ],
+  }
+  await q(`update actividades set formulario = $2 where id = $1`, [act.id, JSON.stringify(form)])
+  await db.exec(`set request.jwt.claim.sub = ''; set role anon`)
+  ok((await uno(`select actividad_publica($1) r`, [act.codigo])).r.formulario.preguntas.length === 3, 'el formulario público recibe sus preguntas')
+  await falla(`select registrar_lead_actividad('${act.codigo}', 'Eva Quispe Ccama', '955111555', null, null, null, null, null, '{"p1":"Sí"}')`, 'un campo obligatorio (DNI) vacío no registra')
+  await falla(`select registrar_lead_actividad('${act.codigo}', 'Eva Quispe Ccama', '955111555', '71239999', null, null, null, null, '{}')`, 'una pregunta obligatoria sin responder no registra')
+  await falla(`select registrar_lead_actividad('${act.codigo}', 'Eva Quispe Ccama', '955111555', '71239999', null, null, null, null, '{"p1":"Quizás"}')`, 'una respuesta fuera de las opciones no cuenta')
+  await uno(`select registrar_lead_actividad($1, 'Eva Quispe Ccama', '955111555', '71239999', 'Colegio oculto', null, null, null, $2::jsonb) r`,
+    [act.codigo, JSON.stringify({ p1: 'Sí', p2: ['Costos', 'Becas', 'Inventada'], p3: 'Noche' })])
+  await reset()
+  const eva = await uno(`select l.colegio, r.respuestas, (select contenido from lead_interacciones i where i.lead_id = l.id and i.contenido like 'Se registró%' order by id desc limit 1) evento
+    from leads l join actividad_respuestas r on r.lead_id = l.id and r.actividad_id = $1 where l.dni = '71239999'`, [act.id])
+  ok(eva.colegio === null, 'un campo oculto no se guarda')
+  ok(eva.respuestas.length === 2 && eva.respuestas[0].respuesta === 'Sí' && eva.respuestas[1].respuesta === 'Becas, Costos', 'guarda las respuestas válidas (en el orden de las opciones)')
+  ok(eva.evento.includes('• ¿Asistirás al simulacro?: Sí'), 'las respuestas se ven en la conversación del lead')
+  await q(`update actividades set formulario = '{}' where id = $1`, [act.id])
   await q(`update actividades set activa = false where id = $1`, [act.id])
   await db.exec(`set request.jwt.claim.sub = ''; set role anon`)
   await falla(`select registrar_lead_actividad('${act.codigo}', 'Otra Persona', '955111299', null, null, null, null)`, 'una actividad cerrada ya no recibe registros')
@@ -686,7 +710,7 @@ seccion('actividades con QR')
   await reset()
   await comoUsuario('a@test.pe')
   ok((await q(`update actividades set nombre = 'x' where id = $1 returning id`, [act.id])).length === 0, 'un asesor no edita actividades ajenas')
-  ok((await q(`select * from resumen_actividades() where actividad_id = $1`, [act.id]))[0].registrados === 4, 'resumen de registrados por actividad')
+  ok((await q(`select * from resumen_actividades() where actividad_id = $1`, [act.id]))[0].registrados === 5, 'resumen de registrados por actividad')
   await reset()
 }
 

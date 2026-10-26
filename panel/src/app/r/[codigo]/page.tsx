@@ -3,10 +3,11 @@ import { carreras } from '@crm/db'
 import { LogoUpeu } from '@/components/LogoUpeu'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { FormularioRegistro } from './Formulario'
+import { leerFormulario } from '@/lib/formulario-actividad'
 
 export const metadata: Metadata = { title: 'Regístrate · Admisión de la Universidad Peruana Unión', robots: { index: false } }
 
-interface ActividadPublica { nombre: string; tipo: string; lugar: string | null; fecha: string | null; activa: boolean }
+interface ActividadPublica { nombre: string; tipo: string; lugar: string | null; fecha: string | null; activa: boolean; formulario: unknown }
 
 /** Página pública del QR (ferias y colegios): el alumno deja sus datos desde su celular. */
 export default async function PaginaRegistro(props: PageProps<'/r/[codigo]'>) {
@@ -34,7 +35,7 @@ export default async function PaginaRegistro(props: PageProps<'/r/[codigo]'>) {
             <>
               <h2 className="text-lg font-semibold text-slate-900">Déjanos tus datos</h2>
               <p className="mt-1 mb-5 text-sm text-slate-500">Te enviaremos por WhatsApp la información de carreras, costos y fechas de admisión.</p>
-              <FormularioRegistro codigo={codigo} carreras={listaCarreras} colegio={actividad.tipo === 'colegio' ? actividad.lugar : null} />
+              <FormularioRegistro codigo={codigo} carreras={listaCarreras} colegio={actividad.tipo === 'colegio' ? actividad.lugar : null} formulario={leerFormulario(actividad.formulario)} />
             </>
           )}
         </div>

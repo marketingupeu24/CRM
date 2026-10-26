@@ -2,9 +2,12 @@
 
 // Actividades con QR (ferias, visitas a colegios). El RLS limita quién crea y edita.
 import { revalidatePath } from 'next/cache'
+import type { Json } from '@crm/db'
 import { mensajeError } from '@/lib/formato'
 import { exigirPermiso, exigirSuperadmin } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
+import { esquemaFormulario } from '@/lib/formulario-actividad'
+import { primerError } from '@/lib/validacion'
 
 export interface Resultado {
   error?: string
@@ -22,6 +25,16 @@ export async function guardarActividad(id: number | null, _previo: Resultado, fo
   if (nombre.length < 3) return { error: 'Ponle un nombre a la actividad (ej.: Feria vocacional Juliaca 2026).' }
   if (nombre.length > 120) return { error: 'El nombre admite máximo 120 caracteres.' }
 
+  // Formulario del QR (campos y preguntas propias)
+  let formulario: unknown = undefined
+  if (formData.has('formulario')) {
+    let crudo: unknown
+    try { crudo = JSON.parse(String(formData.get('formulario'))) } catch { return { error: 'El formulario no es válido.' } }
+    const f = esquemaFormulario.safeParse(crudo)
+    if (!f.success) return { error: primerError(f.error, 'Revisa las preguntas del formulario.') }
+    formulario = f.data
+  }
+
   // Responsable: uno mismo, salvo quien puede asignar (elige a cualquier asesor)
   const responsable = puede('asignar') && /^[0-9a-f-]{36}$/i.test(texto('responsable_id')) ? texto('responsable_id') : perfil.id
   const datos = {
@@ -31,6 +44,7 @@ export async function guardarActividad(id: number | null, _previo: Resultado, fo
     fecha,
     asignacion: texto('asignacion') === 'rotacion' ? 'rotacion' : 'responsable',
     responsable_id: responsable,
+    ...(formulario ? { formulario: formulario as NonNullable<Json> } : {}),
   }
   const supabase = await crearClienteServidor()
   const { error } = id
