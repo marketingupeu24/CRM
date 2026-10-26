@@ -134,11 +134,10 @@ test('procedencia en la ficha: el buscador sugiere Juliaca (sin guardar)', async
   }
 })
 
-test('actividades: el editor del formulario del QR se abre al editar (sin guardar)', async ({ page }) => {
+test('actividades: el formulario de una actividad nueva trae el editor del QR (sin guardar)', async ({ page }) => {
   await page.goto('/actividades')
-  const editar = page.getByRole('button', { name: 'Editar', exact: true }).first()
-  test.skip(!(await editar.count()), 'No hay actividades editables')
-  await editar.click()
+  const nueva = page.locator('details', { hasText: 'Nueva actividad' }).first()
+  if (!(await nueva.evaluate((d) => (d as HTMLDetailsElement).open))) await nueva.locator('summary').click()
   await expect(page.getByText('Formulario del QR').first()).toBeVisible()
   await expect(page.getByRole('radiogroup', { name: 'DNI' }).first()).toBeVisible()
   await page.getByRole('button', { name: '+ Agregar pregunta' }).first().click()
