@@ -719,6 +719,9 @@ seccion('importar varios alumnos')
   await comoUsuario('admin@test.pe')
   const llamadasAntes = (await uno(`select count(*)::int c from llamadas_genesys`)).c
   const filas = Array.from({ length: 9 }, (_, i) => ({ nombre: `Importado Número ${i + 1}`, celular: `95870000${i + 1}`, colegio: 'IE Importación' }))
+  filas[0].ciudad = 'Juliaca'
+  filas[1].ciudad = 'Ilave, Puno'
+  filas[2].ciudad = 'Narnia'
   filas.push({ nombre: 'Sin Celular', celular: '12' }, { nombre: '', celular: '958700099' }, { nombre: 'Con Dni Malo', celular: '958700098', dni: '12' })
   const res = await q(`select * from importar_leads($1::jsonb)`, [JSON.stringify(filas)])
   ok(res.filter((r) => r.estado === 'nuevo').length === 9, 'importa 9 alumnos nuevos')
@@ -728,6 +731,9 @@ seccion('importar varios alumnos')
   const ns = reparto.map((r) => r.n)
   ok(reparto.length >= 3 && Math.max(...ns) - Math.min(...ns) <= 1, `se reparten por igual entre los asesores (${ns.join(' / ')})`)
   ok((await uno(`select count(*)::int c from leads where telefono like '5195870000%' and colegio = 'IE Importación'`)).c === 9, 'guarda el colegio de cada alumno')
+  const ciudades = await q(`select telefono, ubigeo, procedencia_por from leads where telefono in ('51958700001', '51958700002', '51958700003') order by telefono`)
+  ok(ciudades[0].ubigeo === '211101' && ciudades[0].procedencia_por === 'asesor' && ciudades[1].ubigeo === '210501', 'la ciudad de la planilla se guarda como procedencia (Juliaca, Ilave)')
+  ok(ciudades[2].ubigeo === null, 'una ciudad que no existe no se guarda')
   const nuevasLlamadas = await q(`select cuerpo from llamadas_genesys offset $1`, [llamadasAntes])
   ok(nuevasLlamadas.length === 1 && nuevasLlamadas[0].cuerpo.lead_ids.length === 9, 'un solo aviso al final con todos los leads (no uno por fila)')
   await comoUsuario('admin@test.pe')

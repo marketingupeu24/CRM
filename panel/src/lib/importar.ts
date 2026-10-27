@@ -1,6 +1,6 @@
 // Lee alumnos pegados desde Excel / Google Sheets o subidos en CSV.
 // Reconoce el separador (tabulador, punto y coma o coma) y los encabezados más comunes;
-// si no hay encabezados, toma las columnas en orden: nombre, celular, DNI, carrera, colegio, grado.
+// si no hay encabezados, toma las columnas en orden: nombre, celular, DNI, carrera, colegio, grado, ciudad.
 
 export interface FilaImportar {
   nombre: string
@@ -9,11 +9,13 @@ export interface FilaImportar {
   carrera: string
   colegio: string
   grado: string
+  /** Ciudad, distrito o provincia: se busca en la lista de UBIGEO y se guarda como procedencia */
+  ciudad: string
 }
 
-export const COLUMNAS: (keyof FilaImportar)[] = ['nombre', 'celular', 'dni', 'carrera', 'colegio', 'grado']
+export const COLUMNAS: (keyof FilaImportar)[] = ['nombre', 'celular', 'dni', 'carrera', 'colegio', 'grado', 'ciudad']
 
-export const filaVacia = (): FilaImportar => ({ nombre: '', celular: '', dni: '', carrera: '', colegio: '', grado: '' })
+export const filaVacia = (): FilaImportar => ({ nombre: '', celular: '', dni: '', carrera: '', colegio: '', grado: '', ciudad: '' })
 
 const SINONIMOS: Record<keyof FilaImportar, RegExp> = {
   nombre: /^(nombres?( y apellidos)?|apellidos? y nombres?|alumno|postulante|estudiante|nombre completo)$/,
@@ -22,6 +24,7 @@ const SINONIMOS: Record<keyof FilaImportar, RegExp> = {
   carrera: /^(carrera|carrera de interes|interes|programa|especialidad)$/,
   colegio: /^(colegio|institucion educativa|ie|i e|escuela)$/,
   grado: /^(grado|ano|año|nivel|grado y seccion)$/,
+  ciudad: /^(ciudad|distrito|provincia|lugar|procedencia|lugar de procedencia|localidad|domicilio|residencia)$/,
 }
 
 const normalizar = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
@@ -78,4 +81,4 @@ export function problemaFila(f: FilaImportar): string | null {
   return null
 }
 
-export const PLANTILLA_CSV = '﻿Nombres y apellidos;Celular;DNI;Carrera;Colegio;Grado\nRosa Mamani Quispe;951234567;71234567;Enfermería;I.E. San Martín;5.° de secundaria\n'
+export const PLANTILLA_CSV = '﻿Nombres y apellidos;Celular;DNI;Carrera;Colegio;Grado;Ciudad\nRosa Mamani Quispe;951234567;71234567;Enfermería;I.E. San Martín;5.° de secundaria;Juliaca\nJuan Quispe Ccama;987654321;;Psicología;I.E. Glorioso San Carlos;Ya terminé el colegio;Ilave\n'

@@ -148,3 +148,18 @@ test('actividades: el formulario de una actividad nueva trae el editor del QR (s
   await expect(page.getByLabel('Texto de la pregunta 12').first()).toHaveValue('¿Cómo conociste la UPeU?')
   await expect(page.getByRole('radiogroup', { name: 'DNI' }).first().getByRole('radio', { name: 'Obligatorio' })).toHaveAttribute('aria-checked', 'true')
 })
+
+test('importar: la plantilla trae Ciudad y cada ciudad muestra su departamento (sin importar)', async ({ page }) => {
+  await page.goto('/leads/importar')
+  const descarga = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Descargar plantilla' }).click()
+  const archivo = await (await descarga).path()
+  const { readFileSync } = await import('node:fs')
+  expect(readFileSync(archivo, 'utf8')).toContain(';Ciudad')
+  await page.getByLabel('Ciudad fila 1').fill('Juliaca')
+  await expect(page.getByText('→ Juliaca · San Román · Puno')).toBeVisible()
+  await page.getByLabel('Ciudad fila 2').fill('Ilave, Puno')
+  await expect(page.getByText('→ Ilave · El Collao · Puno')).toBeVisible()
+  await page.getByLabel('Ciudad fila 3').fill('Narnia')
+  await expect(page.getByText('No encontrada: escribe el distrito o la provincia')).toBeVisible()
+})

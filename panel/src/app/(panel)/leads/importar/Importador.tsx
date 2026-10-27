@@ -1,14 +1,15 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useTransition } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import { carreraOficial, ORIGENES } from '@crm/db'
 import { SelectorAsignacion, type PermisosAsignacion } from '@/components/SelectorAsignacion'
 import { COLUMNAS, filaVacia, leerTabla, PLANTILLA_CSV, problemaFila, type FilaImportar } from '@/lib/importar'
 import { importarLeads, type ResultadoFila } from './acciones'
+import { cargarUbigeos, rutaUbigeo, ubigeoDeTexto, type FilaUbigeo } from '@/lib/ubigeos'
 
 const TITULOS: Record<keyof FilaImportar, string> = {
-  nombre: 'Nombres y apellidos *', celular: 'Celular *', dni: 'DNI', carrera: 'Carrera', colegio: 'Colegio', grado: 'Grado',
+  nombre: 'Nombres y apellidos *', celular: 'Celular *', dni: 'DNI', carrera: 'Carrera', colegio: 'Colegio', grado: 'Grado', ciudad: 'Ciudad',
 }
 
 const ESTILO_ESTADO: Record<ResultadoFila['estado'], string> = {
@@ -32,6 +33,14 @@ export function Importador({ carreras, actividades, asignacion }: {
   const [resultados, setResultados] = useState<ResultadoFila[] | null>(null)
   const [aviso, setAviso] = useState<{ texto: string; error?: boolean } | null>(null)
   const [pendiente, iniciar] = useTransition()
+  // Lista de UBIGEO: muestra a qué lugar y departamento corresponde cada ciudad antes de importar
+  const [ubigeos, setUbigeos] = useState<FilaUbigeo[] | null>(null)
+  useEffect(() => {
+    let vigente = true
+    cargarUbigeos().then((u) => { if (vigente) setUbigeos(u) }).catch(() => undefined)
+    return () => { vigente = false }
+  }, [])
+  const mapaUbigeos = useMemo(() => (ubigeos ? new Map(ubigeos) : null), [ubigeos])
 
   const llenas = filas.filter((f) => f.nombre.trim() || f.celular.trim())
   const conProblema = llenas.filter((f) => problemaFila(f)).length
@@ -132,7 +141,7 @@ export function Importador({ carreras, actividades, asignacion }: {
           <div className="space-y-3 p-4">
             <p className="text-sm text-slate-600">
               En Excel o Google Sheets selecciona las celdas (con o sin la fila de títulos) y pégalas aquí. Orden sugerido:
-              <b> nombre, celular, DNI, carrera, colegio, grado</b>.
+              <b> nombre, celular, DNI, carrera, colegio, grado, ciudad</b>.
             </p>
             <textarea value={pegado} onChange={(e) => setPegado(e.target.value)} rows={10} placeholder={'Rosa Mamani Quispe\t951234567\t71234567\tEnfermería\nJuan Pérez\t987654321\t\tDerecho'} className="campo font-mono text-xs" />
             <button type="button" className="boton" disabled={!pegado.trim()} onClick={() => { cargar(leerTabla(pegado), 'lo pegado'); setPegado('') }}>Pasar a la planilla</button>
@@ -167,6 +176,8 @@ export function Importador({ carreras, actividades, asignacion }: {
                           {c === 'carrera' && f.carrera.trim() && carreraOficial(f.carrera) !== f.carrera.trim().replace(/\s+/g, ' ') && (
                             <p className="mt-0.5 px-1 text-[11px] text-emerald-700" title="Se guardará con el nombre oficial de la carrera">→ {carreraOficial(f.carrera)}</p>
                           )}
+                          {/* Ciudad: el lugar y su departamento, que se guardarán como procedencia */}
+                          {c === 'ciudad' && f.ciudad.trim() && ubigeos && mapaUbigeos && <LugarDeCiudad ciudad={f.ciudad} ubigeos={ubigeos} mapa={mapaUbigeos} />}
                         </td>
                       ))}
                       <td className="px-2 py-1 text-xs whitespace-nowrap">
@@ -207,4 +218,12 @@ export function Importador({ carreras, actividades, asignacion }: {
       </p>
     </div>
   )
+}
+
+/** Debajo de la ciudad: "→ Juliaca · San Román · Puno" (lo que se guardará) o el aviso si no se encontró. */
+function LugarDeCiudad({ ciudad, ubigeos, mapa }: { ciudad: string; ubigeos: FilaUbigeo[]; mapa: Map<string, string> }) {
+  const codigo = ubigeoDeTexto(ciudad, ubigeos)
+  return codigo
+    ? <p className="mt-0.5 px-1 text-[11px] text-emerald-700" title="Se guardará como procedencia del alumno">→ {rutaUbigeo(codigo, mapa)}</p>
+    : <p className="mt-0.5 px-1 text-[11px] text-amber-700" title="No está en la lista de distritos, provincias y departamentos del Perú">No encontrada: escribe el distrito o la provincia</p>
 }

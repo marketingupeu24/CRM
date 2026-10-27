@@ -32,6 +32,35 @@ export function buscarUbigeos(consulta: string, filas: FilaUbigeo[], max = 8): F
   return encontrados.sort((a, b) => a.puntos - b.puntos || a.fila[1].localeCompare(b.fila[1], 'es')).slice(0, max).map((e) => e.fila)
 }
 
+/**
+ * UBIGEO de una ciudad escrita a mano ("Juliaca", "Ilave, Puno", "soy de San Román"). Igual que ubigeo_de_texto()
+ * en la base (que es la que guarda): sirve para mostrar antes de importar qué lugar se va a guardar.
+ */
+export function ubigeoDeTexto(texto: string, filas: FilaUbigeo[]): string | null {
+  const limpio = paraBuscar(texto).replace(/^\s*(soy|vivo|estoy|somos)?\s*(de|en)?\s+/, '')
+  const partes = limpio.split(/\s*[,/()-]\s*|\s+(?:provincia|departamento|region|distrito)\s+(?:de\s+)?/).map((p) => p.trim()).filter(Boolean)
+  if (!partes.length) return null
+  const nombres = filas.map((f) => [f[0], paraBuscar(f[1])] as const)
+  for (const parte of partes) {
+    const candidatos = nombres.filter(([, n]) => n === parte)
+    if (!candidatos.length) continue
+    // Otra parte mencionada (ej. "Ilave, Puno"): primero lo que está dentro de ella
+    const prefijos = nombres.filter(([c, n]) => n !== parte && partes.includes(n) && nivelUbigeo(c) < 3)
+      .map(([c]) => (nivelUbigeo(c) === 1 ? c.slice(0, 2) : c.slice(0, 4)))
+    const puntos = (c: string) => [
+      prefijos.some((p) => c.startsWith(p) && c !== p.padEnd(6, '0')) ? 0 : 1,
+      c.startsWith('21') ? 0 : 1,                                   // Puno (campus Juliaca) ante nombres repetidos
+      nivelUbigeo(c) === 2 ? 0 : nivelUbigeo(c) === 3 ? 1 : 2,      // "Arequipa": la provincia
+    ]
+    candidatos.sort((a, b) => {
+      const pa = puntos(a[0]), pb = puntos(b[0])
+      return pa[0]! - pb[0]! || pa[1]! - pb[1]! || pa[2]! - pb[2]! || a[0].localeCompare(b[0])
+    })
+    return candidatos[0]![0]
+  }
+  return null
+}
+
 let cache: Promise<FilaUbigeo[]> | null = null
 /** En el navegador: carga la lista una sola vez (≈50 KB, comprimida ≈15 KB). */
 export function cargarUbigeos(): Promise<FilaUbigeo[]> {
