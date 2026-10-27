@@ -5,7 +5,7 @@
 import { useState } from 'react'
 import { useConfirmar } from '@/components/Confirmacion'
 import {
-  CAMPOS_FORMULARIO, PLANTILLAS, TIPOS_FORMULARIO, TIPOS_PREGUNTA, modoDe,
+  CAMPOS_FORMULARIO, MAXIMO_PREGUNTAS, PLANTILLAS, TIPOS_FORMULARIO, TIPOS_PREGUNTA, modoDe,
   type FormularioActividad, type ModoCampo, type PreguntaActividad, type TipoPregunta,
 } from '@/lib/formulario-actividad'
 
@@ -27,9 +27,8 @@ export function EditorFormulario({ inicial }: { inicial: FormularioActividad }) 
   const [textoOpciones, setTextoOpciones] = useState<Record<string, string>>(() => textosDe(inicial))
   const confirmar = useConfirmar()
 
-  /** Carga una plantilla (reemplaza los campos y las preguntas; si ya había preguntas, pregunta antes). */
+  /** Carga una plantilla (reemplaza los campos y las preguntas; si ya había preguntas, pregunta antes). Volver a tocar la misma la carga de nuevo, tal como está ahora. */
   const usarPlantilla = async (tipo: keyof typeof PLANTILLAS) => {
-    if (form.tipo === tipo) return
     if (form.preguntas.length && !(await confirmar({
       titulo: `¿Usar el formulario «${TIPOS_FORMULARIO[tipo].nombre}»?`,
       mensaje: 'Se reemplazan los campos y las preguntas que tienes ahora en este formulario (aún no se guarda nada).',
@@ -165,7 +164,7 @@ export function EditorFormulario({ inicial }: { inicial: FormularioActividad }) 
             )}
           </div>
         ))}
-        {form.preguntas.length < 15 && (
+        {form.preguntas.length < MAXIMO_PREGUNTAS && (
           <button type="button" onClick={agregar} className="text-sm font-medium text-marca-700 hover:underline">+ Agregar pregunta</button>
         )}
       </div>

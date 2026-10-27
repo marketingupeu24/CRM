@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState } from 'react'
+import { Fragment, useActionState, type ReactNode } from 'react'
 import { registrarseEnActividad, type ResultadoRegistro } from './acciones'
 import { SelectorLugar } from '@/components/SelectorLugar'
 import { modoDe, type CampoFormulario, type FormularioActividad, type PreguntaActividad } from '@/lib/formulario-actividad'
@@ -23,8 +23,10 @@ export function FormularioRegistro({ codigo, carreras, colegio, enviar, asesor, 
   const exige = (c: CampoFormulario) => modoDe(f, c) === 'obligatorio'
   // En la inscripción, los campos se nombran como en la ficha de inscripción
   const ins = f.tipo === 'inscripcion'
-  // Preguntas que van justo después de un dato (ej. el lugar del colegio, junto al colegio). Si ese dato no se pide, van al final
+  // Preguntas que van justo antes o después de un dato (ej. la dirección, junto al domicilio). Si ese dato no se pide, van al final
   const junto = (c: CampoFormulario) => pide(c) && f.preguntas.filter((p) => p.junto === c).map((p) => <Pregunta key={p.id} p={p} campo={campo} />)
+  const antes = (c: CampoFormulario) => pide(c) && f.preguntas.filter((p) => p.antes === c && !p.junto).map((p) => <Pregunta key={p.id} p={p} campo={campo} />)
+  const ubicada = (p: PreguntaActividad) => (p.junto && pide(p.junto)) || (!p.junto && p.antes && pide(p.antes))
   const [r, accion, enviando] = useActionState<ResultadoRegistro, FormData>(enviar ?? registrarseEnActividad.bind(null, codigo), {})
 
   if (r.ok) {
@@ -53,25 +55,27 @@ export function FormularioRegistro({ codigo, carreras, colegio, enviar, asesor, 
   }
 
   const campo = 'mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-base text-slate-900 focus:border-[#003865] focus:ring-2 focus:ring-[#003865]/20 focus:outline-none'
-  return (
-    <form action={accion} className="space-y-4">
-      <label className="block text-sm font-medium text-slate-700">Nombres y apellidos *
-        <input name="nombre" required minLength={3} maxLength={120} autoComplete="name" className={campo} />
-      </label>
-      <label className="block text-sm font-medium text-slate-700">Celular (WhatsApp) *
-        <input name="celular" required inputMode="tel" autoComplete="tel" placeholder="987 654 321" className={campo} />
-      </label>
-      {pide('carrera') && (
-        <label className="block text-sm font-medium text-slate-700">{ins ? 'Carrera a la que postulas' : 'Carrera que te interesa'}{exige('carrera') && ' *'}
+  // En la inscripción, cada dato abre su sección, como en la ficha de inscripción
+  const seccion = (titulo: string) => ins && <h2 className="border-b border-slate-200 pt-3 pb-1 text-base font-semibold text-[#003865]">{titulo}</h2>
+  const datos: Record<'carrera' | 'dni' | 'colegio' | 'procedencia', ReactNode> = {
+    carrera: pide('carrera') && (
+      <>
+        {seccion('Datos de admisión')}
+        {antes('carrera')}
+        <label className="block text-sm font-medium text-slate-700">{ins ? 'Carrera profesional' : 'Carrera que te interesa'}{exige('carrera') && ' *'}
           <select name="carrera" defaultValue="" required={exige('carrera')} className={campo}>
             <option value="">{exige('carrera') ? 'Elige una opción' : 'Aún no lo decido'}</option>
             <option value="CEPRE">CEPRE (preuniversitario)</option>
             {carreras.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </label>
-      )}
-      {junto('carrera')}
-      {(pide('dni') || pide('grado')) && (
+        {junto('carrera')}
+      </>
+    ),
+    dni: (pide('dni') || pide('grado')) && (
+      <>
+        {antes('dni')}
+        {antes('grado')}
         <div className={`grid gap-3 ${pide('dni') && pide('grado') ? 'grid-cols-2' : ''}`}>
           {pide('dni') && (
             <label className="block text-sm font-medium text-slate-700">{ins ? 'Número de DNI' : 'DNI'}{exige('dni') && ' *'}
@@ -87,23 +91,45 @@ export function FormularioRegistro({ codigo, carreras, colegio, enviar, asesor, 
             </label>
           )}
         </div>
-      )}
-      {junto('dni')}
-      {junto('grado')}
-      {pide('colegio') && (
-        <label className="block text-sm font-medium text-slate-700">{ins ? 'Nombre del colegio de procedencia' : 'Colegio'}{exige('colegio') && ' *'}
+        {junto('dni')}
+        {junto('grado')}
+      </>
+    ),
+    colegio: pide('colegio') && (
+      <>
+        {seccion('Centro de estudios de procedencia')}
+        {antes('colegio')}
+        <label className="block text-sm font-medium text-slate-700">{ins ? 'Nombre del centro de procedencia educativa' : 'Colegio'}{exige('colegio') && ' *'}
           <input name="colegio" maxLength={120} defaultValue={colegio ?? ''} required={exige('colegio')} placeholder="Nombre de tu colegio" className={campo} />
         </label>
-      )}
-      {junto('colegio')}
-      {pide('procedencia') && (
+        {junto('colegio')}
+      </>
+    ),
+    procedencia: pide('procedencia') && (
+      <>
+        {seccion('Dirección de domicilio')}
+        {antes('procedencia')}
         <SelectorLugar
           nombre="ubigeo" obligatorio={exige('procedencia')} claseCampo={campo}
-          etiqueta={ins ? 'Domicilio (departamento / provincia / distrito)' : '¿De dónde eres?'}
+          etiqueta={ins ? 'Domicilio' : '¿De dónde eres?'}
         />
-      )}
-      {junto('procedencia')}
-      {f.preguntas.filter((p) => !p.junto || !pide(p.junto)).map((p) => <Pregunta key={p.id} p={p} campo={campo} />)}
+        {junto('procedencia')}
+      </>
+    ),
+  }
+  // Inscripción: el orden de la ficha de inscripción; formulario corto: lo más rápido de llenar primero
+  const orden = ins ? (['dni', 'procedencia', 'carrera', 'colegio'] as const) : (['carrera', 'dni', 'colegio', 'procedencia'] as const)
+  return (
+    <form action={accion} className="space-y-4">
+      {seccion('Datos personales')}
+      <label className="block text-sm font-medium text-slate-700">Nombres y apellidos *
+        <input name="nombre" required minLength={3} maxLength={120} autoComplete="name" className={campo} />
+      </label>
+      <label className="block text-sm font-medium text-slate-700">{ins ? 'Número actual del postulante (WhatsApp)' : 'Celular (WhatsApp)'} *
+        <input name="celular" required inputMode="tel" autoComplete="tel" placeholder="987 654 321" className={campo} />
+      </label>
+      {orden.map((c) => <Fragment key={c}>{datos[c]}</Fragment>)}
+      {f.preguntas.filter((p) => !ubicada(p)).map((p) => <Pregunta key={p.id} p={p} campo={campo} />)}
       {/* Campo trampa para bots (oculto para las personas) */}
       <input name="sitio_web" tabIndex={-1} autoComplete="off" aria-hidden className="absolute -left-[9999px] h-0 w-0 opacity-0" />
       <label className="flex items-start gap-3 text-sm text-slate-600">
