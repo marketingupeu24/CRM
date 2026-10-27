@@ -122,8 +122,34 @@ function Pregunta({ p, campo }: { p: PreguntaActividad; campo: string }) {
       </label>
     )
   }
+  if (p.tipo === 'fecha' || p.tipo === 'correo' || p.tipo === 'numero') {
+    return (
+      <label className="block text-sm font-medium text-slate-700">{titulo}
+        <input
+          name={`p_${p.id}`} required={p.obligatoria}
+          {...(p.tipo === 'fecha'
+            ? { type: 'date', max: new Date().toISOString().slice(0, 10) }
+            : p.tipo === 'correo'
+              ? { type: 'email', maxLength: 120, autoComplete: 'email', placeholder: 'tucorreo@gmail.com' }
+              : { type: 'tel', inputMode: 'tel' as const, maxLength: 20, pattern: '[0-9 +]{6,20}', title: 'Solo números', placeholder: '987 654 321' })}
+          className={campo}
+        />
+      </label>
+    )
+  }
   const opciones = p.tipo === 'si_no' ? ['Sí', 'No'] : (p.opciones ?? [])
   const varias = p.tipo === 'varias'
+  // Muchas opciones (ej. modalidades de ingreso): lista desplegable para no alargar el formulario
+  if (p.tipo === 'opcion' && opciones.length > 6) {
+    return (
+      <label className="block text-sm font-medium text-slate-700">{titulo}
+        <select name={`p_${p.id}`} defaultValue="" required={p.obligatoria} className={campo}>
+          <option value="">Elige una opción</option>
+          {opciones.map((o) => <option key={o}>{o}</option>)}
+        </select>
+      </label>
+    )
+  }
   return (
     <fieldset className="text-sm">
       <legend className="font-medium text-slate-700">{titulo}{varias && <span className="font-normal text-slate-500"> (puedes marcar varias)</span>}</legend>

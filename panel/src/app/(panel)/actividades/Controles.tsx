@@ -149,6 +149,7 @@ export function TarjetaActividad({ actividad, base, asesores }: { actividad: Act
             <p className="text-lg font-semibold">
               {actividad.nombre}
               {!actividad.activa && <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">Cerrada</span>}
+              {leerFormulario(actividad.formulario).tipo === 'inscripcion' && <span className="ml-2 rounded-full bg-dorado-50 px-2 py-0.5 text-xs font-medium text-dorado-700">📋 Inscripción completa</span>}
             </p>
             <p className="text-sm text-slate-500">
               {TIPOS[actividad.tipo] ?? actividad.tipo}{actividad.lugar ? ` · ${actividad.lugar}` : ''}{actividad.fecha ? ` · ${actividad.fecha.split('-').reverse().join('/')}` : ''}

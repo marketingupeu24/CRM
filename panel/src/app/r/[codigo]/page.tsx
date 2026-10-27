@@ -15,6 +15,7 @@ export default async function PaginaRegistro(props: PageProps<'/r/[codigo]'>) {
   const supabase = await crearClienteServidor()
   const { data } = await supabase.rpc('actividad_publica', { p_codigo: codigo })
   const actividad = data as unknown as ActividadPublica | null
+  const formulario = leerFormulario(actividad?.formulario)
   const listaCarreras = [...new Set(carreras('PRES', 'JUL').map((c) => c[0]))]
 
   return (
@@ -33,9 +34,18 @@ export default async function PaginaRegistro(props: PageProps<'/r/[codigo]'>) {
             <p className="py-6 text-center text-slate-600">Este formulario ya cerró. Escríbenos por WhatsApp para recibir información de admisión.</p>
           ) : (
             <>
-              <h2 className="text-lg font-semibold text-slate-900">Déjanos tus datos</h2>
-              <p className="mt-1 mb-5 text-sm text-slate-500">Te enviaremos por WhatsApp la información de carreras, costos y fechas de admisión.</p>
-              <FormularioRegistro codigo={codigo} carreras={listaCarreras} colegio={actividad.tipo === 'colegio' ? actividad.lugar : null} formulario={leerFormulario(actividad.formulario)} />
+              {formulario.tipo === 'inscripcion' ? (
+                <>
+                  <h2 className="text-lg font-semibold text-slate-900">Inscripción · Admisión 2027</h2>
+                  <p className="mt-1 mb-5 text-sm text-slate-500">Completa tus datos con cuidado: tu asesor(a) los usará para tu inscripción y te escribirá por WhatsApp. Los campos con * son obligatorios.</p>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-lg font-semibold text-slate-900">Déjanos tus datos</h2>
+                  <p className="mt-1 mb-5 text-sm text-slate-500">Te enviaremos por WhatsApp la información de carreras, costos y fechas de admisión.</p>
+                </>
+              )}
+              <FormularioRegistro codigo={codigo} carreras={listaCarreras} colegio={actividad.tipo === 'colegio' ? actividad.lugar : null} formulario={formulario} />
             </>
           )}
         </div>
