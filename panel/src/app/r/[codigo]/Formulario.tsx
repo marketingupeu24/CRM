@@ -2,7 +2,7 @@
 
 import { useActionState } from 'react'
 import { registrarseEnActividad, type ResultadoRegistro } from './acciones'
-import { SelectorProcedencia } from '@/components/SelectorProcedencia'
+import { SelectorLugar } from '@/components/SelectorLugar'
 import { modoDe, type CampoFormulario, type FormularioActividad, type PreguntaActividad } from '@/lib/formulario-actividad'
 
 const GRADOS = ['5.° de secundaria', '4.° de secundaria', '3.° de secundaria o menos', 'Ya terminé el colegio', 'Universitario / traslado', 'Otro']
@@ -23,6 +23,8 @@ export function FormularioRegistro({ codigo, carreras, colegio, enviar, asesor, 
   const exige = (c: CampoFormulario) => modoDe(f, c) === 'obligatorio'
   // En la inscripción, los campos se nombran como en la ficha de inscripción
   const ins = f.tipo === 'inscripcion'
+  // Preguntas que van justo después de un dato (ej. el lugar del colegio, junto al colegio). Si ese dato no se pide, van al final
+  const junto = (c: CampoFormulario) => pide(c) && f.preguntas.filter((p) => p.junto === c).map((p) => <Pregunta key={p.id} p={p} campo={campo} />)
   const [r, accion, enviando] = useActionState<ResultadoRegistro, FormData>(enviar ?? registrarseEnActividad.bind(null, codigo), {})
 
   if (r.ok) {
@@ -68,6 +70,7 @@ export function FormularioRegistro({ codigo, carreras, colegio, enviar, asesor, 
           </select>
         </label>
       )}
+      {junto('carrera')}
       {(pide('dni') || pide('grado')) && (
         <div className={`grid gap-3 ${pide('dni') && pide('grado') ? 'grid-cols-2' : ''}`}>
           {pide('dni') && (
@@ -85,21 +88,22 @@ export function FormularioRegistro({ codigo, carreras, colegio, enviar, asesor, 
           )}
         </div>
       )}
+      {junto('dni')}
+      {junto('grado')}
       {pide('colegio') && (
         <label className="block text-sm font-medium text-slate-700">{ins ? 'Nombre del colegio de procedencia' : 'Colegio'}{exige('colegio') && ' *'}
           <input name="colegio" maxLength={120} defaultValue={colegio ?? ''} required={exige('colegio')} placeholder="Nombre de tu colegio" className={campo} />
         </label>
       )}
+      {junto('colegio')}
       {pide('procedencia') && (
-        <div className="[&_label]:font-medium [&_label]:text-slate-700">
-          <SelectorProcedencia
-            ubigeo={null} conPais={false} claseCampo={campo.replace('mt-1 ', '')}
-            etiqueta={`${ins ? 'Domicilio: ¿en qué distrito vives?' : '¿De dónde eres?'}${exige('procedencia') ? ' *' : ''}`}
-            ayuda={ins ? 'Escribe tu distrito; se completan la provincia y el departamento.' : exige('procedencia') ? 'Tu distrito o provincia.' : 'Tu distrito o provincia (opcional).'}
-          />
-        </div>
+        <SelectorLugar
+          nombre="ubigeo" obligatorio={exige('procedencia')} claseCampo={campo}
+          etiqueta={ins ? 'Domicilio (departamento / provincia / distrito)' : '¿De dónde eres?'}
+        />
       )}
-      {f.preguntas.map((p) => <Pregunta key={p.id} p={p} campo={campo} />)}
+      {junto('procedencia')}
+      {f.preguntas.filter((p) => !p.junto || !pide(p.junto)).map((p) => <Pregunta key={p.id} p={p} campo={campo} />)}
       {/* Campo trampa para bots (oculto para las personas) */}
       <input name="sitio_web" tabIndex={-1} autoComplete="off" aria-hidden className="absolute -left-[9999px] h-0 w-0 opacity-0" />
       <label className="flex items-start gap-3 text-sm text-slate-600">
@@ -124,13 +128,9 @@ function Pregunta({ p, campo }: { p: PreguntaActividad; campo: string }) {
       </label>
     )
   }
-  // Lugar (ej. de nacimiento): el mismo buscador de distrito / provincia / departamento; se envía como "pl_<id>"
+  // Lugar (ej. de nacimiento, del colegio): departamento → provincia (→ distrito) en listas; se envía como "pl_<id>"
   if (p.tipo === 'lugar') {
-    return (
-      <div className="[&_label]:font-medium [&_label]:text-slate-700">
-        <SelectorProcedencia ubigeo={null} conPais={false} nombre={`pl_${p.id}`} claseCampo={campo.replace('mt-1 ', '')} etiqueta={`${p.texto}${p.obligatoria ? ' *' : ''}`} />
-      </div>
-    )
+    return <SelectorLugar nombre={`pl_${p.id}`} etiqueta={p.texto} hasta={p.hasta ?? 'distrito'} obligatorio={p.obligatoria} claseCampo={campo} />
   }
   if (p.tipo === 'fecha' || p.tipo === 'correo' || p.tipo === 'numero') {
     return (
@@ -149,8 +149,8 @@ function Pregunta({ p, campo }: { p: PreguntaActividad; campo: string }) {
   }
   const opciones = p.tipo === 'si_no' ? ['Sí', 'No'] : (p.opciones ?? [])
   const varias = p.tipo === 'varias'
-  // Muchas opciones (ej. modalidades de ingreso): lista desplegable para no alargar el formulario
-  if (p.tipo === 'opcion' && opciones.length > 6) {
+  // Una sola opción (incluido Sí / No): lista desplegable
+  if (!varias) {
     return (
       <label className="block text-sm font-medium text-slate-700">{titulo}
         <select name={`p_${p.id}`} defaultValue="" required={p.obligatoria} className={campo}>
@@ -160,19 +160,14 @@ function Pregunta({ p, campo }: { p: PreguntaActividad; campo: string }) {
       </label>
     )
   }
+  // Varias opciones: casillas (una lista desplegable no permite marcar varias en el celular)
   return (
     <fieldset className="text-sm">
-      <legend className="font-medium text-slate-700">{titulo}{varias && <span className="font-normal text-slate-500"> (puedes marcar varias)</span>}</legend>
-      {/* Opciones cortas (Sí/No, años, religión) en dos columnas: el formulario queda más corto en el celular */}
+      <legend className="font-medium text-slate-700">{titulo}<span className="font-normal text-slate-500"> (puedes marcar varias)</span></legend>
       <div className={`mt-2 grid gap-2 ${opciones.every((o) => o.length <= 12) ? 'grid-cols-2' : ''}`}>
-        {opciones.map((o, i) => (
+        {opciones.map((o) => (
           <label key={o} className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-base text-slate-800 has-checked:border-[#003865] has-checked:bg-[#003865]/5">
-            <input
-              type={varias ? 'checkbox' : 'radio'} name={varias ? `pv_${p.id}` : `p_${p.id}`} value={o}
-              // En las de una opción, "required" en la primera basta para que el navegador pida elegir
-              required={!varias && p.obligatoria && i === 0}
-              className="h-5 w-5 shrink-0 accent-[#003865]"
-            />
+            <input type="checkbox" name={`pv_${p.id}`} value={o} className="h-5 w-5 shrink-0 accent-[#003865]" />
             {o}
           </label>
         ))}

@@ -139,6 +139,15 @@ export function EditorFormulario({ inicial }: { inicial: FormularioActividad }) 
               >
                 {Object.entries(TIPOS_PREGUNTA).map(([v, t]) => <option key={v} value={v}>{t}</option>)}
               </select>
+              {p.tipo === 'lugar' && (
+                <select
+                  value={p.hasta ?? 'distrito'} onChange={(e) => cambiarPregunta(p.id, { hasta: e.target.value as 'provincia' | 'distrito' })}
+                  aria-label="Hasta qué nivel" className="campo w-auto py-1.5 text-sm"
+                >
+                  <option value="distrito">Departamento, provincia y distrito</option>
+                  <option value="provincia">Solo departamento y provincia</option>
+                </select>
+              )}
               <label className="flex items-center gap-1.5 text-sm text-slate-600">
                 <input type="checkbox" checked={p.obligatoria} onChange={(e) => cambiarPregunta(p.id, { obligatoria: e.target.checked })} className="h-4 w-4 accent-marca-600" />
                 Obligatoria

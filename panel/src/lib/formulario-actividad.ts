@@ -31,6 +31,10 @@ const pregunta = z.object({
   tipo: z.enum(['texto', 'opcion', 'varias', 'si_no', 'fecha', 'correo', 'numero', 'lugar']),
   opciones: z.array(z.string().trim().min(1).max(100)).max(20, 'Máximo 20 opciones por pregunta.').optional(),
   obligatoria: z.boolean(),
+  /** Lugar: hasta qué nivel se pide (por defecto distrito) */
+  hasta: z.enum(['provincia', 'distrito']).optional(),
+  /** Se muestra justo después de ese dato del formulario (ej. el lugar del colegio, junto al colegio) */
+  junto: z.enum(['dni', 'carrera', 'grado', 'colegio', 'procedencia']).optional(),
 }).refine((p) => !['opcion', 'varias'].includes(p.tipo) || (p.opciones?.length ?? 0) >= 2, 'Las preguntas de opciones necesitan al menos 2 opciones.')
 
 export const esquemaFormulario = z.object({
@@ -64,15 +68,16 @@ export const PLANTILLAS: Record<keyof typeof TIPOS_FORMULARIO, FormularioActivid
     tipo: 'inscripcion',
     campos: { dni: 'obligatorio', carrera: 'obligatorio', grado: 'oculto', colegio: 'obligatorio', procedencia: 'obligatorio' },
     preguntas: [
-      { id: 'p1', texto: 'Domicilio: Jr. o Av. y número', tipo: 'texto', obligatoria: true },
-      { id: 'p2', texto: 'Tipo de colegio', tipo: 'opcion', opciones: ['Estatal (público)', 'Particular (privado)', 'Parroquial', 'Otro'], obligatoria: true },
-      { id: 'p3', texto: '¿Es colegio adventista?', tipo: 'si_no', obligatoria: true },
+      { id: 'p12', texto: 'Lugar del colegio (departamento / provincia)', tipo: 'lugar', hasta: 'provincia', obligatoria: true, junto: 'colegio' },
+      { id: 'p2', texto: 'Tipo de colegio', tipo: 'opcion', opciones: ['Estatal (público)', 'Particular (privado)', 'Parroquial', 'Otro'], obligatoria: true, junto: 'colegio' },
+      { id: 'p3', texto: '¿Es colegio adventista?', tipo: 'si_no', obligatoria: true, junto: 'colegio' },
+      { id: 'p1', texto: 'Domicilio: Jr. o Av. y número', tipo: 'texto', obligatoria: true, junto: 'procedencia' },
       { id: 'p4', texto: 'Situación educativa', tipo: 'opcion', opciones: ['Estoy en 5.° de secundaria', 'Ya terminé el colegio', 'Estudio o estudié en otra universidad o instituto', 'Tengo un título técnico o universitario'], obligatoria: true },
       { id: 'p5', texto: 'Año en el que culminaste (o culminarás) el colegio', tipo: 'opcion', opciones: ['2026', '2025', '2024', '2023', '2022', '2021 o antes'], obligatoria: true },
       { id: 'p6', texto: 'Religión', tipo: 'opcion', opciones: ['Adventista', 'Católica', 'Evangélica', 'Otra', 'Ninguna'], obligatoria: true },
       { id: 'p7', texto: '¿Bautizado?', tipo: 'si_no', obligatoria: true },
       { id: 'p8', texto: '¿Tienes alguna discapacidad?', tipo: 'si_no', obligatoria: true },
-      { id: 'p9', texto: 'Lugar de nacimiento (departamento / provincia / distrito)', tipo: 'lugar', obligatoria: true },
+      { id: 'p9', texto: 'Lugar de nacimiento (departamento / provincia / distrito)', tipo: 'lugar', hasta: 'distrito', obligatoria: true },
       { id: 'p10', texto: 'Número de celular de un familiar (padre o madre)', tipo: 'numero', obligatoria: true },
       { id: 'p11', texto: '¿Cómo conociste la UPeU?', tipo: 'opcion', opciones: [...ORIGENES], obligatoria: true },
     ],
