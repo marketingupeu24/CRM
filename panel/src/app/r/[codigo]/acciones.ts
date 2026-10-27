@@ -4,6 +4,8 @@
 // La validación y el registro los hace registrar_lead_actividad(): sin duplicados, identificado por DNI si lo da o, si no, por celular.
 // Genesys no le escribe primero: la pantalla final abre WhatsApp con un mensaje listo y el alumno lo envía.
 import { crearClienteServidor } from '@/lib/supabase/server'
+import { rutaUbigeo } from '@/lib/ubigeos'
+import { UBIGEOS } from '@/lib/ubigeos-servidor'
 import { CAMPOS_REGISTRO_PUBLICO, camposDe, esquemaRegistroPublico, primerError, type RegistroPublico } from '@/lib/validacion'
 
 export interface ResultadoRegistro {
@@ -22,13 +24,17 @@ function temaDeInteres(carrera: string): string {
   return carrera
 }
 
-/** Respuestas a las preguntas propias: "p_<id>" (una) y "pv_<id>" (varias). La base valida cuáles valen. */
+/** Respuestas a las preguntas propias: "p_<id>" (una), "pv_<id>" (varias) y "pl_<id>" (lugar). La base valida cuáles valen. */
 function respuestasDe(formData: FormData): Record<string, string | string[]> {
   const r: Record<string, string | string[]> = {}
   for (const [clave] of formData) {
     const una = /^p_(p\d{1,3})$/.exec(clave)
     const varias = /^pv_(p\d{1,3})$/.exec(clave)
-    if (una) r[una[1]!] = String(formData.get(clave) ?? '').slice(0, 500)
+    // Lugar: llega el código UBIGEO y se guarda con sus nombres ("Juliaca · San Román · Puno")
+    const lugar = /^pl_(p\d{1,3})$/.exec(clave)
+    const codigo = String(formData.get(clave) ?? '')
+    if (lugar) r[lugar[1]!] = UBIGEOS.has(codigo) ? rutaUbigeo(codigo, UBIGEOS) : ''
+    else if (una) r[una[1]!] = String(formData.get(clave) ?? '').slice(0, 500)
     else if (varias) r[varias[1]!] = formData.getAll(clave).map((v) => String(v).slice(0, 100)).slice(0, 20)
   }
   return r

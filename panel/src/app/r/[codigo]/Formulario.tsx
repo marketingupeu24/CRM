@@ -21,6 +21,8 @@ export function FormularioRegistro({ codigo, carreras, colegio, enviar, asesor, 
   const f = formulario ?? { campos: {}, preguntas: [] }
   const pide = (c: CampoFormulario) => modoDe(f, c) !== 'oculto'
   const exige = (c: CampoFormulario) => modoDe(f, c) === 'obligatorio'
+  // En la inscripción, los campos se nombran como en la ficha de inscripción
+  const ins = f.tipo === 'inscripcion'
   const [r, accion, enviando] = useActionState<ResultadoRegistro, FormData>(enviar ?? registrarseEnActividad.bind(null, codigo), {})
 
   if (r.ok) {
@@ -58,7 +60,7 @@ export function FormularioRegistro({ codigo, carreras, colegio, enviar, asesor, 
         <input name="celular" required inputMode="tel" autoComplete="tel" placeholder="987 654 321" className={campo} />
       </label>
       {pide('carrera') && (
-        <label className="block text-sm font-medium text-slate-700">Carrera que te interesa{exige('carrera') && ' *'}
+        <label className="block text-sm font-medium text-slate-700">{ins ? 'Carrera a la que postulas' : 'Carrera que te interesa'}{exige('carrera') && ' *'}
           <select name="carrera" defaultValue="" required={exige('carrera')} className={campo}>
             <option value="">{exige('carrera') ? 'Elige una opción' : 'Aún no lo decido'}</option>
             <option value="CEPRE">CEPRE (preuniversitario)</option>
@@ -69,7 +71,7 @@ export function FormularioRegistro({ codigo, carreras, colegio, enviar, asesor, 
       {(pide('dni') || pide('grado')) && (
         <div className={`grid gap-3 ${pide('dni') && pide('grado') ? 'grid-cols-2' : ''}`}>
           {pide('dni') && (
-            <label className="block text-sm font-medium text-slate-700">DNI{exige('dni') && ' *'}
+            <label className="block text-sm font-medium text-slate-700">{ins ? 'Número de DNI' : 'DNI'}{exige('dni') && ' *'}
               <input name="dni" inputMode="numeric" pattern="[0-9]{8}" maxLength={8} title="8 dígitos" required={exige('dni')} placeholder={exige('dni') ? '8 dígitos' : 'Opcional'} className={campo} />
             </label>
           )}
@@ -84,7 +86,7 @@ export function FormularioRegistro({ codigo, carreras, colegio, enviar, asesor, 
         </div>
       )}
       {pide('colegio') && (
-        <label className="block text-sm font-medium text-slate-700">Colegio{exige('colegio') && ' *'}
+        <label className="block text-sm font-medium text-slate-700">{ins ? 'Nombre del colegio de procedencia' : 'Colegio'}{exige('colegio') && ' *'}
           <input name="colegio" maxLength={120} defaultValue={colegio ?? ''} required={exige('colegio')} placeholder="Nombre de tu colegio" className={campo} />
         </label>
       )}
@@ -92,8 +94,8 @@ export function FormularioRegistro({ codigo, carreras, colegio, enviar, asesor, 
         <div className="[&_label]:font-medium [&_label]:text-slate-700">
           <SelectorProcedencia
             ubigeo={null} conPais={false} claseCampo={campo.replace('mt-1 ', '')}
-            etiqueta={exige('procedencia') ? '¿De dónde eres? *' : '¿De dónde eres?'}
-            ayuda={exige('procedencia') ? 'Tu distrito o provincia.' : 'Tu distrito o provincia (opcional).'}
+            etiqueta={`${ins ? 'Domicilio: ¿en qué distrito vives?' : '¿De dónde eres?'}${exige('procedencia') ? ' *' : ''}`}
+            ayuda={ins ? 'Escribe tu distrito; se completan la provincia y el departamento.' : exige('procedencia') ? 'Tu distrito o provincia.' : 'Tu distrito o provincia (opcional).'}
           />
         </div>
       )}
@@ -120,6 +122,14 @@ function Pregunta({ p, campo }: { p: PreguntaActividad; campo: string }) {
       <label className="block text-sm font-medium text-slate-700">{titulo}
         <textarea name={`p_${p.id}`} rows={2} maxLength={500} required={p.obligatoria} className={campo} />
       </label>
+    )
+  }
+  // Lugar (ej. de nacimiento): el mismo buscador de distrito / provincia / departamento; se envía como "pl_<id>"
+  if (p.tipo === 'lugar') {
+    return (
+      <div className="[&_label]:font-medium [&_label]:text-slate-700">
+        <SelectorProcedencia ubigeo={null} conPais={false} nombre={`pl_${p.id}`} claseCampo={campo.replace('mt-1 ', '')} etiqueta={`${p.texto}${p.obligatoria ? ' *' : ''}`} />
+      </div>
     )
   }
   if (p.tipo === 'fecha' || p.tipo === 'correo' || p.tipo === 'numero') {

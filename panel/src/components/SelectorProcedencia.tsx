@@ -8,7 +8,7 @@ import { PAISES, buscarUbigeos, cargarUbigeos, nivelUbigeo, nombrePais, rutaUbig
 
 const NIVEL = { 1: 'Departamento', 2: 'Provincia', 3: 'Distrito' } as const
 
-export function SelectorProcedencia({ ubigeo, pais, paisDelCelular, conPais = true, claseCampo = 'campo', etiqueta = '¿De dónde es?', ayuda, alCambiar }: {
+export function SelectorProcedencia({ ubigeo, pais, paisDelCelular, conPais = true, claseCampo = 'campo', etiqueta = '¿De dónde es?', ayuda, alCambiar, nombre = 'ubigeo' }: {
   ubigeo: string | null
   /** País guardado (null = el del celular) */
   pais?: string | null
@@ -20,6 +20,8 @@ export function SelectorProcedencia({ ubigeo, pais, paisDelCelular, conPais = tr
   ayuda?: string
   /** Para formularios con estado propio (además del campo oculto) */
   alCambiar?: (ubigeo: string) => void
+  /** Nombre del campo oculto con el código (por defecto "ubigeo") */
+  nombre?: string
 }) {
   const id = useId()
   const [filas, setFilas] = useState<FilaUbigeo[] | null>(null)
@@ -64,7 +66,7 @@ export function SelectorProcedencia({ ubigeo, pais, paisDelCelular, conPais = tr
         </label>
       )}
       {/* Fuera del Perú no hay UBIGEO: se guarda vacío */}
-      <input type="hidden" name="ubigeo" value={enPeru ? codigo : ''} />
+      <input type="hidden" name={nombre} value={enPeru ? codigo : ''} />
       {enPeru && (
         <div className="relative text-sm text-slate-600">
           <label htmlFor={`${id}-buscar`}>{etiqueta}</label>
