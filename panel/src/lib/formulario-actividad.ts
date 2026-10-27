@@ -69,7 +69,7 @@ export const PLANTILLAS: Record<keyof typeof TIPOS_FORMULARIO, FormularioActivid
     campos: { dni: 'obligatorio', carrera: 'obligatorio', grado: 'oculto', colegio: 'obligatorio', procedencia: 'obligatorio' },
     preguntas: [
       { id: 'p12', texto: 'Lugar del colegio (departamento / provincia)', tipo: 'lugar', hasta: 'provincia', obligatoria: true, junto: 'colegio' },
-      { id: 'p2', texto: 'Tipo de colegio', tipo: 'opcion', opciones: ['Estatal (público)', 'Particular (privado)', 'Parroquial', 'Otro'], obligatoria: true, junto: 'colegio' },
+      { id: 'p2', texto: 'Tipo de colegio', tipo: 'opcion', opciones: ['Público', 'Privado'], obligatoria: true, junto: 'colegio' },
       { id: 'p3', texto: '¿Es colegio adventista?', tipo: 'si_no', obligatoria: true, junto: 'colegio' },
       { id: 'p1', texto: 'Domicilio: Jr. o Av. y número', tipo: 'texto', obligatoria: true, junto: 'procedencia' },
       { id: 'p4', texto: 'Situación educativa', tipo: 'opcion', opciones: ['Estoy en 5.° de secundaria', 'Ya terminé el colegio', 'Estudio o estudié en otra universidad o instituto', 'Tengo un título técnico o universitario'], obligatoria: true },
