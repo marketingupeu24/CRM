@@ -108,7 +108,7 @@ export function FormularioRegistro({ codigo, carreras, colegio, enviar, asesor, 
       </label>
       {r.error && <p role="alert" className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{r.error}</p>}
       <button disabled={enviando} className="w-full rounded-xl bg-[#003865] px-4 py-3.5 text-base font-semibold text-white shadow-sm transition hover:brightness-110 disabled:opacity-60">
-        {enviando ? 'Enviando…' : asesor ? 'Enviar mis datos' : 'Quiero recibir información'}
+        {enviando ? 'Enviando…' : asesor ? 'Enviar mis datos' : ins ? 'Enviar mi inscripción' : 'Quiero recibir información'}
       </button>
     </form>
   )
@@ -163,7 +163,8 @@ function Pregunta({ p, campo }: { p: PreguntaActividad; campo: string }) {
   return (
     <fieldset className="text-sm">
       <legend className="font-medium text-slate-700">{titulo}{varias && <span className="font-normal text-slate-500"> (puedes marcar varias)</span>}</legend>
-      <div className={`mt-2 grid gap-2 ${p.tipo === 'si_no' ? 'grid-cols-2' : ''}`}>
+      {/* Opciones cortas (Sí/No, años, religión) en dos columnas: el formulario queda más corto en el celular */}
+      <div className={`mt-2 grid gap-2 ${opciones.every((o) => o.length <= 12) ? 'grid-cols-2' : ''}`}>
         {opciones.map((o, i) => (
           <label key={o} className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-base text-slate-800 has-checked:border-[#003865] has-checked:bg-[#003865]/5">
             <input
