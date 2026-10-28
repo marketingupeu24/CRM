@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { CARRERAS_OFICIALES } from '@crm/db'
+import { CARRERAS_OFERTADAS } from '@crm/db'
 import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { PestanasRegistro } from '../nuevo/PestanasRegistro'
@@ -16,7 +16,7 @@ export default async function PaginaImportar() {
       ? supabase.from('asesores').select('id, nombre').eq('activo', true).is('eliminado_at', null).order('nombre')
       : Promise.resolve({ data: [] as { id: string; nombre: string }[] }),
   ])
-  const listaCarreras = [...CARRERAS_OFICIALES]
+  const listaCarreras = [...CARRERAS_OFERTADAS]
 
   return (
     <div className="space-y-5">

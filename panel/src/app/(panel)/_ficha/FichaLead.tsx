@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { asesorDeLaVista, COOKIE_BANDEJA, COOKIE_DETALLES, leerPreferencia } from '@/lib/bandeja'
 import { CasillaDetalles } from './CasillaDetalles'
-import { CARRERAS_OFICIALES, carreraParecida, ETIQUETAS_FUENTE, type Fuente, type InteraccionTipo } from '@crm/db'
+import { CARRERAS_OFERTADAS, carreraParecida, ETIQUETAS_FUENTE, type Fuente, type InteraccionTipo } from '@crm/db'
 import { InsigniaEstado } from '@/components/InsigniaEstado'
 import { PuntajeInteres } from '@/components/PuntajeInteres'
 import { fechaHora, haceCuanto } from '@/lib/formato'
@@ -27,7 +27,7 @@ import { UBIGEOS } from '@/lib/ubigeos-servidor'
 import { ahoraMs } from '@/lib/texto'
 
 /** Sugerencias de carrera al editar los datos (presencial, campus Juliaca) */
-const CARRERAS_EDITAR = [...CARRERAS_OFICIALES]
+const CARRERAS_EDITAR = [...CARRERAS_OFERTADAS]
 
 const TIPO_INTERACCION: Record<InteraccionTipo, { etiqueta: string; estilo: string }> = {
   mensaje_lead: { etiqueta: 'Mensaje del lead', estilo: 'bg-sky-100 text-sky-700' },

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { CARRERAS_OFICIALES } from '@crm/db'
+import { CARRERAS_OFERTADAS } from '@crm/db'
 import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { PestanasRegistro } from './PestanasRegistro'
@@ -31,7 +31,7 @@ export default async function PaginaNuevoLead() {
       </div>
       <PestanasRegistro actual="uno" />
       <RegistroRapido
-        carreras={[...CARRERAS_OFICIALES]}
+        carreras={[...CARRERAS_OFERTADAS]}
         actividades={actividades ?? []}
         asignacion={{
           recibeLeads: perfil.activo,

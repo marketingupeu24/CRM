@@ -26,6 +26,17 @@ export const CARRERAS_OFICIALES = [
   'Tecnología Médica en Terapia Física y Rehabilitación',
 ] as const
 
+/** Carreras que la filial Juliaca no ofrece en esta convocatoria (sus fichas de Genesys están desactivadas). */
+const NO_OFERTADAS: readonly string[] = [
+  'Educación, Ciencias Naturales y Tecnología',
+  'Educación, Matemática, Análisis de Datos y Computación',
+  'Tecnología Médica en Laboratorio Clínico y Anatomía Patológica',
+  'Tecnología Médica en Terapia Física y Rehabilitación',
+]
+
+/** Las que se ofrecen: las listas para elegir carrera (los leads que ya tienen otra la conservan). */
+export const CARRERAS_OFERTADAS: string[] = CARRERAS_OFICIALES.filter((c) => !NO_OFERTADAS.includes(c))
+
 const REGLAS: [RegExp, string | null][] = [
   [/tecnolog.*laborat|laborat.*tecnolog/, 'Tecnología Médica en Laboratorio Clínico y Anatomía Patológica'],
   [/tecnolog.*(terapia|rehabilit)|(terapia|rehabilit).*tecnolog/, 'Tecnología Médica en Terapia Física y Rehabilitación'],

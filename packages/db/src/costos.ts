@@ -76,9 +76,6 @@ const CARRERAS: Record<CampusId, FilaCarrera[]> = {
     ['Medicina Humana', 26, 600, 0, 5],
     ['Nutrición Humana', 22, 185, 0],
     ['Psicología', 20, 190, 0],
-    // En Juliaca solo Medicina Humana se paga en 5 cuotas; Tecnología Médica, en 4 como las demás
-    ['Tecnología Médica, Especialidad de Laboratorio clínico y anatomía patológica', 21, 250, 0],
-    ['Tecnología Médica, Especialidad de Terapia física y rehabilitación', 21, 250, 0],
     ['Arquitectura y Urbanismo', 21, 190, 0],
     ['Ingeniería Ambiental', 19, 170, 25],
     ['Ingeniería Civil', 21, 185, 0],
@@ -90,7 +87,6 @@ const CARRERAS: Record<CampusId, FilaCarrera[]> = {
     ['Educación Inicial y Puericultura', 21, 155, 0],
     ['Educación, Especialidad Física, Recreación y Deportes', 20, 155, 0],
     ['Educación, Especialidad Lingüística e inglés', 21, 155, 0],
-    ['Educación, Especialidad Matemática, Análisis de datos y computación', 21, 155, 0],
     ['Educación Primaria y pedagógica terapéutica', 21, 155, 0],
   ],
   TAR: [

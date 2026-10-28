@@ -5,14 +5,14 @@ import { fechaHora } from '@/lib/formato'
 import { exigirPermiso } from '@/lib/sesion'
 import { urlBase } from '@/lib/sitio'
 import { crearClienteServidor } from '@/lib/supabase/server'
-import { CARRERAS_OFICIALES } from '@crm/db'
+import { CARRERAS_OFERTADAS } from '@crm/db'
 import { RegistroPresencial } from './RegistroPresencial'
 import { TarjetasQr, type TarjetaQr } from './TarjetasQr'
 import { ahoraMs } from '@/lib/texto'
 
 export const metadata: Metadata = { title: 'Mi QR (presencial)' }
 
-const CARRERAS = [...CARRERAS_OFICIALES]
+const CARRERAS = [...CARRERAS_OFERTADAS]
 
 /**
  * QR personal de cada asesor para la atención presencial: el interesado lo escanea, escribe
