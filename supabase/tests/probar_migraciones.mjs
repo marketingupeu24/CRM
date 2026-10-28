@@ -440,6 +440,16 @@ await uno(`select reasignar_sin_contacto(4, 2, false) r`)
 await q(`update leads set fecha_asignado = now() - interval '10 days' where id = $1`, [ra.lead_id])
 const tercera = (await uno(`select reasignar_sin_contacto(4, 2, false) r`)).r
 ok(!tercera.some((c) => c.lead_id === ra.lead_id) && (await uno(`select reasignaciones from leads where id = $1`, [ra.lead_id])).reasignaciones === 2, 'como máximo 2 reasignaciones por lead')
+// Una tanda se reparte por rotación (antes, con now() fijo, todos los asesores empataban y el resto iba a uno solo)
+const tanda = []
+for (const n of [11, 12, 13, 14]) tanda.push((await procesar({ p_telefono: `5194440000${n}`, p_nombre: 'Tanda', p_carrera: 'Derecho' })).lead_id)
+await q(`select set_config('crm.asignacion_sistema', 'on', false)`)
+await q(`update leads set fecha_asignado = now() - interval '10 days', asesor_id = (select asesor_id from leads where id = $2) where id = any($1)`, [tanda, tanda[0]])
+await q(`update leads set sede = 'Lima' where id = $1`, [tanda[3]])
+const rTanda = (await uno(`select reasignar_sin_contacto(4, 2, false) r`)).r
+const nuevosTanda = await q(`select distinct asesor_id from leads where id = any($1)`, [tanda.slice(0, 3)])
+ok(rTanda.filter((c) => tanda.includes(c.lead_id)).length === 3 && nuevosTanda.length >= 2, 'una tanda de reasignaciones se reparte entre varios asesores')
+ok(!rTanda.some((c) => c.lead_id === tanda[3]), 'un lead que postula a Lima no se reasigna a otro asesor de Juliaca')
 await q(`update leads set origen_campana = 'TikTok' where id = $1`, [rb.lead_id])
 await comoUsuario('admin@test.pe')
 const rO = (await uno(`select resumen_dashboard() r`)).r
