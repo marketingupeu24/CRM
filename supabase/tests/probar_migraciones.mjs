@@ -702,6 +702,38 @@ seccion('actividades con QR')
   ok(eva.colegio === null, 'un campo oculto no se guarda')
   ok(eva.respuestas.length === 2 && eva.respuestas[0].respuesta === 'Sí' && eva.respuestas[1].respuesta === 'Becas, Costos', 'guarda las respuestas válidas (en el orden de las opciones)')
   ok(eva.evento.includes('• ¿Asistirás al simulacro?: Sí'), 'las respuestas se ven en la conversación del lead')
+  // Inscripción completa: preguntas antes/junto a un dato, lugar, correo, número y modalidad de estudio con carrera a distancia
+  const inscripcion = {
+    tipo: 'inscripcion',
+    campos: { dni: 'obligatorio', carrera: 'obligatorio', grado: 'oculto', colegio: 'obligatorio', procedencia: 'obligatorio' },
+    preguntas: [
+      { id: 'p13', texto: 'Estado civil', tipo: 'opcion', opciones: ['Soltero(a)', 'Casado(a)'], obligatoria: true, junto: 'dni' },
+      { id: 'p10', texto: 'Nro. de referencia familiar', tipo: 'numero', obligatoria: true, junto: 'dni' },
+      { id: 'p17', texto: 'Correo electrónico', tipo: 'correo', obligatoria: true, junto: 'dni' },
+      { id: 'p9', texto: 'Lugar de nacimiento', tipo: 'lugar', hasta: 'distrito', obligatoria: true, junto: 'dni' },
+      { id: 'p1', texto: 'Dirección', tipo: 'texto', obligatoria: true, junto: 'procedencia' },
+      { id: 'p23', texto: 'Modalidad de estudio', tipo: 'opcion', opciones: ['Presencial', 'Semipresencial', 'A distancia'], obligatoria: true, antes: 'carrera' },
+      { id: 'p2', texto: 'Régimen', tipo: 'opcion', opciones: ['Público', 'Privado'], obligatoria: true, antes: 'colegio' },
+      { id: 'p3', texto: '¿Es adventista?', tipo: 'si_no', obligatoria: true, antes: 'colegio' },
+    ],
+  }
+  await reset()
+  await q(`update actividades set formulario = $2 where id = $1`, [act.id, JSON.stringify(inscripcion)])
+  await db.exec(`set request.jwt.claim.sub = ''; set role anon`)
+  const respuestasIns = { p13: 'Soltero(a)', p10: '916745336', p17: 'rosa@gmail.com', p9: 'Taraco · Huancané · Puno', p1: 'Jr. 12 de Agosto 123', p23: 'A distancia', p2: 'Privado', p3: 'Sí' }
+  await falla(`select registrar_lead_actividad('${act.codigo}', 'Rosa Ins Quispe', '955111666', '71230001', 'Viva Esperanza', null, 'Administración', '211101', '${JSON.stringify({ ...respuestasIns, p9: '' })}')`,
+    'la inscripción completa exige todas sus preguntas (lugar de nacimiento vacío)')
+  await uno(`select registrar_lead_actividad($1, 'Rosa Ins Quispe', '955111666', '71230001', 'Viva Esperanza', null, 'Educación, Especialidad Primaria y Pedagogía Terapéutica', '211101', $2::jsonb) r`,
+    [act.codigo, JSON.stringify(respuestasIns)])
+  await reset()
+  const ins = await uno(`select l.carrera_interes, l.modalidad, l.programa, l.colegio, l.ubigeo, l.procedencia_por, r.respuestas
+    from leads l join actividad_respuestas r on r.lead_id = l.id and r.actividad_id = $1 where l.dni = '71230001'`, [act.id])
+  ok(ins.carrera_interes === 'Educación Primaria y Pedagogía Terapéutica' && ins.modalidad === null && ins.programa === 'pregrado',
+    'la carrera a distancia se guarda con su nombre oficial (la modalidad de estudio no pisa la modalidad CEPRE del lead)')
+  ok(ins.colegio === 'Viva Esperanza' && ins.ubigeo === '211101' && ins.procedencia_por === 'alumno', 'colegio y domicilio quedan en el lead')
+  ok(ins.respuestas.length === 8 && ins.respuestas.find((x) => x.id === 'p23').respuesta === 'A distancia'
+    && ins.respuestas.find((x) => x.id === 'p9').respuesta === 'Taraco · Huancané · Puno' && ins.respuestas.find((x) => x.id === 'p17').respuesta === 'rosa@gmail.com',
+    'guarda todas las respuestas de la inscripción (modalidad, lugar, correo…)')
   await q(`update actividades set formulario = '{}' where id = $1`, [act.id])
   await q(`update actividades set activa = false where id = $1`, [act.id])
   await db.exec(`set request.jwt.claim.sub = ''; set role anon`)
@@ -710,7 +742,7 @@ seccion('actividades con QR')
   await reset()
   await comoUsuario('a@test.pe')
   ok((await q(`update actividades set nombre = 'x' where id = $1 returning id`, [act.id])).length === 0, 'un asesor no edita actividades ajenas')
-  ok((await q(`select * from resumen_actividades() where actividad_id = $1`, [act.id]))[0].registrados === 5, 'resumen de registrados por actividad')
+  ok((await q(`select * from resumen_actividades() where actividad_id = $1`, [act.id]))[0].registrados === 6, 'resumen de registrados por actividad')
   await reset()
 }
 

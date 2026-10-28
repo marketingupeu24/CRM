@@ -5,6 +5,8 @@ import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { fechaHora } from '@/lib/formato'
 import { leerFormulario } from '@/lib/formulario-actividad'
+import { rutaUbigeo } from '@/lib/ubigeos'
+import { UBIGEOS } from '@/lib/ubigeos-servidor'
 import { BotonCsv } from './BotonCsv'
 
 export const metadata: Metadata = { title: 'Respuestas del formulario' }
@@ -20,7 +22,7 @@ export default async function RespuestasActividad(props: PageProps<'/actividades
   const [{ data: act }, { data: filas, error }] = await Promise.all([
     supabase.from('actividades').select('id, nombre, lugar, formulario').eq('id', Number(id)).maybeSingle(),
     supabase.from('actividad_respuestas')
-      .select('lead_id, respuestas, updated_at, lead:leads(nombre, telefono, carrera_interes, asesor:asesores!leads_asesor_id_fkey(nombre))')
+      .select('lead_id, respuestas, updated_at, lead:leads(nombre, telefono, dni, carrera_interes, colegio, ubigeo, asesor:asesores!leads_asesor_id_fkey(nombre))')
       .eq('actividad_id', Number(id)).order('updated_at', { ascending: false }).limit(2000),
   ])
   if (!act) notFound()
@@ -39,7 +41,11 @@ export default async function RespuestasActividad(props: PageProps<'/actividades
       leadId: f.lead_id,
       nombre: f.lead?.nombre ?? '—',
       telefono: f.lead?.telefono ?? '',
+      dni: f.lead?.dni ?? '',
       carrera: f.lead?.carrera_interes ?? '',
+      colegio: f.lead?.colegio ?? '',
+      // Domicilio (procedencia del lead): "Juliaca · San Román · Puno"
+      domicilio: f.lead?.ubigeo && UBIGEOS.has(f.lead.ubigeo) ? rutaUbigeo(f.lead.ubigeo, UBIGEOS) : '',
       asesor: f.lead?.asesor?.nombre ?? '',
       fecha: f.updated_at,
       valores: columnas.map((c) => porId.get(c.id) ?? ''),
@@ -58,8 +64,8 @@ export default async function RespuestasActividad(props: PageProps<'/actividades
           <BotonCsv
             nombreArchivo={`respuestas-${act.nombre}`}
             filas={[
-              ['Nombre', 'Celular', 'Carrera', 'Asesor', 'Fecha', ...columnas.map((c) => c.texto)],
-              ...tabla.map((t) => [t.nombre, t.telefono, t.carrera, t.asesor, fechaHora(t.fecha), ...t.valores]),
+              ['Nombre', 'Celular', 'DNI', 'Carrera', 'Colegio', 'Domicilio', 'Asesor', 'Fecha', ...columnas.map((c) => c.texto)],
+              ...tabla.map((t) => [t.nombre, t.telefono, t.dni, t.carrera, t.colegio, t.domicilio, t.asesor, fechaHora(t.fecha), ...t.valores]),
             ]}
           />
         )}
@@ -77,6 +83,10 @@ export default async function RespuestasActividad(props: PageProps<'/actividades
             <thead className="bg-slate-50 text-left text-xs font-semibold tracking-wide text-slate-500 uppercase">
               <tr>
                 <th className="px-4 py-2.5">Alumno</th>
+                <th className="px-4 py-2.5">DNI</th>
+                <th className="px-4 py-2.5">Carrera</th>
+                <th className="px-4 py-2.5">Colegio</th>
+                <th className="px-4 py-2.5">Domicilio</th>
                 {columnas.map((c) => <th key={c.id} className="max-w-[16rem] px-4 py-2.5 normal-case">{c.texto}</th>)}
                 <th className="px-4 py-2.5">Fecha</th>
               </tr>
@@ -88,6 +98,7 @@ export default async function RespuestasActividad(props: PageProps<'/actividades
                     <Link href={`/leads/${t.leadId}`} className="font-medium text-marca-700 hover:underline">{t.nombre}</Link>
                     <p className="text-xs text-slate-500">{t.telefono}{t.asesor ? ` · ${t.asesor}` : ''}</p>
                   </td>
+                  {[t.dni, t.carrera, t.colegio, t.domicilio].map((v, i) => <td key={i} className="max-w-[16rem] px-4 py-2.5">{v || <span className="text-slate-300">—</span>}</td>)}
                   {t.valores.map((v, i) => <td key={columnas[i]!.id} className="max-w-[16rem] px-4 py-2.5 whitespace-pre-wrap">{v || <span className="text-slate-300">—</span>}</td>)}
                   <td className="px-4 py-2.5 whitespace-nowrap text-slate-500">{fechaHora(t.fecha)}</td>
                 </tr>
