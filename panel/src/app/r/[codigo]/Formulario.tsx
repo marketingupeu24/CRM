@@ -7,7 +7,9 @@ import { modoDe, type CampoFormulario, type FormularioActividad, type PreguntaAc
 
 const GRADOS = ['5.° de secundaria', '4.° de secundaria', '3.° de secundaria o menos', 'Ya terminé el colegio', 'Universitario / traslado', 'Otro']
 
-type Enviar = (previo: ResultadoRegistro, formData: FormData) => Promise<ResultadoRegistro>
+const SEDES = [['Juliaca', 'Juliaca (filial Juliaca)'], ['Lima', 'Lima (campus Lima)'], ['Tarapoto', 'Tarapoto (filial Tarapoto)']] as const
+
+type Enviar =(previo: ResultadoRegistro, formData: FormData) => Promise<ResultadoRegistro>
 
 /**
  * Formulario público del QR. Por defecto registra en una actividad (feria, colegio); con `enviar`
@@ -37,6 +39,9 @@ export function FormularioRegistro({ codigo, carreras, carrerasModalidad, colegi
   function pregunta(p: PreguntaActividad) {
     return <Pregunta key={p.id} p={p} campo={campo} alCambiar={p.id === pModalidad?.id ? setModalidad : undefined} />
   }
+  // Sede a la que postula (solo en la inscripción): Lima o Tarapoto piden solo datos básicos y la carrera escrita
+  const [sede, setSede] = useState('')
+  const otraSede = ins && (sede === 'Lima' || sede === 'Tarapoto')
   const ubicada = (p: PreguntaActividad) => (p.junto && pide(p.junto)) || (!p.junto && p.antes && pide(p.antes))
   const [r, accion, enviando] = useActionState<ResultadoRegistro, FormData>(enviar ?? registrarseEnActividad.bind(null, codigo), {})
 
@@ -134,15 +139,46 @@ export function FormularioRegistro({ codigo, carreras, carrerasModalidad, colegi
   const orden = ins ? (['dni', 'procedencia', 'carrera', 'colegio'] as const) : (['carrera', 'dni', 'colegio', 'procedencia'] as const)
   return (
     <form action={accion} className="space-y-4">
-      {seccion('Datos personales')}
-      <label className="block text-sm font-medium text-slate-700">Nombres y apellidos *
-        <input name="nombre" required minLength={3} maxLength={120} autoComplete="name" className={campo} />
-      </label>
-      <label className="block text-sm font-medium text-slate-700">{ins ? 'Número actual del postulante (WhatsApp)' : 'Celular (WhatsApp)'} *
-        <input name="celular" required inputMode="tel" autoComplete="tel" placeholder="987 654 321" className={campo} />
-      </label>
-      {orden.map((c) => <Fragment key={c}>{datos[c]}</Fragment>)}
-      {f.preguntas.filter((p) => !ubicada(p)).map(pregunta)}
+      {/* Inscripción: primero la sede. Juliaca llena la ficha completa; Lima o Tarapoto, solo datos básicos y la carrera */}
+      {ins && (
+        <label className="block text-sm font-medium text-slate-700">¿A qué sede deseas postular? *
+          <select name="sede" value={sede} onChange={(e) => setSede(e.target.value)} required className={campo}>
+            <option value="">Elige una sede</option>
+            {SEDES.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
+          </select>
+        </label>
+      )}
+      {ins && !sede ? (
+        <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-500">Elige la sede para continuar con tu inscripción.</p>
+      ) : (
+        <>
+          {seccion('Datos personales')}
+          <label className="block text-sm font-medium text-slate-700">Nombres y apellidos *
+            <input name="nombre" required minLength={3} maxLength={120} autoComplete="name" className={campo} />
+          </label>
+          <label className="block text-sm font-medium text-slate-700">{ins ? 'Número actual del postulante (WhatsApp)' : 'Celular (WhatsApp)'} *
+            <input name="celular" required inputMode="tel" autoComplete="tel" placeholder="987 654 321" className={campo} />
+          </label>
+          {otraSede ? (
+            <>
+              {pide('dni') && (
+                <label className="block text-sm font-medium text-slate-700">Número de DNI{exige('dni') && ' *'}
+                  <input name="dni" inputMode="numeric" pattern="[0-9]{8}" maxLength={8} title="8 dígitos" required={exige('dni')} placeholder={exige('dni') ? '8 dígitos' : 'Opcional'} className={campo} />
+                </label>
+              )}
+              <label className="block text-sm font-medium text-slate-700">Carrera a la que deseas postular *
+                <input name="carrera" required minLength={3} maxLength={150} placeholder="Escribe el nombre de la carrera" className={campo} />
+                <span className="mt-1 block text-xs font-normal text-slate-500">Sede {sede}: te contactaremos para orientarte en tu postulación.</span>
+              </label>
+            </>
+          ) : (
+            <>
+              {orden.map((c) => <Fragment key={c}>{datos[c]}</Fragment>)}
+              {f.preguntas.filter((p) => !ubicada(p)).map(pregunta)}
+            </>
+          )}
+        </>
+      )}
       {/* Campo trampa para bots (oculto para las personas) */}
       <input name="sitio_web" tabIndex={-1} autoComplete="off" aria-hidden className="absolute -left-[9999px] h-0 w-0 opacity-0" />
       <label className="flex items-start gap-3 text-sm text-slate-600">

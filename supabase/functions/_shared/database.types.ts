@@ -1168,7 +1168,7 @@ isOneToOne: false
         isSetofReturn: false
       } },
 "registrar_lead_actividad":
-{ Args: { "p_carrera"?: string,"p_codigo": string,"p_colegio"?: string,"p_dni"?: string,"p_grado"?: string,"p_nombre": string,"p_respuestas"?: Json,"p_telefono": string,"p_ubigeo"?: string }; Returns: Json
+{ Args: { "p_carrera"?: string,"p_codigo": string,"p_colegio"?: string,"p_dni"?: string,"p_grado"?: string,"p_nombre": string,"p_respuestas"?: Json,"p_sede"?: string,"p_telefono": string,"p_ubigeo"?: string }; Returns: Json
                            },
 "registrar_lead_asesor":
 { Args: { "p_carrera"?: string,"p_codigo": string,"p_colegio"?: string,"p_dni"?: string,"p_grado"?: string,"p_nombre": string,"p_telefono": string,"p_ubigeo"?: string,"p_via"?: string }; Returns: Json

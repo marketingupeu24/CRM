@@ -734,6 +734,21 @@ seccion('actividades con QR')
   ok(ins.respuestas.length === 8 && ins.respuestas.find((x) => x.id === 'p23').respuesta === 'A distancia'
     && ins.respuestas.find((x) => x.id === 'p9').respuesta === 'Taraco · Huancané · Puno' && ins.respuestas.find((x) => x.id === 'p17').respuesta === 'rosa@gmail.com',
     'guarda todas las respuestas de la inscripción (modalidad, lugar, correo…)')
+  // Otra sede (Lima / Tarapoto): solo datos básicos y la carrera escrita; Juliaca sigue exigiendo todo
+  await db.exec(`set request.jwt.claim.sub = ''; set role anon`)
+  await falla(`select registrar_lead_actividad('${act.codigo}', 'Mario Lima Quispe', '955111777', '71230002', null, null, 'Ingeniería de Software', null, '{}', 'Juliaca')`,
+    'en Juliaca la inscripción sigue exigiendo colegio, domicilio y preguntas')
+  await falla(`select registrar_lead_actividad('${act.codigo}', 'Mario Lima Quispe', '955111777', '71230002', null, null, null, null, '{}', 'Lima')`,
+    'otra sede exige escribir la carrera')
+  await uno(`select registrar_lead_actividad($1, 'Mario Lima Quispe', '955111777', '71230002', 'No se guarda', null, 'Ingeniería de Software', '211101', '{"p13":"Soltero(a)"}', 'Lima') r`, [act.codigo])
+  await reset()
+  const lima = await uno(`select l.sede, l.carrera_interes, l.colegio, l.ubigeo,
+      (select count(*)::int from actividad_respuestas r where r.lead_id = l.id) resp,
+      (select contenido from lead_interacciones i where i.lead_id = l.id and i.contenido like 'Se registró%' order by id desc limit 1) evento
+    from leads l where l.dni = '71230002'`)
+  ok(lima.sede === 'Lima' && lima.carrera_interes === 'Ingeniería de Software' && lima.colegio === null && lima.ubigeo === null && lima.resp === 0,
+    'otra sede: guarda la sede y la carrera escrita, sin los datos de la inscripción de Juliaca')
+  ok(lima.evento.includes('• Sede a la que postula: Lima'), 'el asesor ve en la conversación la sede a la que postula')
   await q(`update actividades set formulario = '{}' where id = $1`, [act.id])
   await q(`update actividades set activa = false where id = $1`, [act.id])
   await db.exec(`set request.jwt.claim.sub = ''; set role anon`)
@@ -742,7 +757,7 @@ seccion('actividades con QR')
   await reset()
   await comoUsuario('a@test.pe')
   ok((await q(`update actividades set nombre = 'x' where id = $1 returning id`, [act.id])).length === 0, 'un asesor no edita actividades ajenas')
-  ok((await q(`select * from resumen_actividades() where actividad_id = $1`, [act.id]))[0].registrados === 6, 'resumen de registrados por actividad')
+  ok((await q(`select * from resumen_actividades() where actividad_id = $1`, [act.id]))[0].registrados === 7, 'resumen de registrados por actividad')
   await reset()
 }
 
