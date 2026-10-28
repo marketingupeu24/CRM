@@ -86,7 +86,8 @@ export const PLANTILLAS: Record<keyof typeof TIPOS_FORMULARIO, FormularioActivid
       // Dirección de domicilio (después del departamento / provincia / distrito)
       { id: 'p18', texto: 'Ubicación', tipo: 'opcion', opciones: ['Jirón', 'Avenida', 'Calle', 'Pasaje', 'Urbanización', 'Carretera', 'Comunidad', 'Otro'], obligatoria: true, junto: 'procedencia' },
       { id: 'p1', texto: 'Dirección (nombre y número)', tipo: 'texto', obligatoria: true, junto: 'procedencia' },
-      // Datos de admisión (después de la carrera)
+      // Datos de admisión: la modalidad de estudio antes de la carrera; el resto, después
+      { id: 'p23', texto: 'Modalidad de estudio', tipo: 'opcion', opciones: ['Presencial', 'Semipresencial', 'A distancia'], obligatoria: true, antes: 'carrera' },
       { id: 'p19', texto: 'Modalidad de ingreso', tipo: 'opcion', opciones: ['Examen de admisión', 'CEPRE', 'Primeros puestos', 'Traslado externo', 'Graduados o titulados', 'Aún no lo sé'], obligatoria: true, junto: 'carrera' },
       { id: 'p11', texto: 'Canal de referencia (¿cómo conociste la UPeU?)', tipo: 'opcion', opciones: [...ORIGENES], obligatoria: true, junto: 'carrera' },
       // Centro de estudios de procedencia (antes del nombre del colegio)

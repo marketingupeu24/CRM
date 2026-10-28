@@ -142,10 +142,10 @@ test('actividades: el formulario de una actividad nueva trae el editor del QR (s
   await expect(page.getByRole('radiogroup', { name: 'DNI' }).first()).toBeVisible()
   await page.getByRole('button', { name: '+ Agregar pregunta' }).first().click()
   await expect(page.getByLabel('Texto de la pregunta 1').first()).toBeVisible()
-  // Plantilla "Inscripción completa": como ya hay una pregunta, pide confirmar y carga las 22 preguntas
+  // Plantilla "Inscripción completa": como ya hay una pregunta, pide confirmar y carga las 23 preguntas
   await page.getByRole('button', { name: /Inscripción completa/ }).first().click()
   await page.getByRole('button', { name: 'Usar este formulario' }).click()
-  await expect(page.getByLabel('Texto de la pregunta 14').first()).toHaveValue('Canal de referencia (¿cómo conociste la UPeU?)')
+  await expect(page.getByLabel('Texto de la pregunta 15').first()).toHaveValue('Canal de referencia (¿cómo conociste la UPeU?)')
   await expect(page.getByRole('radiogroup', { name: 'DNI' }).first().getByRole('radio', { name: 'Obligatorio' })).toHaveAttribute('aria-checked', 'true')
 })
 
