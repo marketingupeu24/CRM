@@ -17,6 +17,8 @@ export default async function PaginaRegistro(props: PageProps<'/r/[codigo]'>) {
   const actividad = data as unknown as ActividadPublica | null
   const formulario = leerFormulario(actividad?.formulario)
   const listaCarreras = [...new Set(carreras('PRES', 'JUL').map((c) => c[0]))]
+  // Semipresencial y a distancia (sede Lima): las del tarifario de cada modalidad
+  const carrerasModalidad = { semipresencial: carreras('SEMI', 'LIM').map((c) => c[0]), distancia: carreras('EAD', 'LIM').map((c) => c[0]) }
 
   return (
     <main className="min-h-screen bg-slate-100" data-theme="light" style={{ colorScheme: 'light' }}>
@@ -45,7 +47,7 @@ export default async function PaginaRegistro(props: PageProps<'/r/[codigo]'>) {
                   <p className="mt-1 mb-5 text-sm text-slate-500">Te enviaremos por WhatsApp la información de carreras, costos y fechas de admisión.</p>
                 </>
               )}
-              <FormularioRegistro codigo={codigo} carreras={listaCarreras} colegio={actividad.tipo === 'colegio' ? actividad.lugar : null} formulario={formulario} />
+              <FormularioRegistro codigo={codigo} carreras={listaCarreras} carrerasModalidad={carrerasModalidad} colegio={actividad.tipo === 'colegio' ? actividad.lugar : null} formulario={formulario} />
             </>
           )}
         </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment, useActionState, type ReactNode } from 'react'
+import { Fragment, useActionState, useState, type ReactNode } from 'react'
 import { registrarseEnActividad, type ResultadoRegistro } from './acciones'
 import { SelectorLugar } from '@/components/SelectorLugar'
 import { modoDe, type CampoFormulario, type FormularioActividad, type PreguntaActividad } from '@/lib/formulario-actividad'
@@ -13,8 +13,10 @@ type Enviar = (previo: ResultadoRegistro, formData: FormData) => Promise<Resulta
  * Formulario público del QR. Por defecto registra en una actividad (feria, colegio); con `enviar`
  * y `asesor` sirve para el QR de un asesor (atención presencial).
  */
-export function FormularioRegistro({ codigo, carreras, colegio, enviar, asesor, formulario }: {
+export function FormularioRegistro({ codigo, carreras, carrerasModalidad, colegio, enviar, asesor, formulario }: {
   codigo: string; carreras: string[]; colegio: string | null; enviar?: Enviar; asesor?: string
+  /** Carreras semipresenciales y a distancia (sede Lima): se muestran si el alumno elige esa modalidad de estudio */
+  carrerasModalidad?: { semipresencial: string[]; distancia: string[] }
   /** Campos y preguntas propias de la actividad (sin él, el formulario de siempre) */
   formulario?: FormularioActividad
 }) {
@@ -24,8 +26,17 @@ export function FormularioRegistro({ codigo, carreras, colegio, enviar, asesor, 
   // En la inscripción, los campos se nombran como en la ficha de inscripción
   const ins = f.tipo === 'inscripcion'
   // Preguntas que van justo antes o después de un dato (ej. la dirección, junto al domicilio). Si ese dato no se pide, van al final
-  const junto = (c: CampoFormulario) => pide(c) && f.preguntas.filter((p) => p.junto === c).map((p) => <Pregunta key={p.id} p={p} campo={campo} />)
-  const antes = (c: CampoFormulario) => pide(c) && f.preguntas.filter((p) => p.antes === c && !p.junto).map((p) => <Pregunta key={p.id} p={p} campo={campo} />)
+  const junto = (c: CampoFormulario) => pide(c) && f.preguntas.filter((p) => p.junto === c).map(pregunta)
+  const antes = (c: CampoFormulario) => pide(c) && f.preguntas.filter((p) => p.antes === c && !p.junto).map(pregunta)
+  // Modalidad de estudio (Presencial / Semipresencial / A distancia): cambia las carreras de la lista
+  const pModalidad = f.preguntas.find((p) => p.tipo === 'opcion' && p.opciones?.some((o) => /distancia/i.test(o)) && p.opciones.some((o) => /semi/i.test(o)))
+  const [modalidad, setModalidad] = useState('')
+  const semi = /semi/i.test(modalidad)
+  const distancia = !semi && /distancia/i.test(modalidad)
+  const listaCarreras = carrerasModalidad && semi ? carrerasModalidad.semipresencial : carrerasModalidad && distancia ? carrerasModalidad.distancia : carreras
+  function pregunta(p: PreguntaActividad) {
+    return <Pregunta key={p.id} p={p} campo={campo} alCambiar={p.id === pModalidad?.id ? setModalidad : undefined} />
+  }
   const ubicada = (p: PreguntaActividad) => (p.junto && pide(p.junto)) || (!p.junto && p.antes && pide(p.antes))
   const [r, accion, enviando] = useActionState<ResultadoRegistro, FormData>(enviar ?? registrarseEnActividad.bind(null, codigo), {})
 
@@ -63,11 +74,13 @@ export function FormularioRegistro({ codigo, carreras, colegio, enviar, asesor, 
         {seccion('Datos de admisión')}
         {antes('carrera')}
         <label className="block text-sm font-medium text-slate-700">{ins ? 'Carrera profesional' : 'Carrera que te interesa'}{exige('carrera') && ' *'}
-          <select name="carrera" defaultValue="" required={exige('carrera')} className={campo}>
+          {/* key: al cambiar de modalidad se borra la carrera elegida (puede no existir en la otra) */}
+          <select key={semi ? 'semi' : distancia ? 'distancia' : 'presencial'} name="carrera" defaultValue="" required={exige('carrera')} className={campo}>
             <option value="">{exige('carrera') ? 'Elige una opción' : 'Aún no lo decido'}</option>
-            <option value="CEPRE">CEPRE (preuniversitario)</option>
-            {carreras.map((c) => <option key={c} value={c}>{c}</option>)}
+            {!semi && !distancia && <option value="CEPRE">CEPRE (preuniversitario)</option>}
+            {listaCarreras.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
+          {carrerasModalidad && (semi || distancia) && <span className="mt-1 block text-xs font-normal text-slate-500">{semi ? 'Carreras semipresenciales' : 'Carreras a distancia · sede Lima'}</span>}
         </label>
         {junto('carrera')}
       </>
@@ -129,7 +142,7 @@ export function FormularioRegistro({ codigo, carreras, colegio, enviar, asesor, 
         <input name="celular" required inputMode="tel" autoComplete="tel" placeholder="987 654 321" className={campo} />
       </label>
       {orden.map((c) => <Fragment key={c}>{datos[c]}</Fragment>)}
-      {f.preguntas.filter((p) => !ubicada(p)).map((p) => <Pregunta key={p.id} p={p} campo={campo} />)}
+      {f.preguntas.filter((p) => !ubicada(p)).map(pregunta)}
       {/* Campo trampa para bots (oculto para las personas) */}
       <input name="sitio_web" tabIndex={-1} autoComplete="off" aria-hidden className="absolute -left-[9999px] h-0 w-0 opacity-0" />
       <label className="flex items-start gap-3 text-sm text-slate-600">
@@ -145,7 +158,7 @@ export function FormularioRegistro({ codigo, carreras, colegio, enviar, asesor, 
 }
 
 /** Pregunta propia de la actividad. Se envía como "p_<id>" (varias opciones: "pv_<id>", una por casilla). */
-function Pregunta({ p, campo }: { p: PreguntaActividad; campo: string }) {
+function Pregunta({ p, campo, alCambiar }: { p: PreguntaActividad; campo: string; alCambiar?: (valor: string) => void }) {
   const titulo = <>{p.texto}{p.obligatoria && ' *'}</>
   if (p.tipo === 'texto') {
     return (
@@ -179,7 +192,7 @@ function Pregunta({ p, campo }: { p: PreguntaActividad; campo: string }) {
   if (!varias) {
     return (
       <label className="block text-sm font-medium text-slate-700">{titulo}
-        <select name={`p_${p.id}`} defaultValue="" required={p.obligatoria} className={campo}>
+        <select name={`p_${p.id}`} defaultValue="" required={p.obligatoria} onChange={alCambiar && ((e) => alCambiar(e.target.value))} className={campo}>
           <option value="">Elige una opción</option>
           {opciones.map((o) => <option key={o}>{o}</option>)}
         </select>
