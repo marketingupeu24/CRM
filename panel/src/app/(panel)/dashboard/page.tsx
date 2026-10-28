@@ -9,6 +9,7 @@ import {
 import { EmbudoPorOrigen } from './EmbudoPorOrigen'
 import { duracion, num, pct } from '@/lib/formato'
 import { hoyLima } from '@/lib/texto'
+import { CAMPUS, campusDe } from '@/lib/campus'
 
 export const metadata: Metadata = { title: 'Dashboard' }
 
@@ -69,13 +70,18 @@ export default async function PaginaDashboard(props: PageProps<'/dashboard'>) {
     p_convocatoria: convocatoria || undefined,
     p_asesor_id: esAdmin && /^[0-9a-f-]{36}$/i.test(asesor) ? asesor : undefined,
   }
-  const [{ data, error }, { data: convocatorias }, { data: asesores }, { data: embudo }] = await Promise.all([
+  // Campus que eligió el alumno (con las mismas fechas): solo para quien ve todo el equipo
+  let sedes = supabase.from('leads').select('sede, asesor_id').not('sede', 'is', null).is('eliminado_at', null).limit(5000)
+  if (desde) sedes = sedes.gte('created_at', `${desde}T00:00:00-05:00`)
+  if (hasta) sedes = sedes.lte('created_at', `${hasta}T23:59:59.999-05:00`)
+  const [{ data, error }, { data: convocatorias }, { data: asesores }, { data: embudo }, { data: conSede }] = await Promise.all([
     supabase.rpc('resumen_dashboard', filtrosRpc),
     supabase.from('leads').select('convocatoria').not('convocatoria', 'is', null).limit(2000),
     esAdmin
       ? supabase.rpc('posibles_reemplazos')
       : Promise.resolve({ data: [] as { id: string; nombre: string }[] }),
     supabase.rpc('embudo_por_origen', { ...filtrosRpc, p_por: embudoPor }),
+    esAdmin ? sedes : Promise.resolve({ data: [] as { sede: string | null; asesor_id: string | null }[] }),
   ])
 
   if (error || !data) {
@@ -95,7 +101,12 @@ export default async function PaginaDashboard(props: PageProps<'/dashboard'>) {
     })
   }
 
-  const filtrosActuales = new URLSearchParams(Object.entries({ convocatoria, asesor }).filter(([, v]) => v))
+  const porCampus = CAMPUS.map((campus) => {
+    const del = (conSede ?? []).filter((l) => campusDe(l.sede) === campus)
+    return { campus, total: del.length, sinAsesor: del.filter((l) => !l.asesor_id).length }
+  })
+
+  const filtrosActuales =new URLSearchParams(Object.entries({ convocatoria, asesor }).filter(([, v]) => v))
   const rango = (d: string, h: string) => {
     const p = new URLSearchParams(filtrosActuales)
     if (d) p.set('desde', d)
@@ -228,6 +239,32 @@ export default async function PaginaDashboard(props: PageProps<'/dashboard'>) {
           />
         </Tarjeta>
       </div>
+
+      {esAdmin && (
+        <Tarjeta titulo="Leads por campus" descripcion="Campus que eligió el alumno al inscribirse, con las fechas del filtro. Lima y Tarapoto no se entregan a los asesores">
+          <BarrasHorizontales
+            total={porCampus.reduce((s, c) => s + c.total, 0)}
+            filas={porCampus.map((c) => ({
+              etiqueta: c.campus,
+              valor: c.total,
+              detalle: <p className="text-slate-300">Sin asesor: {num(c.sinAsesor)}</p>,
+            }))}
+          />
+          {puede('exportar') && (
+            <form action="/dashboard/leads-campus" className="mt-5 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
+              <span className="text-sm font-medium text-slate-700">Descargar leads de</span>
+              <select name="campus" defaultValue="" aria-label="Campus" className="campo w-auto">
+                <option value="">Todos los campus</option>
+                {CAMPUS.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <input type="date" name="desde" defaultValue={desde} aria-label="Desde" className="campo w-auto" />
+              <span className="text-sm text-slate-400">a</span>
+              <input type="date" name="hasta" defaultValue={hasta} aria-label="Hasta" className="campo w-auto" />
+              <button className="boton-secundario" title="Excel con todos los datos del lead y sus respuestas al formulario">⬇ Descargar Excel</button>
+            </form>
+          )}
+        </Tarjeta>
+      )}
 
       <Tarjeta
         titulo="Embudo por origen"

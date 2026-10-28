@@ -749,6 +749,11 @@ seccion('actividades con QR')
   ok(lima.sede === 'Lima' && lima.carrera_interes === 'Ingeniería de Software' && lima.colegio === null && lima.ubigeo === null && lima.resp === 0,
     'otra sede: guarda la sede y la carrera escrita, sin los datos de la inscripción de Juliaca')
   ok(lima.evento.includes('• Sede a la que postula: Lima'), 'el asesor ve en la conversación la sede a la que postula')
+  ok((await uno(`select asesor_id from leads where dni = '71230002'`)).asesor_id === null, 'otra sede: el lead no se entrega a los asesores de Juliaca')
+  // Si después escribe al bot, tampoco entra a la rotación
+  await q(`update leads set ultimo_registro_at = now() - interval '1 hour' where dni = '71230002'`)
+  await q(`select procesar_lead(p_telefono => '51955111777', p_nombre => 'Mario Lima Quispe', p_asignar => true)`)
+  ok((await uno(`select asesor_id from leads where dni = '71230002'`)).asesor_id === null, 'otra sede: tampoco se asigna cuando vuelve a escribir al bot')
   await q(`update actividades set formulario = '{}' where id = $1`, [act.id])
   await q(`update actividades set activa = false where id = $1`, [act.id])
   await db.exec(`set request.jwt.claim.sub = ''; set role anon`)
