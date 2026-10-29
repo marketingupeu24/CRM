@@ -36,7 +36,8 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
     desde: mes?.desde ?? parametro(sp.desde),
     hasta: mes?.hasta ?? parametro(sp.hasta),
     // "interes": primero los más interesados (puntaje); por defecto, los que escribieron último
-    orden: ['interes', 'asignado'].includes(parametro(sp.orden)) ? parametro(sp.orden) : '',
+    // Por defecto: los asignados o reasignados más recientes arriba
+    orden: ['interes', 'mensaje'].includes(parametro(sp.orden)) ? parametro(sp.orden) : '',
   }
   const pagina = Math.max(1, Number.parseInt(parametro(sp.pagina) || '1', 10) || 1)
 
@@ -79,10 +80,10 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
 
   const desde = (pagina - 1) * POR_PAGINA
   const [{ data: leads, count, error }, { data: carreras }, { data: convocatorias }, { data: asesores }] = await Promise.all([
-    // Los que volvieron a escribir suben arriba
+    // Por defecto, los últimos asignados o reasignados arriba ('mensaje': los que escribieron último)
     (filtros.orden === 'interes' ? consulta.order('puntaje', { ascending: false }).order('ultimo_contacto', { ascending: false })
-      : filtros.orden === 'asignado' ? consulta.order('fecha_asignado', { ascending: false, nullsFirst: false })
-      : consulta.order('ultimo_contacto', { ascending: false }))
+      : filtros.orden === 'mensaje' ? consulta.order('ultimo_contacto', { ascending: false })
+      : consulta.order('fecha_asignado', { ascending: false, nullsFirst: false }).order('ultimo_contacto', { ascending: false }))
       .range(desde, desde + POR_PAGINA - 1),
     supabase.from('vista_leads_por_carrera').select('carrera'),
     supabase.from('leads').select('convocatoria').not('convocatoria', 'is', null).limit(2000),
@@ -134,7 +135,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
     filtros.convocatoria ? { clave: 'convocatoria', texto: `Convocatoria: ${filtros.convocatoria}` } : null,
     esAdmin && filtros.asesor ? { clave: 'asesor', texto: `Asesor: ${nombreAsesor}` } : null,
     filtros.origen ? { clave: 'origen', texto: `Nos conoció por: ${filtros.origen}` } : null,
-    filtros.orden ? { clave: 'orden', texto: filtros.orden === 'asignado' ? 'Asignados más recientes primero' : 'Más interesados primero' } : null,
+    filtros.orden ? { clave: 'orden', texto: filtros.orden === 'mensaje' ? 'Escribieron último primero' : 'Más interesados primero' } : null,
   ].filter((a) => a !== null)
   /** La misma lista sin un filtro ("periodo" quita desde y hasta). */
   const sinFiltro = (clave: string) => {
@@ -226,9 +227,9 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
             <option value="Sin dato">Sin dato</option>
           </select>
           <select name="orden" defaultValue={filtros.orden} className="campo" aria-label="Ordenar">
-            <option value="">Ordenar: escribieron último</option>
+            <option value="">Ordenar: asignados o reasignados más recientes</option>
+            <option value="mensaje">Ordenar: escribieron último</option>
             <option value="interes">Ordenar: más interesados primero</option>
-            <option value="asignado">Ordenar: asignados o reasignados más recientes</option>
           </select>
           <label className="flex items-center gap-2 text-sm text-slate-600">
             Registrado desde <input type="date" name="desde" defaultValue={filtros.desde} className="campo" />
