@@ -47,6 +47,7 @@ export function Navegacion(
       enlaces: [
         { href: '/dashboard', texto: 'Dashboard', icono: '◔', modulo: 'dashboard' },
         { href: '/procedencia' as Route, texto: 'Procedencia', icono: '📍', modulo: 'dashboard' },
+        { href: '/reasignaciones' as Route, texto: 'Reasignaciones', icono: '🔁', modulo: 'dashboard' },
         { href: '/campanas', texto: 'Campañas', icono: '📣', modulo: 'campanas' },
         { href: '/enlaces' as Route, texto: 'Enlaces y QR por medio', icono: '🔗', modulo: 'campanas' },
         { href: '/puntaje' as Route, texto: 'Puntaje de interés', icono: '🔥', modulo: 'leads' },

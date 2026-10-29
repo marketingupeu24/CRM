@@ -7,7 +7,7 @@ import { fechaHora } from '@/lib/formato'
 import { leerFormulario } from '@/lib/formulario-actividad'
 import { rutaUbigeo } from '@/lib/ubigeos'
 import { UBIGEOS } from '@/lib/ubigeos-servidor'
-import { BotonCsv } from './BotonCsv'
+import { BotonCsv } from '@/components/BotonCsv'
 
 export const metadata: Metadata = { title: 'Respuestas del formulario' }
 

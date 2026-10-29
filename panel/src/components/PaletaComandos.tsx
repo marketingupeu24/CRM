@@ -29,6 +29,7 @@ const PAGINAS: Omit<Item, 'id' | 'grupo'>[] = [
   { titulo: 'Proformas de costos', icono: '💰', ir: '/costos', detalle: 'Calcular costos 2027-1, PDF e imagen', modulo: 'costos' },
   { titulo: 'Dashboard', icono: '◔', ir: '/dashboard', modulo: 'dashboard', detalle: 'Indicadores y gráficos' },
   { titulo: 'Procedencia', icono: '📍', ir: '/procedencia', modulo: 'dashboard', detalle: 'De dónde vienen los leads (país, departamento, provincia, distrito)' },
+  { titulo: 'Reasignaciones', icono: '🔁', ir: '/reasignaciones', modulo: 'dashboard', detalle: 'Historial: de qué asesor a cuál pasaron los leads y quiénes no contactan a tiempo' },
   { titulo: 'Campañas', icono: '📣', ir: '/campanas', modulo: 'campanas', detalle: 'Resultados y Excel por campaña' },
   { titulo: 'Leads sin responder', icono: '●', ir: '/chats?filtro=sin_responder', modulo: 'chats', detalle: 'Escribieron y esperan respuesta' },
   { titulo: 'Respuestas rápidas', icono: '⚡', ir: '/respuestas', modulo: 'chats', detalle: 'Mis respuestas personales y las de todos' },

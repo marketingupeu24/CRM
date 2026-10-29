@@ -449,6 +449,61 @@ isOneToOne: false
       referencedColumns: ["codigo"]
     }
                   ]
+                },"movimientos_lead": {
+                  Row: {
+                    "a_asesor_id": string | null,"a_nombre": string | null,"created_at": string,"de_asesor_id": string | null,"de_nombre": string | null,"id": number,"lead_id": string,"motivo": string,"por_asesor_id": string | null,"tuvo_desde": string | null
+                  }
+                  Insert: {
+                    "a_asesor_id"?: string | null,"a_nombre"?: string | null,"created_at"?: string,"de_asesor_id"?: string | null,"de_nombre"?: string | null,"id"?: never,"lead_id": string,"motivo": string,"por_asesor_id"?: string | null,"tuvo_desde"?: string | null
+                  }
+                  Update: {
+                    "a_asesor_id"?: string | null,"a_nombre"?: string | null,"created_at"?: string,"de_asesor_id"?: string | null,"de_nombre"?: string | null,"id"?: never,"lead_id"?: string,"motivo"?: string,"por_asesor_id"?: string | null,"tuvo_desde"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "movimientos_lead_a_asesor_id_fkey"
+      columns: ["a_asesor_id"]
+isOneToOne: false
+      referencedRelation: "asesores"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "movimientos_lead_a_asesor_id_fkey"
+      columns: ["a_asesor_id"]
+isOneToOne: false
+      referencedRelation: "vista_leads_por_asesor"
+      referencedColumns: ["asesor_id"]
+    },{
+      foreignKeyName: "movimientos_lead_de_asesor_id_fkey"
+      columns: ["de_asesor_id"]
+isOneToOne: false
+      referencedRelation: "asesores"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "movimientos_lead_de_asesor_id_fkey"
+      columns: ["de_asesor_id"]
+isOneToOne: false
+      referencedRelation: "vista_leads_por_asesor"
+      referencedColumns: ["asesor_id"]
+    },{
+      foreignKeyName: "movimientos_lead_lead_id_fkey"
+      columns: ["lead_id"]
+isOneToOne: false
+      referencedRelation: "leads"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "movimientos_lead_por_asesor_id_fkey"
+      columns: ["por_asesor_id"]
+isOneToOne: false
+      referencedRelation: "asesores"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "movimientos_lead_por_asesor_id_fkey"
+      columns: ["por_asesor_id"]
+isOneToOne: false
+      referencedRelation: "vista_leads_por_asesor"
+      referencedColumns: ["asesor_id"]
+    }
+                  ]
                 },"prerregistros": {
                   Row: {
                     "asesor_id": string,"carrera": string | null,"codigo": string,"colegio": string | null,"created_at": string,"dni": string | null,"grado": string | null,"id": string,"lead_id": string | null,"nombre": string,"usado_at": string | null
@@ -1087,6 +1142,9 @@ isOneToOne: false
                            },
 "qr_asesor_publico":
 { Args: { "p_codigo": string }; Returns: Json
+                           },
+"reasignar_sin_aviso":
+{ Args: { "p_horas"?: number,"p_maximo"?: number }; Returns: Json
                            },
 "reasignar_sin_contacto":
 { Args: { "p_horas"?: number,"p_maximo"?: number,"p_solo_horario"?: boolean }; Returns: Json

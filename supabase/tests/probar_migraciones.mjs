@@ -450,6 +450,18 @@ const rTanda = (await uno(`select reasignar_sin_contacto(4, 2, false) r`)).r
 const nuevosTanda = await q(`select distinct asesor_id from leads where id = any($1)`, [tanda.slice(0, 3)])
 ok(rTanda.filter((c) => tanda.includes(c.lead_id)).length === 3 && nuevosTanda.length >= 2, 'una tanda de reasignaciones se reparte entre varios asesores')
 ok(!rTanda.some((c) => c.lead_id === tanda[3]), 'un lead que postula a Lima no se reasigna a otro asesor de Juliaca')
+// Historial de movimientos: de quién a quién, por qué y desde cuándo lo tenía
+const movT = await q(`select de_asesor_id, a_asesor_id, de_nombre, a_nombre, motivo, tuvo_desde from movimientos_lead where lead_id = any($1) and motivo like 'No contactado%'`, [tanda.slice(0, 3)])
+ok(movT.length === 3 && movT.every((m) => m.motivo === 'No contactado en 4 h hábiles' && m.de_asesor_id && m.a_asesor_id && m.de_nombre && m.a_nombre && m.tuvo_desde),
+  'cada reasignación automática queda en el historial con origen, destino, motivo y desde cuándo lo tenía')
+await comoUsuario('admin@test.pe')
+const destinoManual = (await uno(`select id from asesores where activo and id <> (select asesor_id from leads where id = $1) limit 1`, [tanda[0]])).id
+await q(`update leads set asesor_id = $1 where id = $2`, [destinoManual, tanda[0]])
+await reset()
+const manual = await uno(`select motivo, por_asesor_id from movimientos_lead where lead_id = $1 order by id desc limit 1`, [tanda[0]])
+ok(manual.motivo === 'Cambio manual' && manual.por_asesor_id !== null, 'un cambio de asesor desde el panel queda como "Cambio manual" con quién lo hizo')
+const movVisibles = async (correo) => { await comoUsuario(correo); const n = (await uno(`select count(*)::int n from movimientos_lead`)).n; await reset(); return n }
+ok((await movVisibles('admin@test.pe')) >= 4 && (await movVisibles('a@test.pe')) < (await movVisibles('admin@test.pe')), 'el admin ve todo el historial; el asesor solo lo que le salió o le llegó')
 await q(`update leads set origen_campana = 'TikTok' where id = $1`, [rb.lead_id])
 await comoUsuario('admin@test.pe')
 const rO = (await uno(`select resumen_dashboard() r`)).r
