@@ -36,7 +36,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
     desde: mes?.desde ?? parametro(sp.desde),
     hasta: mes?.hasta ?? parametro(sp.hasta),
     // "interes": primero los más interesados (puntaje); por defecto, los que escribieron último
-    orden: parametro(sp.orden) === 'interes' ? 'interes' : '',
+    orden: ['interes', 'asignado'].includes(parametro(sp.orden)) ? parametro(sp.orden) : '',
   }
   const pagina = Math.max(1, Number.parseInt(parametro(sp.pagina) || '1', 10) || 1)
 
@@ -51,7 +51,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
 
   let consulta = supabase
     .from('leads')
-    .select('id, nombre, telefono, dni, carrera_interes, modalidad, programa, convocatoria, estado, origen, origen_campana, reasignaciones, created_at, ultimo_contacto, reconsultas, sin_responder, ultimo_mensaje_lead_at, puntaje, puntaje_motivos, asesor:asesores!leads_asesor_id_fkey(nombre)', { count: 'exact' })
+    .select('id, nombre, telefono, dni, carrera_interes, modalidad, programa, convocatoria, estado, origen, origen_campana, reasignaciones, created_at, fecha_asignado, ultimo_contacto, reconsultas, sin_responder, ultimo_mensaje_lead_at, puntaje, puntaje_motivos, asesor:asesores!leads_asesor_id_fkey(nombre)', { count: 'exact' })
 
   if (filtros.q) {
     // Quita caracteres que alteran la sintaxis del filtro de PostgREST
@@ -80,7 +80,9 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
   const desde = (pagina - 1) * POR_PAGINA
   const [{ data: leads, count, error }, { data: carreras }, { data: convocatorias }, { data: asesores }] = await Promise.all([
     // Los que volvieron a escribir suben arriba
-    (filtros.orden === 'interes' ? consulta.order('puntaje', { ascending: false }).order('ultimo_contacto', { ascending: false }) : consulta.order('ultimo_contacto', { ascending: false }))
+    (filtros.orden === 'interes' ? consulta.order('puntaje', { ascending: false }).order('ultimo_contacto', { ascending: false })
+      : filtros.orden === 'asignado' ? consulta.order('fecha_asignado', { ascending: false, nullsFirst: false })
+      : consulta.order('ultimo_contacto', { ascending: false }))
       .range(desde, desde + POR_PAGINA - 1),
     supabase.from('vista_leads_por_carrera').select('carrera'),
     supabase.from('leads').select('convocatoria').not('convocatoria', 'is', null).limit(2000),
@@ -89,7 +91,13 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
       : Promise.resolve({ data: [] as { id: string; nombre: string }[] }),
   ])
 
-  const listaConvocatorias = [...new Set((convocatorias ?? []).map((c) => c.convocatoria!))].sort().reverse()
+  // Leads que llegaron a su asesor actual por un cambio (reasignación, reparto o a mano): dice "Reasignado"
+  const { data: movidos } = leads?.length
+    ? await supabase.from('movimientos_lead').select('lead_id').in('lead_id', leads.map((l) => l.id))
+    : { data: [] }
+  const reasignados = new Set((movidos ?? []).map((m) => m.lead_id))
+
+  const listaConvocatorias =[...new Set((convocatorias ?? []).map((c) => c.convocatoria!))].sort().reverse()
   const total = count ?? 0
   const paginas = Math.max(1, Math.ceil(total / POR_PAGINA))
   const hayFiltros = Object.values(filtros).some(Boolean)
@@ -126,7 +134,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
     filtros.convocatoria ? { clave: 'convocatoria', texto: `Convocatoria: ${filtros.convocatoria}` } : null,
     esAdmin && filtros.asesor ? { clave: 'asesor', texto: `Asesor: ${nombreAsesor}` } : null,
     filtros.origen ? { clave: 'origen', texto: `Nos conoció por: ${filtros.origen}` } : null,
-    filtros.orden ? { clave: 'orden', texto: 'Más interesados primero' } : null,
+    filtros.orden ? { clave: 'orden', texto: filtros.orden === 'asignado' ? 'Asignados más recientes primero' : 'Más interesados primero' } : null,
   ].filter((a) => a !== null)
   /** La misma lista sin un filtro ("periodo" quita desde y hasta). */
   const sinFiltro = (clave: string) => {
@@ -220,6 +228,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
           <select name="orden" defaultValue={filtros.orden} className="campo" aria-label="Ordenar">
             <option value="">Ordenar: escribieron último</option>
             <option value="interes">Ordenar: más interesados primero</option>
+            <option value="asignado">Ordenar: asignados o reasignados más recientes</option>
           </select>
           <label className="flex items-center gap-2 text-sm text-slate-600">
             Registrado desde <input type="date" name="desde" defaultValue={filtros.desde} className="campo" />
@@ -284,6 +293,7 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
               {esAdmin && <th className="hidden px-4 py-3 md:table-cell">Asesor</th>}
               <th className="hidden px-4 py-3 md:table-cell">Fuente</th>
               <th className="px-4 py-3">Último contacto</th>
+              <th className="px-4 py-3" title="Hace cuánto se le asignó o reasignó el lead a su asesor actual">Asignado</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -331,11 +341,19 @@ export default async function PaginaLeads(props: PageProps<'/leads'>) {
                     <span className="ml-1 text-xs text-amber-600" title="Veces que se reasignó por no ser contactado a tiempo">⇄ {l.reasignaciones}</span>
                   )}
                 </td>
+                <td className="px-4 py-3 text-xs whitespace-nowrap md:text-sm" title={l.fecha_asignado ? `${reasignados.has(l.id) ? 'Reasignado' : 'Asignado'} el ${fechaHora(l.fecha_asignado)}` : undefined}>
+                  {l.asesor && l.fecha_asignado ? (
+                    <>
+                      {haceCuanto(l.fecha_asignado)}
+                      <p className={`text-xs ${reasignados.has(l.id) ? 'text-amber-600' : 'text-slate-400'}`}>{reasignados.has(l.id) ? 'reasignado' : 'asignado'}</p>
+                    </>
+                  ) : <span className="text-slate-400">—</span>}
+                </td>
               </tr>
             ))}
             {!leads?.length && (
               <tr>
-                <td colSpan={esAdmin ? 8 : 7} className="px-4 py-12 text-center text-slate-500">
+                <td colSpan={esAdmin ? 9 : 8} className="px-4 py-12 text-center text-slate-500">
                   {hayFiltros ? 'No hay leads con estos filtros.' : 'Todavía no hay leads.'}
                 </td>
               </tr>

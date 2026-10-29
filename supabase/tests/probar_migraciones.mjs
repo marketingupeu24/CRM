@@ -460,6 +460,13 @@ await q(`update leads set asesor_id = $1 where id = $2`, [destinoManual, tanda[0
 await reset()
 const manual = await uno(`select motivo, por_asesor_id from movimientos_lead where lead_id = $1 order by id desc limit 1`, [tanda[0]])
 ok(manual.motivo === 'Cambio manual' && manual.por_asesor_id !== null, 'un cambio de asesor desde el panel queda como "Cambio manual" con quién lo hizo')
+await q(`update leads set fecha_asignado = now() - interval '10 days', estado = 'lead_asignado' where id = $1`, [tanda[0]])
+const destinoManual2 = (await uno(`select id from asesores where activo and id <> (select asesor_id from leads where id = $1) limit 1`, [tanda[0]])).id
+await comoUsuario('admin@test.pe')
+await q(`update leads set asesor_id = $1 where id = $2`, [destinoManual2, tanda[0]])
+await reset()
+ok((await uno(`select fecha_asignado > now() - interval '1 minute' r from leads where id = $1`, [tanda[0]])).r, 'al reasignar a mano, el tiempo del nuevo asesor empieza de cero')
+ok(!(await uno(`select reasignar_sin_contacto(4, 4, false) r`)).r.some((c) => c.lead_id === tanda[0]), 'y la reasignación automática no se lo quita enseguida')
 const movVisibles = async (correo) => { await comoUsuario(correo); const n = (await uno(`select count(*)::int n from movimientos_lead`)).n; await reset(); return n }
 ok((await movVisibles('admin@test.pe')) >= 4 && (await movVisibles('a@test.pe')) < (await movVisibles('admin@test.pe')), 'el admin ve todo el historial; el asesor solo lo que le salió o le llegó')
 await q(`update leads set origen_campana = 'TikTok' where id = $1`, [rb.lead_id])
