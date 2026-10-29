@@ -229,7 +229,7 @@ Se actualiza en vivo (Supabase Realtime).
 - **Avisos de escritorio** (botón 🔔 de la barra superior): sonido y notificación del navegador cuando un
   lead escribe, aunque la pestaña esté en segundo plano. Se activa por usuario y navegador.
 - **Reasignación automática**: cada 15 min (de 8:00 a 19:00, hora de Lima) un lead *Asignado* que no fue
-  contactado en 4 h pasa al siguiente asesor de la rotación y este recibe el aviso por WhatsApp
+  contactado en 4 h pasa al siguiente asesor de la rotación (desde el 29/10 sin aviso por WhatsApp: el cron llama a `reasignar_sin_aviso()` y el asesor lo ve en el panel; antes recibía
   ("🔁 LEAD REASIGNADO A TI"). Máximo 4 veces por lead (secreto `REASIGNAR_MAXIMO=4`; sin él, 2); se ajusta con los secretos `REASIGNAR_HORAS` y
   `REASIGNAR_MAXIMO` de la función `genesys`. La ficha muestra cuántas veces se reasignó.
 - **Origen del lead** ("Nos conoció por": Facebook, Instagram, TikTok, ferias…): se elige en el registro
