@@ -28,7 +28,8 @@ export function Importador({ carreras, actividades, asignacion }: {
   const [pegado, setPegado] = useState('')
   const [vista, setVista] = useState<'planilla' | 'pegar'>('planilla')
   const [actividadId, setActividadId] = useState('')
-  const [asesorId, setAsesorId] = useState('')
+  // Una planilla se reparte por igual por defecto (antes iba toda a nombre de quien la subía)
+  const [asesorId, setAsesorId] = useState(asignacion.puedeRepartir && asignacion.recibeLeads ? 'repartir' : '')
   const [origen, setOrigen] = useState('')
   const [resultados, setResultados] = useState<ResultadoFila[] | null>(null)
   const [aviso, setAviso] = useState<{ texto: string; error?: boolean } | null>(null)
@@ -214,7 +215,7 @@ export function Importador({ carreras, actividades, asignacion }: {
       </div>
       <p className="text-xs text-slate-500">
         No se duplican: si un alumno ya existe (mismo DNI o celular) se actualizan sus datos. A los alumnos no se les envía ningún mensaje;
-        los asesores reciben un solo aviso con sus leads nuevos.
+        cada asesor ve sus leads nuevos en su panel.
       </p>
     </div>
   )
