@@ -670,8 +670,8 @@ seccion('actividades con QR')
   ok(lr.origen === 'actividad' && lr.actividad_id === act.id && lr.colegio === 'IES San Martín' && lr.grado === '5to de secundaria', 'el lead guarda actividad, colegio y grado')
   ok(lr.asesor_id === resp.id && lr.estado === 'lead_asignado', 'se asigna al responsable de la actividad')
   ok(lr.origen_campana === 'Feria / colegio' && lr.carrera_interes === 'Enfermería', 'queda con origen "Feria / colegio" y su carrera')
-  const ll = (await q(`select cuerpo from llamadas_genesys where accion = 'notificar' order by ctid desc limit 1`))[0]
-  ok(ll && !ll.cuerpo.bienvenida && ll.cuerpo.asignado_por === 'QR: Feria Juliaca 2026', 'avisa al asesor y no le escribe al alumno (él inicia el chat)')
+  const pend = await uno(`select actividad from avisos_pendientes where lead_id = $1`, [lr.id])
+  ok(pend?.actividad === 'Feria Juliaca 2026', 'el aviso al asesor queda para el resumen agrupado (no un WhatsApp por alumno) y al alumno no se le escribe')
   await db.exec(`set request.jwt.claim.sub = ''; set role anon`)
   await uno(`select registrar_lead_actividad($1, 'Rosa Mamani Quispe', '955111222', '71234567', null, null, 'CEPRE') r`, [act.codigo])
   await reset()
@@ -834,6 +834,7 @@ seccion('importar varios alumnos')
 
 seccion('registro rápido de fichas')
 {
+  await q(`delete from avisos_pendientes`)
   await comoUsuario('admin@test.pe')
   const antes = (await uno(`select count(*)::int c from llamadas_genesys`)).c
   for (let i = 1; i <= 4; i++) {
