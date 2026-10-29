@@ -230,7 +230,7 @@ Se actualiza en vivo (Supabase Realtime).
   lead escribe, aunque la pestaña esté en segundo plano. Se activa por usuario y navegador.
 - **Reasignación automática**: cada 15 min (de 8:00 a 19:00, hora de Lima) un lead *Asignado* que no fue
   contactado en 4 h pasa al siguiente asesor de la rotación y este recibe el aviso por WhatsApp
-  ("🔁 LEAD REASIGNADO A TI"). Máximo 2 veces por lead; se ajusta con los secretos `REASIGNAR_HORAS` y
+  ("🔁 LEAD REASIGNADO A TI"). Máximo 4 veces por lead (secreto `REASIGNAR_MAXIMO=4`; sin él, 2); se ajusta con los secretos `REASIGNAR_HORAS` y
   `REASIGNAR_MAXIMO` de la función `genesys`. La ficha muestra cuántas veces se reasignó.
 - **Origen del lead** ("Nos conoció por": Facebook, Instagram, TikTok, ferias…): se elige en el registro
   manual o en *Editar datos*, se filtra en la lista, sale en el Excel y en el gráfico *Leads por origen*
