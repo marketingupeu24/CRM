@@ -871,12 +871,12 @@ seccion('repartir leads y eliminar actividades')
   await q(`select * from importar_leads($1::jsonb)`, [JSON.stringify([{ nombre: 'Por Defecto Mio', celular: '957100099' }])])
   await reset()
   ok((await uno(`select asesor_id from leads where telefono = '51957100099'`)).asesor_id === usrB.id, 'por defecto, a nombre de quien registra')
-  // Regla del 29/10: todo lead sin contactar se reasigna, también el que subió el propio asesor
+  // Regla del 30/10: lo que el asesor registra a su nombre no rota; lo repartido sí (aunque le toque a quien lo subió)
   await q(`update leads set fecha_asignado = now() - interval '10 days', primer_contacto_asesor_at = null, estado = 'lead_asignado', reasignaciones = 0
            where telefono in ('51957100099', '51957100101', '51957100102', '51957100103', '51957100104')`)
   await uno(`select reasignar_sin_contacto(4, 2, false) r`)
   const propio = await uno(`select asesor_id, registrado_por, reasignaciones from leads where telefono = '51957100099'`)
-  ok(propio.asesor_id !== usrB.id && propio.registrado_por === usrB.id && propio.reasignaciones === 1, 'el lead que subió el asesor también se reasigna si no lo contacta (y se sabe quién lo subió)')
+  ok(propio.asesor_id === usrB.id && propio.registrado_por === usrB.id && propio.reasignaciones === 0, 'el lead que el asesor registró a su nombre (oficina) no se reasigna')
   const repartidos = await q(`select reasignaciones from leads where telefono like '5195710010%'`)
   ok(repartidos.length === 4 && repartidos.every((r) => r.reasignaciones === 1), 'todos los importados sin contactar se reasignan, también los que tocaron a quien los subió')
   // Si ya lo atiende quien lo subió, no cambia de dueño si vuelve a llegar por otro camino
