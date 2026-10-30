@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/Enlace'
 import { useState, useTransition } from 'react'
 import { programarVencimientos, type Resultado } from '../acciones'
 

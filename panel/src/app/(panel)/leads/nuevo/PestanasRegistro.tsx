@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from '@/components/Enlace'
 
 /** Pestañas de "Registrar lead": uno por uno o varios alumnos a la vez. */
 export function PestanasRegistro({ actual }: { actual: 'uno' | 'varios' }) {

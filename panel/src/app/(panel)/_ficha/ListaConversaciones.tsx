@@ -3,7 +3,7 @@
 // Bandeja a la izquierda del chat (pantallas grandes, como WhatsApp Web): pasar de una conversación a otra
 // sin salir de la ficha y ver de un vistazo quién escribió y espera respuesta. Se actualiza en vivo
 // (RefrescoEnVivo vuelve a pedir la página cuando llega un mensaje).
-import Link from 'next/link'
+import Link from '@/components/Enlace'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { guardarPreferencia, type PreferenciaBandeja } from '@/lib/bandeja'

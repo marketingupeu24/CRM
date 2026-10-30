@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/Enlace'
 import { useActionState, useState, useTransition } from 'react'
 import { CARRERAS_OFICIALES } from '@crm/db'
 import { useAviso, useConfirmar } from '@/components/Confirmacion'

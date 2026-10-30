@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/Enlace'
 import { agruparPorCategoria, CATEGORIAS_RESPUESTA, type RespuestaRapida } from '@crm/db'
 import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'

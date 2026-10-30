@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/Enlace'
 import { useActionState, useEffect, useState, useTransition } from 'react'
 import QRCode from 'qrcode'
 import { useConfirmar } from '@/components/Confirmacion'

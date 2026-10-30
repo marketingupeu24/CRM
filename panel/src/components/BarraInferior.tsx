@@ -1,7 +1,7 @@
 'use client'
 
 // Barra inferior del celular: lo del trabajo diario a un toque. "Menú" abre el menú completo.
-import Link from 'next/link'
+import Link from '@/components/Enlace'
 import { usePathname } from 'next/navigation'
 import type { Route } from 'next'
 import type { Modulo } from '@crm/db'

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/Enlace'
 import { InsigniaEstado } from '@/components/InsigniaEstado'
 import { fechaHora, num, pct } from '@/lib/formato'
 import { exigirSuperadmin } from '@/lib/sesion'

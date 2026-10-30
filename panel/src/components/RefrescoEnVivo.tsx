@@ -2,16 +2,29 @@
 
 // Actualiza la página actual (listas, contadores del menú) cuando llega un mensaje o un lead nuevo.
 // Realtime solo envía los eventos de leads que el usuario puede ver (RLS).
-// Si la conexión se corta se reconecta sola, y además se actualiza al volver a la pestaña
-// y cada minuto con la pestaña visible, por si algún evento se perdió.
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+// Cada actualización vuelve a armar la página en el servidor (procesador de Vercel: el plan gratis se pausó
+// el 30/10 por esto), así que se cuida cuándo:
+//   - con la pestaña oculta no se actualiza: queda pendiente y se hace al volver a ella;
+//   - en las listas que se atienden en vivo (leads, chats, pendientes, kanban) a lo más cada 10 s;
+//     en las demás páginas (dashboard, reportes…) a lo más cada 2 min;
+//   - si la conexión se corta se reconecta sola y al reconectarse actualiza una vez (por si algo se perdió);
+//     al volver a la pestaña tras más de 5 min también.
+import { useEffect, useRef } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import { crearClienteNavegador, prepararTiempoReal } from '@/lib/supabase/client'
 
 const TIPOS_QUE_ACTUALIZAN = new Set(['mensaje_lead', 'mensaje_asesor', 'sistema', 'cambio_estado'])
+const RUTAS_EN_VIVO = ['/leads', '/chats', '/pendientes', '/kanban']
+const ESPERA_EN_VIVO = 10_000
+const ESPERA_OTRAS = 120_000
+const VOLVER_TRAS = 5 * 60_000
 
 export function RefrescoEnVivo() {
   const router = useRouter()
+  const ruta = usePathname()
+  // En una ref: cambiar de página no reconecta el tiempo real
+  const rutaActual = useRef(ruta)
+  useEffect(() => { rutaActual.current = ruta }, [ruta])
 
   useEffect(() => {
     const supabase = crearClienteNavegador()
@@ -20,10 +33,26 @@ export function RefrescoEnVivo() {
     let reintento: ReturnType<typeof setTimeout> | undefined
     let espera = 2_000
     let activo = true
+    let conectadoAntes = false
+    let pendiente = false
+    let ultimo = Date.now()
 
-    const refrescar = () => {
+    const visible = () => document.visibilityState === 'visible'
+    const actualizar = () => {
       clearTimeout(refresco)
-      refresco = setTimeout(() => { if (activo) router.refresh() }, 800)
+      refresco = undefined
+      if (!activo) return
+      if (!visible()) { pendiente = true; return }
+      pendiente = false
+      ultimo = Date.now()
+      router.refresh()
+    }
+    const refrescar = () => {
+      if (!visible()) { pendiente = true; return }
+      if (refresco) return // ya hay una actualización en camino: junta los eventos
+      const enVivo = RUTAS_EN_VIVO.some((r) => rutaActual.current === r || rutaActual.current.startsWith(r + '/'))
+      const minimo = enVivo ? ESPERA_EN_VIVO : ESPERA_OTRAS
+      refresco = setTimeout(actualizar, Math.max(800, ultimo + minimo - Date.now()))
     }
 
     async function conectar() {
@@ -42,6 +71,8 @@ export function RefrescoEnVivo() {
           if (!activo) return
           if (estado === 'SUBSCRIBED') {
             espera = 2_000
+            if (conectadoAntes) refrescar() // lo que llegó mientras estuvo desconectado
+            conectadoAntes = true
           } else if (estado === 'CHANNEL_ERROR' || estado === 'TIMED_OUT' || estado === 'CLOSED') {
             clearTimeout(reintento)
             reintento = setTimeout(() => {
@@ -54,18 +85,16 @@ export function RefrescoEnVivo() {
     }
 
     void conectar()
-    const alVolver = () => { if (document.visibilityState === 'visible') refrescar() }
-    const intervalo = setInterval(alVolver, 60_000)
+    const alVolver = () => {
+      if (visible() && (pendiente || Date.now() - ultimo > VOLVER_TRAS)) actualizar()
+    }
     document.addEventListener('visibilitychange', alVolver)
-    window.addEventListener('focus', alVolver)
 
     return () => {
       activo = false
       clearTimeout(refresco)
       clearTimeout(reintento)
-      clearInterval(intervalo)
       document.removeEventListener('visibilitychange', alVolver)
-      window.removeEventListener('focus', alVolver)
       if (canal) void supabase.removeChannel(canal)
     }
   }, [router])

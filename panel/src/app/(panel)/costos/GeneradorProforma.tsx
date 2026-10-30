@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/Enlace'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from 'react'
 import {
   ADICIONALES_EXPLORE, BENEFICIOS, calcularProforma, CAMPUS, carreras, INSTITUCIONALES, MODALIDADES, numeroProforma, soles0, soles2,

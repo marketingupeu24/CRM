@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/Enlace'
 import { num, pct } from '@/lib/formato'
 import { fechaCorta, type Campana } from '@/lib/periodos'
 import { exigirPermiso } from '@/lib/sesion'

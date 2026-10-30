@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/Enlace'
 import QRCode from 'qrcode'
 import { fechaHora } from '@/lib/formato'
 import { exigirPermiso } from '@/lib/sesion'

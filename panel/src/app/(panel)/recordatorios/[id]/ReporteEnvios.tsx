@@ -2,7 +2,7 @@
 
 // Reporte de envíos (como los de campañas de WhatsApp): totales arriba y la lista de destinatarios
 // filtrable por estado, con buscador y descarga en CSV.
-import Link from 'next/link'
+import Link from '@/components/Enlace'
 import { useMemo, useState } from 'react'
 import { paraBuscar } from '@/lib/texto'
 

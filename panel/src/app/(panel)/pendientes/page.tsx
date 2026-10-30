@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/Enlace'
 import { InsigniaEstado } from '@/components/InsigniaEstado'
 import { BotonesTarea } from '@/components/Tareas'
 import { YaRespondi } from '@/components/YaRespondi'

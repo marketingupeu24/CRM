@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/Enlace'
 import { fechaHora } from '@/lib/formato'
 import { cobertura, PROHIBIDAS_SIEMPRE, proveedorIA, type Prueba } from '@/lib/pruebas-genesys'
 import { exigirPermiso } from '@/lib/sesion'

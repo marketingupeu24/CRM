@@ -1,5 +1,5 @@
 // Ficha del lead con el chat (compartida por /leads/[id] y /chats/[id]; carpeta privada: no es una ruta).
-import Link from 'next/link'
+import Link from '@/components/Enlace'
 import { notFound } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { asesorDeLaVista, COOKIE_BANDEJA, COOKIE_DETALLES, leerPreferencia } from '@/lib/bandeja'

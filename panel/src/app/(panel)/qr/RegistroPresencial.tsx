@@ -2,7 +2,7 @@
 
 // Paso 1: el asesor escribe los datos de quien atiende. Paso 2: la persona escanea el QR que
 // aparece y envía el mensaje. Paso 3: el panel confirma que quedó registrada (con su celular).
-import Link from 'next/link'
+import Link from '@/components/Enlace'
 import { useActionState, useEffect, useRef, useState } from 'react'
 import QRCode from 'qrcode'
 import { GRADOS } from '@crm/db'

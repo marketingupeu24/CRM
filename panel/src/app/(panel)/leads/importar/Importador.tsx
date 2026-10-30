@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/Enlace'
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { carreraOficial, ORIGENES } from '@crm/db'
 import { SelectorAsignacion, type PermisosAsignacion } from '@/components/SelectorAsignacion'

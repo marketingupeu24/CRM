@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/Enlace'
 import { PARTES_GENESYS, type FichaGenesys } from '@crm/db'
 import { fechasEnFicha } from '@/lib/genesys'
 import { obtenerSesion } from '@/lib/sesion'

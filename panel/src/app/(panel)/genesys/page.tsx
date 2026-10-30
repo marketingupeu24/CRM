@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import Link from '@/components/Enlace'
 import type { Route } from 'next'
 import { PARTES_GENESYS, type FichaGenesys } from '@crm/db'
 import { fechaHora } from '@/lib/formato'

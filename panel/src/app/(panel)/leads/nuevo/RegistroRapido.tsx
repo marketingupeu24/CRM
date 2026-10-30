@@ -2,7 +2,7 @@
 
 // Registro rápido de fichas en papel: se queda en la pantalla, conserva los datos de la tanda,
 // avisa de duplicados mientras se escribe y guarda con Enter.
-import Link from 'next/link'
+import Link from '@/components/Enlace'
 import { useEffect, useRef, useState } from 'react'
 import { ORIGENES } from '@crm/db'
 import { SelectorAsignacion, type PermisosAsignacion } from '@/components/SelectorAsignacion'

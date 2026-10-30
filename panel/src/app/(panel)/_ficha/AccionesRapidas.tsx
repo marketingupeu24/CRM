@@ -3,7 +3,7 @@
 // Acciones rápidas de la ficha: contactar al lead y saltar a cada sección sin hacer scroll.
 // "barra": fila arriba del chat (celular, tablet y laptop). "riel": columna de íconos a la izquierda del chat
 // en pantallas grandes (como el panel de actividades de HubSpot); al pasar el mouse se despliegan los nombres.
-import Link from 'next/link'
+import Link from '@/components/Enlace'
 import { useState } from 'react'
 
 function irA(id: string, enfocar?: string) {

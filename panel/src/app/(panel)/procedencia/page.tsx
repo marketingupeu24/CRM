@@ -1,5 +1,5 @@
 import type { Metadata, Route } from 'next'
-import Link from 'next/link'
+import Link from '@/components/Enlace'
 import { exigirPermiso } from '@/lib/sesion'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { num, pct } from '@/lib/formato'

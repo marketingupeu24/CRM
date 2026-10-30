@@ -2,7 +2,7 @@
 
 // Proforma directa desde el chat: elegir carrera y beneficio y enviarla sin salir de la conversación.
 // La hoja se dibuja fuera de pantalla solo para generar la imagen/PDF.
-import Link from 'next/link'
+import Link from '@/components/Enlace'
 import { useMemo, useRef, useState, useTransition } from 'react'
 import {
   BENEFICIOS, calcularProforma, carreras, numeroProforma, soles2, type BeneficioId, type FormaPago, type Modalidad,
